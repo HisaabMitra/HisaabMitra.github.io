@@ -129,8 +129,8 @@
 
 <!-- HEADER -->
 <div class="header">
-    <div>My Website</div>
-    <div>Welcome User</div>
+    <div>BCA PNB Garhi birbal</div>
+    <div>Welcome Prince Arya</div>
 </div>
 
 <!-- MAIN -->
@@ -163,6 +163,7 @@
             </div>
         </div>
 
+       <!-- Deposit -->
   <div id="deposit" class="page">
 
 <div class="main-box">
@@ -189,7 +190,7 @@
 
         <div class="input-box">
             <label>Amount</label>
-            <input type="number" id="amount" readonly>
+            <input type="number" id="amount">
         </div>
 
         <div class="input-box amount-word">
@@ -771,90 +772,8 @@ body{
 
 <script>
 
-function calculateCash(){
 
-    let n500 = Number(document.getElementById("n500").value) || 0;
-    let n200 = Number(document.getElementById("n200").value) || 0;
-    let n100 = Number(document.getElementById("n100").value) || 0;
-    let n50 = Number(document.getElementById("n50").value) || 0;
-    let n20 = Number(document.getElementById("n20").value) || 0;
-    let n10 = Number(document.getElementById("n10").value) || 0;
-    let n5 = Number(document.getElementById("n5").value) || 0;
-    let coin = Number(document.getElementById("coin").value) || 0;
 
-    let t500 = n500 * 500;
-    let t200 = n200 * 200;
-    let t100 = n100 * 100;
-    let t50 = n50 * 50;
-    let t20 = n20 * 20;
-    let t10 = n10 * 10;
-    let t5 = n5 * 5;
-    let tcoin = coin;
-
-    document.getElementById("t500").value = t500;
-    document.getElementById("t200").value = t200;
-    document.getElementById("t100").value = t100;
-    document.getElementById("t50").value = t50;
-    document.getElementById("t20").value = t20;
-    document.getElementById("t10").value = t10;
-    document.getElementById("t5").value = t5;
-    document.getElementById("tcoin").value = tcoin;
-
-    let total =
-        t500 + t200 + t100 +
-        t50 + t20 + t10 +
-        t5 + tcoin;
-
-    document.getElementById("grandtotal").value = total;
-
-    document.getElementById("amount").value = total;
-
-    document.getElementById("amountword").value =
-        numberToWords(total) + " Rupees Only";
-}
-
-function numberToWords(num){
-
-    let a = [
-        "", "One", "Two", "Three", "Four", "Five",
-        "Six", "Seven", "Eight", "Nine", "Ten",
-        "Eleven", "Twelve", "Thirteen", "Fourteen",
-        "Fifteen", "Sixteen", "Seventeen", "Eighteen",
-        "Nineteen"
-    ];
-
-    let b = [
-        "", "", "Twenty", "Thirty", "Forty",
-        "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"
-    ];
-
-    if(num == 0)
-        return "Zero";
-
-    if(num < 20)
-        return a[num];
-
-    if(num < 100)
-        return b[Math.floor(num/10)] + " " + a[num%10];
-
-    if(num < 1000)
-        return a[Math.floor(num/100)] + " Hundred " +
-               numberToWords(num%100);
-
-    if(num < 100000)
-        return numberToWords(Math.floor(num/1000)) +
-               " Thousand " +
-               numberToWords(num%1000);
-
-    if(num < 10000000)
-        return numberToWords(Math.floor(num/100000)) +
-               " Lakh " +
-               numberToWords(num%100000);
-
-    return num;
-}
-
-</script>
 <!-- WITHDRAWAL -->
         <div id="withdrawal" class="page">
             <div class="card">
