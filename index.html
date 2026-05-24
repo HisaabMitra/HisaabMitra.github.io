@@ -1,163 +1,258 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HisaabMitra</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Dashboard Layout</title>
 
-    <style>
-        body {
-            margin: 0;
-            font-family: Arial, sans-serif;
-            background-color: #fff8e7; /* Cream */
-        }
+<style>
+    *{
+        margin:0;
+        padding:0;
+        box-sizing:border-box;
+        font-family: Arial, sans-serif;
+    }
 
-        header {
-            background-color: #800000; /* Maroon */
-            color: white;
-            padding: 15px 40px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
+    body{
+        height:100vh;
+        display:flex;
+        flex-direction:column;
+        overflow:hidden;
+    }
 
-        header h1 {
-            margin: 0;
-            color: #ffd700; /* Yellow */
-        }
+    /* TOP HEADER */
+    .header{
+        height:60px;
+        background:#0d6efd;
+        color:white;
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        padding:0 20px;
+        font-size:22px;
+        font-weight:bold;
+    }
 
-        nav a {
-            color: white;
-            margin-left: 20px;
-            text-decoration: none;
-            font-weight: bold;
-        }
+    /* MAIN AREA */
+    .container{
+        flex:1;
+        display:flex;
+        overflow:hidden;
+    }
 
-        nav a:hover {
-            color: #ffd700;
-        }
+    /* LEFT MENU */
+    .sidebar{
+        width:220px;
+        background:#1e293b;
+        color:white;
+        padding-top:20px;
+    }
 
-        .hero {
-            background: linear-gradient(rgba(128,0,0,0.8), rgba(128,0,0,0.8)),
-                        url('https://www.shutterstock.com/video/clip-1111173595-4k-animation-clip-financial-audit-managment-calculation');
-            background-size: cover;
-            color: white;
-            text-align: center;
-            padding: 100px 20px;
-        }
+    .sidebar button{
+        width:100%;
+        padding:15px;
+        border:none;
+        background:none;
+        color:white;
+        text-align:left;
+        cursor:pointer;
+        font-size:16px;
+        transition:0.3s;
+    }
 
-        .hero h2 {
-            font-size: 40px;
-            margin-bottom: 10px;
-        }
+    .sidebar button:hover{
+        background:#334155;
+    }
 
-        .hero p {
-            font-size: 18px;
-        }
+    /* MAIN CONTENT */
+    .content{
+        flex:1;
+        padding:20px;
+        background:#f1f5f9;
+        overflow:auto;
+    }
 
-        .btn {
-            background-color: #ffd700;
-            color: #800000;
-            padding: 12px 25px;
-            border: none;
-            margin-top: 20px;
-            font-size: 16px;
-            cursor: pointer;
-            border-radius: 5px;
-        }
+    .page{
+        display:none;
+        animation:fade 0.3s;
+    }
 
-        .btn:hover {
-            background-color: #ffcc00;
-        }
+    .active{
+        display:block;
+    }
 
-        .features {
-            padding: 50px 20px;
-            text-align: center;
+    @keyframes fade{
+        from{
+            opacity:0;
+            transform:translateY(10px);
         }
+        to{
+            opacity:1;
+            transform:translateY(0);
+        }
+    }
 
-        .features h2 {
-            color: #800000;
-            margin-bottom: 30px;
-        }
+    /* BOTTOM MENU */
+    .footer{
+        height:55px;
+        background:#0f172a;
+        display:flex;
+        justify-content:space-around;
+        align-items:center;
+        color:white;
+    }
 
-        .feature-box {
-            display: inline-block;
-            width: 250px;
-            margin: 15px;
-            padding: 20px;
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-        }
+    .footer button{
+        background:none;
+        border:none;
+        color:white;
+        font-size:15px;
+        cursor:pointer;
+    }
 
-        .feature-box h3 {
-            color: #800000;
-        }
+    .footer button:hover{
+        color:#38bdf8;
+    }
 
-        .about {
-            background-color: #fff0d6;
-            padding: 50px 20px;
-            text-align: center;
-        }
-
-        footer {
-            background-color: #800000;
-            color: white;
-            text-align: center;
-            padding: 15px;
-        }
-    </style>
+    /* CARDS */
+    .card{
+        background:white;
+        padding:20px;
+        border-radius:10px;
+        box-shadow:0 2px 5px rgba(0,0,0,0.1);
+        margin-bottom:20px;
+    }
+</style>
 </head>
 
 <body>
 
-<header>
-    <h1>HisaabMitra</h1>
-    <nav>
-        <a href="#">Home</a>
-        <a href="#">Features</a>
-        <a href="#">About</a>
-        <a href="#">Contact</a>
-    </nav>
-</header>
+<!-- HEADER -->
+<div class="header">
+    <div>My Website</div>
+    <div>Welcome User</div>
+</div>
 
-<section class="hero">
-    <h2>Smart Digital Accounting Solution</h2>
-    <p>आसान, सुरक्षित और स्मार्ट हिसाब का डिजिटल समाधान</p>
-    <button class="btn">Get Started</button>
-</section>
+<!-- MAIN -->
+<div class="container">
 
-<section class="features">
-    <h2>Our Features</h2>
-
-    <div class="feature-box">
-        <h3>Easy Transactions</h3>
-        <p>Deposit, Withdrawal और Fund Transfer आसानी से करें</p>
+    <!-- LEFT MENU -->
+    <div class="sidebar">
+        <button onclick="showPage('home')">🏠 Home</button>
+        <button onclick="showPage('deposit')">💰 Deposit</button>
+        <button onclick="showPage('withdrawal')">💳 Withdrawal</button>
+        <button onclick="showPage('transfer')">🔄 Fund Transfer</button>
+        <button onclick="showPage('report')">📊 Reports</button>
+        <button onclick="showPage('settings')">⚙ Settings</button>
     </div>
 
-    <div class="feature-box">
-        <h3>Note Management</h3>
-        <p>₹500, ₹200, ₹100 आदि का पूरा हिसाब रखें</p>
+    <!-- CONTENT -->
+    <div class="content">
+
+        <!-- HOME -->
+        <div id="home" class="page active">
+            <div class="card">
+                <h2>Dashboard</h2>
+                <p>Welcome to your dashboard.</p>
+            </div>
+
+            <div class="card">
+                <h3>Today's Summary</h3>
+                <p>Total Deposit : ₹50,000</p>
+                <p>Total Withdrawal : ₹20,000</p>
+            </div>
+        </div>
+
+        <!-- DEPOSIT -->
+        <div id="deposit" class="page">
+            <div class="card">
+                <h2>Deposit Form</h2>
+
+                <input type="text" placeholder="Account Number" style="width:100%;padding:10px;margin-top:10px;"><br><br>
+
+                <input type="number" placeholder="Amount" style="width:100%;padding:10px;"><br><br>
+
+                <button style="padding:10px 20px;background:#16a34a;color:white;border:none;border-radius:5px;">
+                    Save Deposit
+                </button>
+            </div>
+        </div>
+
+        <!-- WITHDRAWAL -->
+        <div id="withdrawal" class="page">
+            <div class="card">
+                <h2>Withdrawal Form</h2>
+
+                <input type="text" placeholder="Account Number" style="width:100%;padding:10px;margin-top:10px;"><br><br>
+
+                <input type="number" placeholder="Amount" style="width:100%;padding:10px;"><br><br>
+
+                <button style="padding:10px 20px;background:#dc2626;color:white;border:none;border-radius:5px;">
+                    Save Withdrawal
+                </button>
+            </div>
+        </div>
+
+        <!-- TRANSFER -->
+        <div id="transfer" class="page">
+            <div class="card">
+                <h2>Fund Transfer</h2>
+
+                <input type="text" placeholder="From Account" style="width:100%;padding:10px;margin-top:10px;"><br><br>
+
+                <input type="text" placeholder="To Account" style="width:100%;padding:10px;"><br><br>
+
+                <input type="number" placeholder="Amount" style="width:100%;padding:10px;"><br><br>
+
+                <button style="padding:10px 20px;background:#2563eb;color:white;border:none;border-radius:5px;">
+                    Transfer
+                </button>
+            </div>
+        </div>
+
+        <!-- REPORT -->
+        <div id="report" class="page">
+            <div class="card">
+                <h2>Reports</h2>
+                <p>Transaction reports will appear here.</p>
+            </div>
+        </div>
+
+        <!-- SETTINGS -->
+        <div id="settings" class="page">
+            <div class="card">
+                <h2>Settings</h2>
+                <p>Website settings page.</p>
+            </div>
+        </div>
+
     </div>
+</div>
 
-    <div class="feature-box">
-        <h3>Real-Time Balance</h3>
-        <p>हर समय अपना सही balance देखें</p>
-    </div>
+<!-- FOOTER -->
+<div class="footer">
+    <button onclick="showPage('home')">Home</button>
+    <button onclick="showPage('deposit')">Deposit</button>
+    <button onclick="showPage('withdrawal')">Withdrawal</button>
+    <button onclick="showPage('report')">Reports</button>
+</div>
 
-</section>
+<script>
 
-<section class="about">
-    <h2>About HisaabMitra</h2>
-    <p>
-        HisaabMitra एक smart accounting platform है जो आपके daily transactions
-        और financial records को आसान और सुरक्षित बनाता है।
-    </p>
-</section>
+function showPage(pageId){
 
-<footer>
-    <p>© 2026 HisaabMitra | All Rights Reserved</p>
-</footer>
+    // Hide all pages
+    let pages = document.querySelectorAll('.page');
+
+    pages.forEach(function(page){
+        page.classList.remove('active');
+    });
+
+    // Show selected page
+    document.getElementById(pageId).classList.add('active');
+}
+
+</script>
 
 </body>
 </html>
