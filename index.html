@@ -164,19 +164,316 @@
         </div>
 
         <!-- DEPOSIT -->
-        <div id="deposit" class="page">
-            <div class="card">
-                <h2>Deposit Form</h2>
+       
+<div id="deposit" class="page">
 
-                <input type="text" placeholder="Account Number" style="width:100%;padding:10px;margin-top:10px;"><br><br>
+    <div class="card">
 
-                <input type="number" placeholder="Amount" style="width:100%;padding:10px;"><br><br>
+        <h2>Deposit Entry Form</h2>
 
-                <button style="padding:10px 20px;background:#16a34a;color:white;border:none;border-radius:5px;">
-                    Save Deposit
-                </button>
+        <div class="form-grid">
+
+            <!-- ACCOUNT -->
+            <div>
+                <label>Account No</label>
+                <input type="text" id="accountno">
             </div>
+
+            <!-- NAME -->
+            <div>
+                <label>Customer Name</label>
+                <input type="text" id="custname">
+            </div>
+
+            <!-- MOBILE -->
+            <div>
+                <label>Mobile No</label>
+                <input type="text" id="mobno">
+            </div>
+
+            <!-- AMOUNT -->
+            <div>
+                <label>Amount</label>
+                <input type="number" id="amount" onkeyup="convertAmount()">
+            </div>
+
+            <!-- AMOUNT IN WORD -->
+            <div class="full-width">
+                <label>Amount In Words</label>
+                <input type="text" id="amountword" readonly>
+            </div>
+
         </div>
+
+        <hr style="margin:20px 0;">
+
+        <h3>Cash Details</h3>
+
+        <!-- NOTE TABLE -->
+        <table class="note-table">
+
+            <tr>
+                <th>Note</th>
+                <th>Count</th>
+                <th>Total</th>
+            </tr>
+
+            <tr>
+                <td>500</td>
+                <td><input type="number" id="n500" value="0" onkeyup="calcTotal()"></td>
+                <td><input type="text" id="t500" readonly></td>
+            </tr>
+
+            <tr>
+                <td>200</td>
+                <td><input type="number" id="n200" value="0" onkeyup="calcTotal()"></td>
+                <td><input type="text" id="t200" readonly></td>
+            </tr>
+
+            <tr>
+                <td>100</td>
+                <td><input type="number" id="n100" value="0" onkeyup="calcTotal()"></td>
+                <td><input type="text" id="t100" readonly></td>
+            </tr>
+
+            <tr>
+                <td>50</td>
+                <td><input type="number" id="n50" value="0" onkeyup="calcTotal()"></td>
+                <td><input type="text" id="t50" readonly></td>
+            </tr>
+
+            <tr>
+                <td>20</td>
+                <td><input type="number" id="n20" value="0" onkeyup="calcTotal()"></td>
+                <td><input type="text" id="t20" readonly></td>
+            </tr>
+
+            <tr>
+                <td>10</td>
+                <td><input type="number" id="n10" value="0" onkeyup="calcTotal()"></td>
+                <td><input type="text" id="t10" readonly></td>
+            </tr>
+
+            <tr>
+                <td>5</td>
+                <td><input type="number" id="n5" value="0" onkeyup="calcTotal()"></td>
+                <td><input type="text" id="t5" readonly></td>
+            </tr>
+
+            <tr>
+                <td>Coin</td>
+                <td><input type="number" id="coin" value="0" onkeyup="calcTotal()"></td>
+                <td><input type="text" id="tcoin" readonly></td>
+            </tr>
+
+            <tr>
+                <th colspan="2">Grand Total</th>
+                <th><input type="text" id="grandtotal" readonly></th>
+            </tr>
+
+        </table>
+
+        <br>
+
+        <!-- BUTTONS -->
+        <div class="btn-area">
+
+            <button class="save-btn">Save</button>
+
+            <button class="update-btn">Update</button>
+
+            <button class="delete-btn">Delete</button>
+
+            <button class="clear-btn">Clear</button>
+
+        </div>
+
+    </div>
+
+    <!-- GRIDVIEW -->
+    <div class="card">
+
+        <h2>Today's Deposit Data</h2>
+
+        <table class="gridview">
+
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Account No</th>
+                    <th>Name</th>
+                    <th>Mobile</th>
+                    <th>Amount</th>
+                    <th>Total Cash</th>
+                </tr>
+            </thead>
+
+            <tbody id="gridBody">
+
+                <tr>
+                    <td>24/05/2026</td>
+                    <td>1001</td>
+                    <td>Rahul</td>
+                    <td>9876543210</td>
+                    <td>5000</td>
+                    <td>5000</td>
+                </tr>
+
+                <tr>
+                    <td>24/05/2026</td>
+                    <td>1002</td>
+                    <td>Amit</td>
+                    <td>9999999999</td>
+                    <td>3000</td>
+                    <td>3000</td>
+                </tr>
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+<!-- STYLE -->
+<style>
+
+.form-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:15px;
+}
+
+.full-width{
+    grid-column:1/3;
+}
+
+.form-grid input{
+    width:100%;
+    padding:10px;
+    margin-top:5px;
+}
+
+.note-table{
+    width:100%;
+    border-collapse:collapse;
+}
+
+.note-table th,
+.note-table td{
+    border:1px solid #ccc;
+    padding:10px;
+    text-align:center;
+}
+
+.note-table input{
+    width:100%;
+    padding:8px;
+    text-align:center;
+}
+
+.btn-area{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+}
+
+.btn-area button{
+    padding:10px 20px;
+    border:none;
+    color:white;
+    cursor:pointer;
+    border-radius:5px;
+}
+
+.save-btn{
+    background:#16a34a;
+}
+
+.update-btn{
+    background:#2563eb;
+}
+
+.delete-btn{
+    background:#dc2626;
+}
+
+.clear-btn{
+    background:#64748b;
+}
+
+.gridview{
+    width:100%;
+    border-collapse:collapse;
+}
+
+.gridview th,
+.gridview td{
+    border:1px solid #ccc;
+    padding:10px;
+    text-align:center;
+}
+
+.gridview th{
+    background:#0f172a;
+    color:white;
+}
+
+</style>
+
+<!-- SCRIPT -->
+<script>
+
+function calcTotal(){
+
+    let n500 = Number(document.getElementById("n500").value) || 0;
+    let n200 = Number(document.getElementById("n200").value) || 0;
+    let n100 = Number(document.getElementById("n100").value) || 0;
+    let n50 = Number(document.getElementById("n50").value) || 0;
+    let n20 = Number(document.getElementById("n20").value) || 0;
+    let n10 = Number(document.getElementById("n10").value) || 0;
+    let n5 = Number(document.getElementById("n5").value) || 0;
+    let coin = Number(document.getElementById("coin").value) || 0;
+
+    let t500 = n500 * 500;
+    let t200 = n200 * 200;
+    let t100 = n100 * 100;
+    let t50 = n50 * 50;
+    let t20 = n20 * 20;
+    let t10 = n10 * 10;
+    let t5 = n5 * 5;
+    let tcoin = coin;
+
+    document.getElementById("t500").value = t500;
+    document.getElementById("t200").value = t200;
+    document.getElementById("t100").value = t100;
+    document.getElementById("t50").value = t50;
+    document.getElementById("t20").value = t20;
+    document.getElementById("t10").value = t10;
+    document.getElementById("t5").value = t5;
+    document.getElementById("tcoin").value = tcoin;
+
+    let grand =
+        t500 + t200 + t100 + t50 +
+        t20 + t10 + t5 + tcoin;
+
+    document.getElementById("grandtotal").value = grand;
+
+    document.getElementById("amount").value = grand;
+
+    convertAmount();
+}
+
+function convertAmount(){
+
+    let amount = document.getElementById("amount").value;
+
+    document.getElementById("amountword").value =
+        amount + " Rupees Only";
+}
+
+</script>
 
         <!-- WITHDRAWAL -->
         <div id="withdrawal" class="page">
