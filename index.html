@@ -163,180 +163,26 @@
             </div>
         </div>
 
-    <div id="deposit" class="page">
+   <!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<div class="main-box">
-
-    <h2 class="title">Deposit Form</h2>
-
-    <!-- TOP FORM -->
-    <div class="top-form">
-
-        <div class="input-box">
-            <label>Account No</label>
-            <input type="text" id="accountno">
-        </div>
-
-        <div class="input-box">
-            <label>Name</label>
-            <input type="text" id="name">
-        </div>
-
-        <div class="input-box">
-            <label>Mobile No</label>
-            <input type="text" id="mobile">
-        </div>
-
-        <div class="input-box">
-            <label>Amount</label>
-            <input type="number" id="amount" readonly>
-        </div>
-
-        <div class="input-box amount-word">
-            <label>Amount In Word</label>
-            <input type="text" id="amountword" readonly>
-        </div>
-
-    </div>
-
-    <!-- NOTE TABLE -->
-    <table class="cash-table">
-
-        <tr>
-            <th>Note</th>
-            <th>Count</th>
-            <th>X</th>
-            <th>Total</th>
-        </tr>
-
-        <tr>
-            <td>500</td>
-            <td><input type="number" id="n500" value="0" onkeyup="calculateCash()"></td>
-            <td>500</td>
-            <td><input type="text" id="t500" readonly></td>
-        </tr>
-
-        <tr>
-            <td>200</td>
-            <td><input type="number" id="n200" value="0" onkeyup="calculateCash()"></td>
-            <td>200</td>
-            <td><input type="text" id="t200" readonly></td>
-        </tr>
-
-        <tr>
-            <td>100</td>
-            <td><input type="number" id="n100" value="0" onkeyup="calculateCash()"></td>
-            <td>100</td>
-            <td><input type="text" id="t100" readonly></td>
-        </tr>
-
-        <tr>
-            <td>50</td>
-            <td><input type="number" id="n50" value="0" onkeyup="calculateCash()"></td>
-            <td>50</td>
-            <td><input type="text" id="t50" readonly></td>
-        </tr>
-
-        <tr>
-            <td>20</td>
-            <td><input type="number" id="n20" value="0" onkeyup="calculateCash()"></td>
-            <td>20</td>
-            <td><input type="text" id="t20" readonly></td>
-        </tr>
-
-        <tr>
-            <td>10</td>
-            <td><input type="number" id="n10" value="0" onkeyup="calculateCash()"></td>
-            <td>10</td>
-            <td><input type="text" id="t10" readonly></td>
-        </tr>
-
-        <tr>
-            <td>5</td>
-            <td><input type="number" id="n5" value="0" onkeyup="calculateCash()"></td>
-            <td>5</td>
-            <td><input type="text" id="t5" readonly></td>
-        </tr>
-
-        <tr>
-            <td>Coin</td>
-            <td><input type="number" id="coin" value="0" onkeyup="calculateCash()"></td>
-            <td>1</td>
-            <td><input type="text" id="tcoin" readonly></td>
-        </tr>
-
-        <tr class="grand-row">
-            <td colspan="3">Grand Total</td>
-            <td><input type="text" id="grandtotal" readonly></td>
-        </tr>
-
-    </table>
-
-    <!-- BUTTONS -->
-    <div class="btn-box">
-
-        <button class="save-btn">Submit</button>
-
-        <button class="update-btn">Update</button>
-
-        <button class="delete-btn">Delete</button>
-
-        <button class="clear-btn">Clear</button>
-
-    </div>
-
-    <!-- GRIDVIEW -->
-    <div class="grid-box">
-
-        <h3>Today Deposit Data</h3>
-
-        <table class="gridview">
-
-            <thead>
-                <tr>
-                    <th>Date</th>
-                    <th>Account</th>
-                    <th>Name</th>
-                    <th>Mobile</th>
-                    <th>Amount</th>
-                    <th>Total Cash</th>
-                </tr>
-            </thead>
-
-            <tbody>
-
-                <tr>
-                    <td>24/05/2026</td>
-                    <td>1001</td>
-                    <td>Rahul</td>
-                    <td>9876543210</td>
-                    <td>5000</td>
-                    <td>5000</td>
-                </tr>
-
-                <tr>
-                    <td>24/05/2026</td>
-                    <td>1002</td>
-                    <td>Amit</td>
-                    <td>9999999999</td>
-                    <td>3200</td>
-                    <td>3200</td>
-                </tr>
-
-            </tbody>
-
-        </table>
-
-    </div>
-
-</div>
-</div>
+<title>Deposit Form</title>
 
 <style>
 
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:Arial;
+}
+
 body{
     background:#f1f5f9;
-    font-family:Arial;
+    padding:15px;
 }
 
 .main-box{
@@ -351,16 +197,23 @@ body{
     color:#0f172a;
 }
 
+/* TOP FORM */
+
 .top-form{
     display:flex;
-    gap:10px;
     flex-wrap:wrap;
+    gap:10px;
     margin-bottom:15px;
 }
 
 .input-box{
     display:flex;
     flex-direction:column;
+}
+
+.input-box label{
+    font-size:14px;
+    margin-bottom:5px;
 }
 
 .input-box input{
@@ -373,6 +226,8 @@ body{
 .amount-word input{
     width:350px;
 }
+
+/* CASH TABLE */
 
 .cash-table{
     width:100%;
@@ -387,15 +242,15 @@ body{
     text-align:center;
 }
 
-.cash-table input{
-    width:100%;
-    padding:5px;
-    text-align:center;
-}
-
 .cash-table th{
     background:#0f172a;
     color:white;
+}
+
+.cash-table input{
+    width:100%;
+    padding:6px;
+    text-align:center;
 }
 
 .grand-row{
@@ -403,18 +258,22 @@ body{
     font-weight:bold;
 }
 
+/* BUTTON */
+
 .btn-box{
     margin-top:15px;
     display:flex;
     gap:10px;
+    flex-wrap:wrap;
 }
 
 .btn-box button{
     padding:10px 20px;
     border:none;
-    color:white;
     border-radius:5px;
+    color:white;
     cursor:pointer;
+    font-weight:bold;
 }
 
 .save-btn{
@@ -432,6 +291,8 @@ body{
 .clear-btn{
     background:#64748b;
 }
+
+/* GRIDVIEW */
 
 .grid-box{
     margin-top:20px;
@@ -457,63 +318,614 @@ body{
 
 </style>
 
+</head>
+
+<body>
+
+<div class="main-box">
+
+    <h2 class="title">Deposit Form</h2>
+
+    <!-- TOP FORM -->
+
+    <div class="top-form">
+
+        <div class="input-box">
+            <label>Account No</label>
+            <input type="text" id="accountno">
+        </div>
+
+        <div class="input-box">
+            <label>Name</label>
+            <input type="text" id="name">
+        </div>
+
+        <div class="input-box">
+            <label>Mobile No</label>
+            <input type="text" id="mobile">
+        </div>
+
+        <div class="input-box">
+            <label>Amount</label>
+            <input type="text" id="amount" readonly>
+        </div>
+
+        <div class="input-box amount-word">
+            <label>Amount In Words</label>
+            <input type="text" id="amountword" readonly>
+        </div>
+
+    </div>
+
+    <!-- CASH TABLE -->
+
+    <table class="cash-table">
+
+        <tr>
+
+            <th>Note</th>
+
+            <th>Deposit Qty (+)</th>
+
+            <th>X</th>
+
+            <th>Deposit Total</th>
+
+            <th>Return Qty (-)</th>
+
+            <th>X</th>
+
+            <th>Return Total</th>
+
+            <th>Final Total</th>
+
+        </tr>
+
+        <!-- 500 -->
+
+        <tr>
+
+            <td>500</td>
+
+            <td>
+                <input type="number"
+                id="d500"
+                value="0"
+                onkeyup="calculateCash()">
+            </td>
+
+            <td>500</td>
+
+            <td>
+                <input type="text"
+                id="dt500"
+                readonly>
+            </td>
+
+            <td>
+                <input type="number"
+                id="w500"
+                value="0"
+                onkeyup="calculateCash()">
+            </td>
+
+            <td>500</td>
+
+            <td>
+                <input type="text"
+                id="wt500"
+                readonly>
+            </td>
+
+            <td>
+                <input type="text"
+                id="ft500"
+                readonly>
+            </td>
+
+        </tr>
+
+        <!-- 200 -->
+
+        <tr>
+
+            <td>200</td>
+
+            <td>
+                <input type="number"
+                id="d200"
+                value="0"
+                onkeyup="calculateCash()">
+            </td>
+
+            <td>200</td>
+
+            <td>
+                <input type="text"
+                id="dt200"
+                readonly>
+            </td>
+
+            <td>
+                <input type="number"
+                id="w200"
+                value="0"
+                onkeyup="calculateCash()">
+            </td>
+
+            <td>200</td>
+
+            <td>
+                <input type="text"
+                id="wt200"
+                readonly>
+            </td>
+
+            <td>
+                <input type="text"
+                id="ft200"
+                readonly>
+            </td>
+
+        </tr>
+
+        <!-- 100 -->
+
+        <tr>
+
+            <td>100</td>
+
+            <td>
+                <input type="number"
+                id="d100"
+                value="0"
+                onkeyup="calculateCash()">
+            </td>
+
+            <td>100</td>
+
+            <td>
+                <input type="text"
+                id="dt100"
+                readonly>
+            </td>
+
+            <td>
+                <input type="number"
+                id="w100"
+                value="0"
+                onkeyup="calculateCash()">
+            </td>
+
+            <td>100</td>
+
+            <td>
+                <input type="text"
+                id="wt100"
+                readonly>
+            </td>
+
+            <td>
+                <input type="text"
+                id="ft100"
+                readonly>
+            </td>
+
+        </tr>
+
+        <!-- 50 -->
+
+        <tr>
+
+            <td>50</td>
+
+            <td>
+                <input type="number"
+                id="d50"
+                value="0"
+                onkeyup="calculateCash()">
+            </td>
+
+            <td>50</td>
+
+            <td>
+                <input type="text"
+                id="dt50"
+                readonly>
+            </td>
+
+            <td>
+                <input type="number"
+                id="w50"
+                value="0"
+                onkeyup="calculateCash()">
+            </td>
+
+            <td>50</td>
+
+            <td>
+                <input type="text"
+                id="wt50"
+                readonly>
+            </td>
+
+            <td>
+                <input type="text"
+                id="ft50"
+                readonly>
+            </td>
+
+        </tr>
+
+        <!-- 20 -->
+
+        <tr>
+
+            <td>20</td>
+
+            <td>
+                <input type="number"
+                id="d20"
+                value="0"
+                onkeyup="calculateCash()">
+            </td>
+
+            <td>20</td>
+
+            <td>
+                <input type="text"
+                id="dt20"
+                readonly>
+            </td>
+
+            <td>
+                <input type="number"
+                id="w20"
+                value="0"
+                onkeyup="calculateCash()">
+            </td>
+
+            <td>20</td>
+
+            <td>
+                <input type="text"
+                id="wt20"
+                readonly>
+            </td>
+
+            <td>
+                <input type="text"
+                id="ft20"
+                readonly>
+            </td>
+
+        </tr>
+
+        <!-- 10 -->
+
+        <tr>
+
+            <td>10</td>
+
+            <td>
+                <input type="number"
+                id="d10"
+                value="0"
+                onkeyup="calculateCash()">
+            </td>
+
+            <td>10</td>
+
+            <td>
+                <input type="text"
+                id="dt10"
+                readonly>
+            </td>
+
+            <td>
+                <input type="number"
+                id="w10"
+                value="0"
+                onkeyup="calculateCash()">
+            </td>
+
+            <td>10</td>
+
+            <td>
+                <input type="text"
+                id="wt10"
+                readonly>
+            </td>
+
+            <td>
+                <input type="text"
+                id="ft10"
+                readonly>
+            </td>
+
+        </tr>
+
+        <!-- 5 -->
+
+        <tr>
+
+            <td>5</td>
+
+            <td>
+                <input type="number"
+                id="d5"
+                value="0"
+                onkeyup="calculateCash()">
+            </td>
+
+            <td>5</td>
+
+            <td>
+                <input type="text"
+                id="dt5"
+                readonly>
+            </td>
+
+            <td>
+                <input type="number"
+                id="w5"
+                value="0"
+                onkeyup="calculateCash()">
+            </td>
+
+            <td>5</td>
+
+            <td>
+                <input type="text"
+                id="wt5"
+                readonly>
+            </td>
+
+            <td>
+                <input type="text"
+                id="ft5"
+                readonly>
+            </td>
+
+        </tr>
+
+        <!-- COIN -->
+
+        <tr>
+
+            <td>Coin</td>
+
+            <td>
+                <input type="number"
+                id="dcoin"
+                value="0"
+                onkeyup="calculateCash()">
+            </td>
+
+            <td>1</td>
+
+            <td>
+                <input type="text"
+                id="dtcoin"
+                readonly>
+            </td>
+
+            <td>
+                <input type="number"
+                id="wcoin"
+                value="0"
+                onkeyup="calculateCash()">
+            </td>
+
+            <td>1</td>
+
+            <td>
+                <input type="text"
+                id="wtcoin"
+                readonly>
+            </td>
+
+            <td>
+                <input type="text"
+                id="ftcoin"
+                readonly>
+            </td>
+
+        </tr>
+
+        <!-- GRAND TOTAL -->
+
+        <tr class="grand-row">
+
+            <td colspan="7">
+                Grand Total
+            </td>
+
+            <td>
+                <input type="text"
+                id="grandtotal"
+                readonly>
+            </td>
+
+        </tr>
+
+    </table>
+
+    <!-- BUTTONS -->
+
+    <div class="btn-box">
+
+        <button class="save-btn">
+            Submit
+        </button>
+
+        <button class="update-btn">
+            Update
+        </button>
+
+        <button class="delete-btn">
+            Delete
+        </button>
+
+        <button class="clear-btn"
+        onclick="location.reload()">
+            Clear
+        </button>
+
+    </div>
+
+    <!-- GRIDVIEW -->
+
+    <div class="grid-box">
+
+        <h3>Today's Deposit Data</h3>
+
+        <table class="gridview">
+
+            <thead>
+
+                <tr>
+
+                    <th>Date</th>
+
+                    <th>Account</th>
+
+                    <th>Name</th>
+
+                    <th>Mobile</th>
+
+                    <th>Amount</th>
+
+                </tr>
+
+            </thead>
+
+            <tbody>
+
+                <tr>
+
+                    <td>24/05/2026</td>
+
+                    <td>1001</td>
+
+                    <td>Rahul</td>
+
+                    <td>9876543210</td>
+
+                    <td>1300</td>
+
+                </tr>
+
+                <tr>
+
+                    <td>24/05/2026</td>
+
+                    <td>1002</td>
+
+                    <td>Amit</td>
+
+                    <td>9999999999</td>
+
+                    <td>2500</td>
+
+                </tr>
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
 <script>
 
 function calculateCash(){
 
-    let n500 = Number(document.getElementById("n500").value) || 0;
-    let n200 = Number(document.getElementById("n200").value) || 0;
-    let n100 = Number(document.getElementById("n100").value) || 0;
-    let n50 = Number(document.getElementById("n50").value) || 0;
-    let n20 = Number(document.getElementById("n20").value) || 0;
-    let n10 = Number(document.getElementById("n10").value) || 0;
-    let n5 = Number(document.getElementById("n5").value) || 0;
-    let coin = Number(document.getElementById("coin").value) || 0;
+    calculateRow(500);
+    calculateRow(200);
+    calculateRow(100);
+    calculateRow(50);
+    calculateRow(20);
+    calculateRow(10);
+    calculateRow(5);
+    calculateCoin();
 
-    let t500 = n500 * 500;
-    let t200 = n200 * 200;
-    let t100 = n100 * 100;
-    let t50 = n50 * 50;
-    let t20 = n20 * 20;
-    let t10 = n10 * 10;
-    let t5 = n5 * 5;
-    let tcoin = coin;
+    let grand =
+        Number(document.getElementById("ft500").value || 0) +
+        Number(document.getElementById("ft200").value || 0) +
+        Number(document.getElementById("ft100").value || 0) +
+        Number(document.getElementById("ft50").value || 0) +
+        Number(document.getElementById("ft20").value || 0) +
+        Number(document.getElementById("ft10").value || 0) +
+        Number(document.getElementById("ft5").value || 0) +
+        Number(document.getElementById("ftcoin").value || 0);
 
-    document.getElementById("t500").value = t500;
-    document.getElementById("t200").value = t200;
-    document.getElementById("t100").value = t100;
-    document.getElementById("t50").value = t50;
-    document.getElementById("t20").value = t20;
-    document.getElementById("t10").value = t10;
-    document.getElementById("t5").value = t5;
-    document.getElementById("tcoin").value = tcoin;
+    document.getElementById("grandtotal").value = grand;
 
-    let total =
-        t500 + t200 + t100 +
-        t50 + t20 + t10 +
-        t5 + tcoin;
-
-    document.getElementById("grandtotal").value = total;
-
-    document.getElementById("amount").value = total;
+    document.getElementById("amount").value = grand;
 
     document.getElementById("amountword").value =
-        numberToWords(total) + " Rupees Only";
+        numberToWords(grand) + " Rupees Only";
+}
+
+function calculateRow(note){
+
+    let d =
+        Number(document.getElementById("d"+note).value) || 0;
+
+    let w =
+        Number(document.getElementById("w"+note).value) || 0;
+
+    let dt = d * note;
+
+    let wt = w * note;
+
+    let ft = dt - wt;
+
+    document.getElementById("dt"+note).value = dt;
+
+    document.getElementById("wt"+note).value = wt;
+
+    document.getElementById("ft"+note).value = ft;
+}
+
+function calculateCoin(){
+
+    let d =
+        Number(document.getElementById("dcoin").value) || 0;
+
+    let w =
+        Number(document.getElementById("wcoin").value) || 0;
+
+    let dt = d;
+
+    let wt = w;
+
+    let ft = dt - wt;
+
+    document.getElementById("dtcoin").value = dt;
+
+    document.getElementById("wtcoin").value = wt;
+
+    document.getElementById("ftcoin").value = ft;
 }
 
 function numberToWords(num){
 
     let a = [
-        "", "One", "Two", "Three", "Four", "Five",
-        "Six", "Seven", "Eight", "Nine", "Ten",
-        "Eleven", "Twelve", "Thirteen", "Fourteen",
-        "Fifteen", "Sixteen", "Seventeen", "Eighteen",
+        "", "One", "Two", "Three", "Four",
+        "Five", "Six", "Seven", "Eight",
+        "Nine", "Ten", "Eleven", "Twelve",
+        "Thirteen", "Fourteen", "Fifteen",
+        "Sixteen", "Seventeen", "Eighteen",
         "Nineteen"
     ];
 
     let b = [
-        "", "", "Twenty", "Thirty", "Forty",
-        "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"
+        "", "", "Twenty", "Thirty",
+        "Forty", "Fifty", "Sixty",
+        "Seventy", "Eighty", "Ninety"
     ];
 
     if(num == 0)
@@ -523,10 +935,13 @@ function numberToWords(num){
         return a[num];
 
     if(num < 100)
-        return b[Math.floor(num/10)] + " " + a[num%10];
+        return b[Math.floor(num/10)] +
+               " " +
+               a[num%10];
 
     if(num < 1000)
-        return a[Math.floor(num/100)] + " Hundred " +
+        return a[Math.floor(num/100)] +
+               " Hundred " +
                numberToWords(num%100);
 
     if(num < 100000)
@@ -543,7 +958,10 @@ function numberToWords(num){
 }
 
 </script>
-        <!-- WITHDRAWAL -->
+
+</body>
+</html>
+       <!-- WITHDRAWAL -->
         <div id="withdrawal" class="page">
             <div class="card">
                 <h2>Withdrawal Form</h2>
