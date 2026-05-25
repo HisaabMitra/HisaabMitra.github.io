@@ -6,136 +6,169 @@
 <title>BCA Dashboard</title>
 
 <style>
-    *{
-        margin:0;
-        padding:0;
-        box-sizing:border-box;
-        font-family: Arial, Helvetica, sans-serif;
-    }
 
-    body{
-        background:#f5f5f5;
-        overflow:hidden;
-    }
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:Arial, Helvetica, sans-serif;
+}
 
-    /* HEADER */
-    .header{
-        width:100%;
-        height:70px;
-        background:maroon;
-        color:white;
-        display:flex;
-        align-items:center;
-        justify-content:space-between;
-        padding:0 20px;
-        font-size:28px;
-        font-weight:bold;
-    }
+body{
+    overflow:hidden;
+    background:#f4f4f4;
+}
 
-    .header .right{
-        font-size:22px;
-    }
+/* HEADER */
 
-    /* YELLOW LINE */
-    .yellow-line{
-        height:6px;
-        background:gold;
-        width:100%;
-    }
+.header{
+    width:100%;
+    height:70px;
+    background:maroon;
+    color:white;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:0 20px;
+    font-size:28px;
+    font-weight:bold;
+}
 
-    /* MAIN CONTAINER */
-    .container{
-        display:flex;
-        height:calc(100vh - 126px);
-    }
+.header-right{
+    font-size:22px;
+}
 
-    /* LEFT MENU */
-    .sidebar{
-        width:240px;
-        background:maroon;
-        overflow-y:auto;
-        padding-top:10px;
-    }
+/* YELLOW LINE */
 
-    .sidebar button{
-        width:100%;
-        padding:15px;
-        border:none;
-        outline:none;
-        background:maroon;
-        color:white;
-        text-align:left;
-        font-size:17px;
-        cursor:pointer;
-        border-bottom:1px solid rgba(255,255,255,0.2);
-        transition:0.3s;
-    }
+.yellow-line{
+    height:5px;
+    width:100%;
+    background:gold;
+}
 
-    .sidebar button:hover{
-        background:#8b0000;
-        padding-left:25px;
-    }
+/* MAIN CONTAINER */
 
-    /* MAIN BODY */
-    .main-body{
-        flex:1;
-        background:#fff;
-        padding:20px;
-        overflow:auto;
-    }
+.container{
+    display:flex;
+    height:calc(100vh - 125px);
+}
 
-    .page{
-        display:none;
-    }
+/* SIDEBAR */
 
-    .page.active{
-        display:block;
-    }
+.sidebar{
+    width:240px;
+    background:maroon;
+    overflow-y:auto;
+}
 
-    .page h1{
-        color:maroon;
-        margin-bottom:15px;
-    }
+.sidebar button{
+    width:100%;
+    padding:15px;
+    border:none;
+    background:maroon;
+    color:white;
+    text-align:left;
+    cursor:pointer;
+    font-size:17px;
+    border-bottom:1px solid rgba(255,255,255,0.2);
+    transition:0.3s;
+}
 
-    .card{
-        background:#fafafa;
-        border-left:6px solid maroon;
-        padding:20px;
-        margin-top:15px;
-        border-radius:5px;
-        box-shadow:0 0 5px rgba(0,0,0,0.1);
-    }
+.sidebar button:hover{
+    background:#8b0000;
+    padding-left:25px;
+}
 
-    /* BOTTOM MENU */
-    .bottom-menu{
-        height:50px;
-        background:maroon;
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        gap:20px;
-        color:white;
-        font-size:16px;
-    }
+/* MAIN BODY */
 
-    .bottom-menu div{
-        cursor:pointer;
-        transition:0.3s;
-    }
+.main-body{
+    flex:1;
+    padding:20px;
+    overflow:auto;
+    background:#fff;
+}
 
-    .bottom-menu div:hover{
-        color:yellow;
-    }
+/* PAGES */
 
-    /* SCROLLBAR */
-    ::-webkit-scrollbar{
-        width:8px;
-    }
+.page{
+    display:none;
+}
 
-    ::-webkit-scrollbar-thumb{
-        background:gold;
-        border-radius:10px;
-    }
+.page.active{
+    display:block;
+}
+
+/* HOME CARDS */
+
+.dashboard{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+    gap:20px;
+    margin-top:20px;
+}
+
+.card{
+    background:maroon;
+    color:white;
+    padding:25px;
+    border-radius:10px;
+    box-shadow:0 0 10px rgba(0,0,0,0.2);
+}
+
+.card h2{
+    font-size:20px;
+    margin-bottom:15px;
+}
+
+.card h1{
+    font-size:35px;
+}
+
+/* FORM BOX */
+
+.form-box{
+    background:#fafafa;
+    border-left:5px solid maroon;
+    padding:20px;
+    margin-top:20px;
+    border-radius:5px;
+    box-shadow:0 0 5px rgba(0,0,0,0.1);
+}
+
+/* BOTTOM MENU */
+
+.bottom-menu{
+    height:50px;
+    background:maroon;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    gap:25px;
+}
+
+.bottom-menu button{
+    background:none;
+    border:none;
+    color:white;
+    font-size:16px;
+    cursor:pointer;
+    transition:0.3s;
+}
+
+.bottom-menu button:hover{
+    color:yellow;
+}
+
+/* SCROLLBAR */
+
+::-webkit-scrollbar{
+    width:8px;
+}
+
+::-webkit-scrollbar-thumb{
+    background:gold;
+    border-radius:10px;
+}
 
 </style>
 </head>
@@ -143,136 +176,300 @@
 <body>
 
 <!-- HEADER -->
+
 <div class="header">
+
     <div>WELCOME BCA PNB GARHI BIRBAL</div>
-    <div class="right"> By:- Prince Arya</div>
+
+    <div class="header-right">
+        Welcome Prince Arya
+    </div>
+
 </div>
 
 <!-- YELLOW LINE -->
+
 <div class="yellow-line"></div>
 
-<!-- CONTAINER -->
+<!-- MAIN AREA -->
+
 <div class="container">
 
     <!-- SIDEBAR -->
+
     <div class="sidebar">
 
         <button onclick="showPage('home')">🏠 Home</button>
+
         <button onclick="showPage('deposit')">💰 Deposit</button>
+
         <button onclick="showPage('withdrawal')">💸 Withdrawal</button>
+
         <button onclick="showPage('fundtransfer')">🔄 Fund Transfer</button>
+
         <button onclick="showPage('imps')">📲 IMPS</button>
+
         <button onclick="showPage('fixdeposit')">🏦 Fix Deposit</button>
+
         <button onclick="showPage('settlement')">📑 Settlement</button>
+
         <button onclick="showPage('commission')">📊 Commission</button>
+
         <button onclick="showPage('salary')">👨‍💼 Salary</button>
+
         <button onclick="showPage('shopexp')">🛒 Shop Expense</button>
+
         <button onclick="showPage('search')">🔍 Search</button>
+
         <button onclick="showPage('report')">📄 Report</button>
+
         <button onclick="showPage('eod')">📅 EOD</button>
+
         <button onclick="showPage('logout')">🚪 Logout</button>
 
     </div>
 
     <!-- MAIN BODY -->
+
     <div class="main-body">
 
+        <!-- HOME -->
+
         <div id="home" class="page active">
-            <h1>Home Dashboard</h1>
-            <div class="card">
-                Welcome to BCA Banking Dashboard.
+
+            <h1 style="color:maroon;">Dashboard</h1>
+
+            <div class="dashboard">
+
+                <div class="card">
+                    <h2>Today's Deposit</h2>
+                    <h1>₹ 25,000</h1>
+                </div>
+
+                <div class="card">
+                    <h2>Today's Withdrawal</h2>
+                    <h1>₹ 18,500</h1>
+                </div>
+
+                <div class="card">
+                    <h2>Today's IMPS</h2>
+                    <h1>₹ 12,000</h1>
+                </div>
+
+                <div class="card">
+                    <h2>Fund Transfer</h2>
+                    <h1>₹ 8,000</h1>
+                </div>
+
+                <div class="card">
+                    <h2>Daily Commission</h2>
+                    <h1>₹ 1,250</h1>
+                </div>
+
+                <div class="card">
+                    <h2>Total Cash</h2>
+                    <h1>₹ 2,45,000</h1>
+                </div>
+
             </div>
+
         </div>
+
+        <!-- DEPOSIT -->
 
         <div id="deposit" class="page">
-            <h1>Deposit Form</h1>
-            <div class="card">
-                Deposit page content here...
+
+            <h1 style="color:maroon;">Deposit Form</h1>
+
+            <div class="form-box">
+
+                <h2>Deposit Entry Form</h2>
+
+                <br>
+
+                <label>Account Number</label><br><br>
+                <input type="text" style="width:300px;height:35px;"><br><br>
+
+                <label>Customer Name</label><br><br>
+                <input type="text" style="width:300px;height:35px;"><br><br>
+
+                <label>Amount</label><br><br>
+                <input type="text" style="width:300px;height:35px;"><br><br>
+
+                <button style="padding:10px 25px;background:maroon;color:white;border:none;">
+                    Save
+                </button>
+
             </div>
+
         </div>
+
+        <!-- WITHDRAWAL -->
 
         <div id="withdrawal" class="page">
-            <h1>Withdrawal Form</h1>
-            <div class="card">
-                Withdrawal page content here...
+
+            <h1 style="color:maroon;">Withdrawal Form</h1>
+
+            <div class="form-box">
+
+                Withdrawal form content here...
+
             </div>
+
         </div>
+
+        <!-- FUND TRANSFER -->
 
         <div id="fundtransfer" class="page">
-            <h1>Fund Transfer</h1>
-            <div class="card">
-                Fund transfer content here...
+
+            <h1 style="color:maroon;">Fund Transfer</h1>
+
+            <div class="form-box">
+
+                Fund transfer form here...
+
             </div>
+
         </div>
+
+        <!-- IMPS -->
 
         <div id="imps" class="page">
-            <h1>IMPS Transfer</h1>
-            <div class="card">
-                IMPS transaction content here...
+
+            <h1 style="color:maroon;">IMPS</h1>
+
+            <div class="form-box">
+
+                IMPS transaction form here...
+
             </div>
+
         </div>
+
+        <!-- FIX DEPOSIT -->
 
         <div id="fixdeposit" class="page">
-            <h1>Fix Deposit</h1>
-            <div class="card">
-                FD details here...
+
+            <h1 style="color:maroon;">Fix Deposit</h1>
+
+            <div class="form-box">
+
+                FD form here...
+
             </div>
+
         </div>
+
+        <!-- SETTLEMENT -->
 
         <div id="settlement" class="page">
-            <h1>Settlement</h1>
-            <div class="card">
+
+            <h1 style="color:maroon;">Settlement</h1>
+
+            <div class="form-box">
+
                 Settlement records here...
+
             </div>
+
         </div>
+
+        <!-- COMMISSION -->
 
         <div id="commission" class="page">
-            <h1>Commission</h1>
-            <div class="card">
-                Commission details here...
+
+            <h1 style="color:maroon;">Commission</h1>
+
+            <div class="form-box">
+
+                Commission report here...
+
             </div>
+
         </div>
+
+        <!-- SALARY -->
 
         <div id="salary" class="page">
-            <h1>Salary Management</h1>
-            <div class="card">
-                Employee salary details here...
+
+            <h1 style="color:maroon;">Salary</h1>
+
+            <div class="form-box">
+
+                Salary details here...
+
             </div>
+
         </div>
+
+        <!-- SHOP EXPENSE -->
 
         <div id="shopexp" class="page">
-            <h1>Shop Expense</h1>
-            <div class="card">
-                Shop expenses details here...
+
+            <h1 style="color:maroon;">Shop Expense</h1>
+
+            <div class="form-box">
+
+                Shop expenses here...
+
             </div>
+
         </div>
+
+        <!-- SEARCH -->
 
         <div id="search" class="page">
-            <h1>Search Records</h1>
-            <div class="card">
-                Search functionality here...
+
+            <h1 style="color:maroon;">Search</h1>
+
+            <div class="form-box">
+
+                Search records here...
+
             </div>
+
         </div>
+
+        <!-- REPORT -->
 
         <div id="report" class="page">
-            <h1>Reports</h1>
-            <div class="card">
-                Reports section here...
+
+            <h1 style="color:maroon;">Report</h1>
+
+            <div class="form-box">
+
+                Reports here...
+
             </div>
+
         </div>
+
+        <!-- EOD -->
 
         <div id="eod" class="page">
-            <h1>End Of Day (EOD)</h1>
-            <div class="card">
-                EOD reports here...
+
+            <h1 style="color:maroon;">End Of Day (EOD)</h1>
+
+            <div class="form-box">
+
+                Daily closing report here...
+
             </div>
+
         </div>
 
+        <!-- LOGOUT -->
+
         <div id="logout" class="page">
-            <h1>Logout</h1>
-            <div class="card">
-                Logout successfully...
+
+            <h1 style="color:maroon;">Logout</h1>
+
+            <div class="form-box">
+
+                Logout successful...
+
             </div>
+
         </div>
 
     </div>
@@ -280,26 +477,39 @@
 </div>
 
 <!-- BOTTOM MENU -->
+
 <div class="bottom-menu">
-    <div>Home</div>
-    <div>Deposit</div>
-    <div>Withdrawal</div>
-    <div>Report</div>
-    <div>EOD</div>
-    <div>Logout</div>
+
+    <button onclick="showPage('home')">Home</button>
+
+    <button onclick="showPage('deposit')">Deposit</button>
+
+    <button onclick="showPage('withdrawal')">Withdrawal</button>
+
+    <button onclick="showPage('report')">Report</button>
+
+    <button onclick="showPage('eod')">EOD</button>
+
+    <button onclick="showPage('logout')">Logout</button>
+
 </div>
+
+<!-- SCRIPT -->
 
 <script>
 
 function showPage(pageId){
 
-    let pages = document.querySelectorAll('.page');
+    let pages = document.querySelectorAll(".page");
 
     pages.forEach(function(page){
-        page.classList.remove('active');
+
+        page.classList.remove("active");
+
     });
 
-    document.getElementById(pageId).classList.add('active');
+    document.getElementById(pageId).classList.add("active");
+
 }
 
 </script>
