@@ -701,107 +701,109 @@ body{
 <!-- ========================= -->
 <!-- JAVASCRIPT -->
 <!-- ========================= -->
+<!-- ========================= -->
+<!-- SCRIPT -->
+<!-- ========================= -->
 
 <script>
 
 function calculateTotal(){
 
-    // NOTE VALUES
+    // GET QTY
 
-    let n500 = parseInt(document.getElementById("n500").value) || 0;
-    let n200 = parseInt(document.getElementById("n200").value) || 0;
-    let n100 = parseInt(document.getElementById("n100").value) || 0;
-    let n50 = parseInt(document.getElementById("n50").value) || 0;
-    let n20 = parseInt(document.getElementById("n20").value) || 0;
-    let n10 = parseInt(document.getElementById("n10").value) || 0;
-    let n5 = parseInt(document.getElementById("n5").value) || 0;
-    let ncoin = parseInt(document.getElementById("ncoin").value) || 0;
+    let n500  = Number(document.getElementById("n500").value)  || 0;
+    let n200  = Number(document.getElementById("n200").value)  || 0;
+    let n100  = Number(document.getElementById("n100").value)  || 0;
+    let n50   = Number(document.getElementById("n50").value)   || 0;
+    let n20   = Number(document.getElementById("n20").value)   || 0;
+    let n10   = Number(document.getElementById("n10").value)   || 0;
+    let n5    = Number(document.getElementById("n5").value)    || 0;
+    let ncoin = Number(document.getElementById("ncoin").value) || 0;
 
-    // TOTAL
+    // CALCULATE SINGLE TOTAL
 
-    let t500 = n500 * 500;
-    let t200 = n200 * 200;
-    let t100 = n100 * 100;
-    let t50 = n50 * 50;
-    let t20 = n20 * 20;
-    let t10 = n10 * 10;
-    let t5 = n5 * 5;
+    let t500  = n500 * 500;
+    let t200  = n200 * 200;
+    let t100  = n100 * 100;
+    let t50   = n50 * 50;
+    let t20   = n20 * 20;
+    let t10   = n10 * 10;
+    let t5    = n5 * 5;
     let tcoin = ncoin;
 
-    // SHOW TOTAL
+    // SHOW SINGLE TOTAL
 
-    document.getElementById("t500").value = t500;
-    document.getElementById("t200").value = t200;
-    document.getElementById("t100").value = t100;
-    document.getElementById("t50").value = t50;
-    document.getElementById("t20").value = t20;
-    document.getElementById("t10").value = t10;
-    document.getElementById("t5").value = t5;
+    document.getElementById("t500").value  = t500;
+    document.getElementById("t200").value  = t200;
+    document.getElementById("t100").value  = t100;
+    document.getElementById("t50").value   = t50;
+    document.getElementById("t20").value   = t20;
+    document.getElementById("t10").value   = t10;
+    document.getElementById("t5").value    = t5;
     document.getElementById("tcoin").value = tcoin;
 
     // GRAND TOTAL
 
     let grandTotal =
-    t500 + t200 + t100 +
-    t50 + t20 + t10 +
-    t5 + tcoin;
+        t500 +
+        t200 +
+        t100 +
+        t50 +
+        t20 +
+        t10 +
+        t5 +
+        tcoin;
+
+    // SHOW GRAND TOTAL
 
     document.getElementById("grandtotal").value = grandTotal;
 
-    // WORDS
+    // SHOW IN WORDS
 
     document.getElementById("amountwords").innerHTML =
     numberToWords(grandTotal) + " Rupees Only";
 
 }
 
+
+/* ========================= */
 /* NUMBER TO WORDS */
+/* ========================= */
 
 function numberToWords(num){
 
+    if(num == 0) return "Zero";
+
     let a = ['','One ','Two ','Three ','Four ','Five ','Six ','Seven ','Eight ','Nine ','Ten ','Eleven ','Twelve ','Thirteen ','Fourteen ','Fifteen ','Sixteen ','Seventeen ','Eighteen ','Nineteen '];
 
-    let b = ['', '', 'Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
+    let b = ['', '', 'Twenty ','Thirty ','Forty ','Fifty ','Sixty ','Seventy ','Eighty ','Ninety '];
 
-    if ((num = num.toString()).length > 9) return 'Overflow';
+    function inWords(num){
 
-    let n = ('000000000' + num)
-    .substr(-9)
-    .match(/(\d{2})(\d{2})(\d{2})(\d{3})/);
+        if(num < 20)
+            return a[num];
 
-    if (!n) return;
+        if(num < 100)
+            return b[Math.floor(num / 10)] + a[num % 10];
 
-    let str = '';
+        if(num < 1000)
+            return a[Math.floor(num / 100)] + 'Hundred ' + inWords(num % 100);
 
-    str += (n[1] != 0) ?
-    (a[Number(n[1])] ||
-    b[n[1][0]] + ' ' +
-    a[n[1][1]]) + 'Crore ' : '';
+        if(num < 100000)
+            return inWords(Math.floor(num / 1000)) + 'Thousand ' + inWords(num % 1000);
 
-    str += (n[2] != 0) ?
-    (a[Number(n[2])] ||
-    b[n[2][0]] + ' ' +
-    a[n[2][1]]) + 'Lakh ' : '';
+        if(num < 10000000)
+            return inWords(Math.floor(num / 100000)) + 'Lakh ' + inWords(num % 100000);
 
-    str += (n[3] != 0) ?
-    (a[Number(n[3])] ||
-    b[n[3][0]] + ' ' +
-    a[n[3][1]]) + 'Thousand ' : '';
+        return inWords(Math.floor(num / 10000000)) + 'Crore ' + inWords(num % 10000000);
 
-    str += (n[4] != 0) ?
-    (a[Number(n[4][0])] + 'Hundred ' : '') +
-    (n[4][1] != 0 ?
-    'and ' +
-    (a[Number(n[4][1])] ||
-    b[n[4][1][0]] + ' ' +
-    a[n[4][1][1]]) : '');
+    }
 
-    return str;
+    return inWords(num);
 
 }
 
 </script>
-
 <!-- ========================= -->
 <!-- DEPOSIT PAGE END -->
 <!-- ========================= -->
