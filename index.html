@@ -182,7 +182,7 @@ body{
     <div>WELCOME BCA PNB GARHI BIRBAL</div>
 
     <div class="header-right">
-        Welcome Prince Arya
+        By:- Prince Arya
     </div>
 
 </div>
@@ -271,38 +271,434 @@ body{
                     <h1>₹ 2,45,000</h1>
                 </div>
 
+                <div class="card">
+                    <h2>Total bank Balance</h2>
+                    <h1>₹ 2,50,000</h1>
+                </div>
+
             </div>
 
         </div>
 
-        <!-- DEPOSIT -->
+       <!-- DEPOSIT PAGE -->
 
-        <div id="deposit" class="page">
+<div id="deposit" class="page">
 
-            <h1 style="color:maroon;">Deposit Form</h1>
+    <h1 style="color:maroon;">Deposit Form</h1>
 
-            <div class="form-box">
+    <div style="display:flex; gap:20px;">
 
-                <h2>Deposit Entry Form</h2>
+        <!-- LEFT SIDE FORM -->
 
-                <br>
+        <div class="form-box" style="width:55%;">
 
-                <label>Account Number</label><br><br>
-                <input type="text" style="width:300px;height:35px;"><br><br>
+            <h2 style="color:maroon;">Deposit Entry Form</h2>
 
-                <label>Customer Name</label><br><br>
-                <input type="text" style="width:300px;height:35px;"><br><br>
+            <br>
 
-                <label>Amount</label><br><br>
-                <input type="text" style="width:300px;height:35px;"><br><br>
+            <!-- TOP DETAILS -->
 
-                <button style="padding:10px 25px;background:maroon;color:white;border:none;">
-                    Save
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;">
+
+                <div>
+                    <label>Account Number</label><br><br>
+                    <input type="text" id="accountno" class="textbox">
+                </div>
+
+                <div>
+                    <label>Customer Name</label><br><br>
+                    <input type="text" id="name" class="textbox">
+                </div>
+
+                <div>
+                    <label>Mobile Number</label><br><br>
+                    <input type="text" class="textbox">
+                </div>
+
+                <div>
+                    <label>Amount</label><br><br>
+                    <input type="text" id="amount" class="textbox">
+                </div>
+
+            </div>
+
+            <br>
+
+            <!-- NOTE SECTION -->
+
+            <h2 style="color:maroon;">Cash Details</h2>
+
+            <br>
+
+            <table style="width:100%; border-collapse:collapse;" border="1">
+
+                <tr style="background:maroon;color:white;height:40px;">
+                    <th>Note</th>
+                    <th>Qty</th>
+                    <th>Total</th>
+                </tr>
+
+                <tr>
+                    <td align="center">500</td>
+                    <td align="center">
+                        <input type="number" id="n500" value="0"
+                        onkeyup="calculateTotal()"
+                        class="smallbox">
+                    </td>
+                    <td align="center">
+                        <input type="text" id="t500" value="0" readonly class="totalbox">
+                    </td>
+                </tr>
+
+                <tr>
+                    <td align="center">200</td>
+                    <td align="center">
+                        <input type="number" id="n200" value="0"
+                        onkeyup="calculateTotal()"
+                        class="smallbox">
+                    </td>
+                    <td align="center">
+                        <input type="text" id="t200" value="0" readonly class="totalbox">
+                    </td>
+                </tr>
+
+                <tr>
+                    <td align="center">100</td>
+                    <td align="center">
+                        <input type="number" id="n100" value="0"
+                        onkeyup="calculateTotal()"
+                        class="smallbox">
+                    </td>
+                    <td align="center">
+                        <input type="text" id="t100" value="0" readonly class="totalbox">
+                    </td>
+                </tr>
+
+                <tr>
+                    <td align="center">50</td>
+                    <td align="center">
+                        <input type="number" id="n50" value="0"
+                        onkeyup="calculateTotal()"
+                        class="smallbox">
+                    </td>
+                    <td align="center">
+                        <input type="text" id="t50" value="0" readonly class="totalbox">
+                    </td>
+                </tr>
+
+                <tr>
+                    <td align="center">20</td>
+                    <td align="center">
+                        <input type="number" id="n20" value="0"
+                        onkeyup="calculateTotal()"
+                        class="smallbox">
+                    </td>
+                    <td align="center">
+                        <input type="text" id="t20" value="0" readonly class="totalbox">
+                    </td>
+                </tr>
+
+                <tr>
+                    <td align="center">10</td>
+                    <td align="center">
+                        <input type="number" id="n10" value="0"
+                        onkeyup="calculateTotal()"
+                        class="smallbox">
+                    </td>
+                    <td align="center">
+                        <input type="text" id="t10" value="0" readonly class="totalbox">
+                    </td>
+                </tr>
+
+                <tr>
+                    <td align="center">5</td>
+                    <td align="center">
+                        <input type="number" id="n5" value="0"
+                        onkeyup="calculateTotal()"
+                        class="smallbox">
+                    </td>
+                    <td align="center">
+                        <input type="text" id="t5" value="0" readonly class="totalbox">
+                    </td>
+                </tr>
+
+                <tr>
+                    <td align="center">Coin</td>
+                    <td align="center">
+                        <input type="number" id="ncoin" value="0"
+                        onkeyup="calculateTotal()"
+                        class="smallbox">
+                    </td>
+                    <td align="center">
+                        <input type="text" id="tcoin" value="0" readonly class="totalbox">
+                    </td>
+                </tr>
+
+            </table>
+
+            <br>
+
+            <!-- GRAND TOTAL -->
+
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+
+                <h2 style="color:maroon;">
+                    Grand Total :
+                </h2>
+
+                <input type="text"
+                id="grandtotal"
+                value="0"
+                readonly
+                style="width:200px;height:40px;
+                font-size:22px;
+                text-align:center;
+                font-weight:bold;
+                color:maroon;">
+
+            </div>
+
+            <br>
+
+            <!-- WORD AMOUNT -->
+
+            <div style="background:#fff3cd;
+            padding:15px;
+            border-radius:5px;
+            border:1px solid #ffeeba;">
+
+                <b>Amount In Words :</b>
+
+                <span id="amountwords">
+                    Zero Rupees Only
+                </span>
+
+            </div>
+
+            <br>
+
+            <!-- BUTTONS -->
+
+            <div style="display:flex;gap:15px;">
+
+                <button class="btn savebtn">
+                    SAVE
+                </button>
+
+                <button class="btn updatebtn">
+                    UPDATE
+                </button>
+
+                <button class="btn deletebtn">
+                    DELETE
+                </button>
+
+                <button class="btn clearbtn">
+                    CLEAR
                 </button>
 
             </div>
 
         </div>
+
+        <!-- RIGHT SIDE GRID -->
+
+        <div class="form-box" style="width:45%;">
+
+            <h2 style="color:maroon;">
+                Today's Deposit Entries
+            </h2>
+
+            <br>
+
+            <table style="width:100%;
+            border-collapse:collapse;"
+            border="1">
+
+                <tr style="background:maroon;color:white;height:40px;">
+
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Amount</th>
+
+                </tr>
+
+                <tr height="35">
+                    <td align="center">1</td>
+                    <td align="center">Ravi Kumar</td>
+                    <td align="center">25000</td>
+                </tr>
+
+                <tr height="35">
+                    <td align="center">2</td>
+                    <td align="center">Prince Arya</td>
+                    <td align="center">12000</td>
+                </tr>
+
+                <tr height="35">
+                    <td align="center">3</td>
+                    <td align="center">Amit</td>
+                    <td align="center">5500</td>
+                </tr>
+
+            </table>
+
+        </div>
+
+    </div>
+
+</div>
+
+<!-- STYLE -->
+
+<style>
+
+.textbox{
+    width:100%;
+    height:38px;
+    border:1px solid #ccc;
+    border-radius:5px;
+    padding-left:10px;
+}
+
+.smallbox{
+    width:80px;
+    height:35px;
+    text-align:center;
+    border:1px solid #ccc;
+}
+
+.totalbox{
+    width:120px;
+    height:35px;
+    text-align:center;
+    background:#f5f5f5;
+    border:1px solid #ccc;
+}
+
+.btn{
+    padding:12px 25px;
+    border:none;
+    color:white;
+    cursor:pointer;
+    font-weight:bold;
+    border-radius:5px;
+}
+
+.savebtn{
+    background:green;
+}
+
+.updatebtn{
+    background:orange;
+}
+
+.deletebtn{
+    background:red;
+}
+
+.clearbtn{
+    background:#555;
+}
+
+.btn:hover{
+    opacity:0.8;
+}
+
+</style>
+
+<!-- SCRIPT -->
+
+<script>
+
+function calculateTotal(){
+
+    let n500 = parseInt(document.getElementById("n500").value) || 0;
+    let n200 = parseInt(document.getElementById("n200").value) || 0;
+    let n100 = parseInt(document.getElementById("n100").value) || 0;
+    let n50 = parseInt(document.getElementById("n50").value) || 0;
+    let n20 = parseInt(document.getElementById("n20").value) || 0;
+    let n10 = parseInt(document.getElementById("n10").value) || 0;
+    let n5 = parseInt(document.getElementById("n5").value) || 0;
+    let ncoin = parseInt(document.getElementById("ncoin").value) || 0;
+
+    let t500 = n500 * 500;
+    let t200 = n200 * 200;
+    let t100 = n100 * 100;
+    let t50 = n50 * 50;
+    let t20 = n20 * 20;
+    let t10 = n10 * 10;
+    let t5 = n5 * 5;
+    let tcoin = ncoin;
+
+    document.getElementById("t500").value = t500;
+    document.getElementById("t200").value = t200;
+    document.getElementById("t100").value = t100;
+    document.getElementById("t50").value = t50;
+    document.getElementById("t20").value = t20;
+    document.getElementById("t10").value = t10;
+    document.getElementById("t5").value = t5;
+    document.getElementById("tcoin").value = tcoin;
+
+    let grand =
+    t500 + t200 + t100 + t50 +
+    t20 + t10 + t5 + tcoin;
+
+    document.getElementById("grandtotal").value = grand;
+
+    document.getElementById("amount").value = grand;
+
+    document.getElementById("amountwords").innerHTML =
+    numberToWords(grand) + " Rupees Only";
+
+}
+
+/* NUMBER TO WORDS */
+
+function numberToWords(num) {
+
+    let a = ['','One ','Two ','Three ','Four ','Five ','Six ','Seven ','Eight ','Nine ','Ten ','Eleven ','Twelve ','Thirteen ','Fourteen ','Fifteen ','Sixteen ','Seventeen ','Eighteen ','Nineteen '];
+
+    let b = ['', '', 'Twenty','Thirty','Forty','Fifty', 'Sixty','Seventy','Eighty','Ninety'];
+
+    if ((num = num.toString()).length > 9) return 'Overflow';
+
+    let n = ('000000000' + num)
+    .substr(-9)
+    .match(/(\d{2})(\d{2})(\d{2})(\d{3})/);
+
+    if (!n) return;
+
+    let str = '';
+
+    str += (n[1] != 0) ?
+    (a[Number(n[1])] ||
+    b[n[1][0]] + ' ' +
+    a[n[1][1]]) + 'Crore ' : '';
+
+    str += (n[2] != 0) ?
+    (a[Number(n[2])] ||
+    b[n[2][0]] + ' ' +
+    a[n[2][1]]) + 'Lakh ' : '';
+
+    str += (n[3] != 0) ?
+    (a[Number(n[3])] ||
+    b[n[3][0]] + ' ' +
+    a[n[3][1]]) + 'Thousand ' : '';
+
+    str += (n[4] != 0) ?
+    (a[Number(n[4][0])] + 'Hundred ' : '') +
+    (n[4][1] != 0 ?
+    'and ' +
+    (a[Number(n[4][1])] ||
+    b[n[4][1][0]] + ' ' +
+    a[n[4][1][1]]) : '');
+
+    return str;
+
+}
+
+</script>
 
         <!-- WITHDRAWAL -->
 
