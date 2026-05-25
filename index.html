@@ -280,192 +280,189 @@ body{
 
         </div>
 
-       <!-- DEPOSIT PAGE -->
+     <!-- ========================= -->
+<!-- DEPOSIT PAGE START -->
+<!-- ========================= -->
 
 <div id="deposit" class="page">
 
-    <h1 style="color:maroon;">Deposit Form</h1>
+    <h1 class="page-title">Deposit Form</h1>
 
-    <div style="display:flex; gap:20px;">
+    <div class="deposit-container">
 
-        <!-- LEFT SIDE FORM -->
+        <!-- LEFT FORM -->
 
-        <div class="form-box" style="width:55%;">
+        <div class="deposit-form">
 
-            <h2 style="color:maroon;">Deposit Entry Form</h2>
+            <h2 class="form-title">Deposit Entry</h2>
 
-            <br>
+            <!-- TOP INPUTS -->
 
-            <!-- TOP DETAILS -->
+            <div class="top-fields">
 
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;">
-
-                <div>
-                    <label>Account Number</label><br><br>
+                <div class="field-box">
+                    <label>Account Number</label>
                     <input type="text" id="accountno" class="textbox">
                 </div>
 
-                <div>
-                    <label>Customer Name</label><br><br>
-                    <input type="text" id="name" class="textbox">
+                <div class="field-box">
+                    <label>Customer Name</label>
+                    <input type="text" id="custname" class="textbox">
                 </div>
 
-                <div>
-                    <label>Mobile Number</label><br><br>
-                    <input type="text" class="textbox">
+                <div class="field-box">
+                    <label>Mobile Number</label>
+                    <input type="text" id="mobile" class="textbox">
                 </div>
 
-                <div>
-                    <label>Amount</label><br><br>
-                    <input type="text" id="amount" class="textbox">
+                <div class="field-box">
+                    <label>Total Amount</label>
+                    <input type="text" id="grandtotal" class="textbox total-main" readonly>
                 </div>
 
             </div>
 
-            <br>
+            <!-- CASH TABLE -->
 
-            <!-- NOTE SECTION -->
+            <div class="cash-section">
 
-            <h2 style="color:maroon;">Cash Details</h2>
+                <h3 class="cash-title">Cash Details</h3>
 
-            <br>
+                <table class="cash-table">
 
-            <table style="width:100%; border-collapse:collapse;" border="1">
+                    <tr class="table-head">
+                        <th>Note</th>
+                        <th>Qty</th>
+                        <th>Total</th>
+                    </tr>
 
-                <tr style="background:maroon;color:white;height:40px;">
-                    <th>Note</th>
-                    <th>Qty</th>
-                    <th>Total</th>
-                </tr>
+                    <tr>
+                        <td>500</td>
+                        <td>
+                            <input type="number" id="n500" value="0"
+                            oninput="calculateTotal()"
+                            class="qtybox">
+                        </td>
+                        <td>
+                            <input type="text" id="t500"
+                            value="0"
+                            readonly
+                            class="amountbox">
+                        </td>
+                    </tr>
 
-                <tr>
-                    <td align="center">500</td>
-                    <td align="center">
-                        <input type="number" id="n500" value="0"
-                        onkeyup="calculateTotal()"
-                        class="smallbox">
-                    </td>
-                    <td align="center">
-                        <input type="text" id="t500" value="0" readonly class="totalbox">
-                    </td>
-                </tr>
+                    <tr>
+                        <td>200</td>
+                        <td>
+                            <input type="number" id="n200" value="0"
+                            oninput="calculateTotal()"
+                            class="qtybox">
+                        </td>
+                        <td>
+                            <input type="text" id="t200"
+                            value="0"
+                            readonly
+                            class="amountbox">
+                        </td>
+                    </tr>
 
-                <tr>
-                    <td align="center">200</td>
-                    <td align="center">
-                        <input type="number" id="n200" value="0"
-                        onkeyup="calculateTotal()"
-                        class="smallbox">
-                    </td>
-                    <td align="center">
-                        <input type="text" id="t200" value="0" readonly class="totalbox">
-                    </td>
-                </tr>
+                    <tr>
+                        <td>100</td>
+                        <td>
+                            <input type="number" id="n100" value="0"
+                            oninput="calculateTotal()"
+                            class="qtybox">
+                        </td>
+                        <td>
+                            <input type="text" id="t100"
+                            value="0"
+                            readonly
+                            class="amountbox">
+                        </td>
+                    </tr>
 
-                <tr>
-                    <td align="center">100</td>
-                    <td align="center">
-                        <input type="number" id="n100" value="0"
-                        onkeyup="calculateTotal()"
-                        class="smallbox">
-                    </td>
-                    <td align="center">
-                        <input type="text" id="t100" value="0" readonly class="totalbox">
-                    </td>
-                </tr>
+                    <tr>
+                        <td>50</td>
+                        <td>
+                            <input type="number" id="n50" value="0"
+                            oninput="calculateTotal()"
+                            class="qtybox">
+                        </td>
+                        <td>
+                            <input type="text" id="t50"
+                            value="0"
+                            readonly
+                            class="amountbox">
+                        </td>
+                    </tr>
 
-                <tr>
-                    <td align="center">50</td>
-                    <td align="center">
-                        <input type="number" id="n50" value="0"
-                        onkeyup="calculateTotal()"
-                        class="smallbox">
-                    </td>
-                    <td align="center">
-                        <input type="text" id="t50" value="0" readonly class="totalbox">
-                    </td>
-                </tr>
+                    <tr>
+                        <td>20</td>
+                        <td>
+                            <input type="number" id="n20" value="0"
+                            oninput="calculateTotal()"
+                            class="qtybox">
+                        </td>
+                        <td>
+                            <input type="text" id="t20"
+                            value="0"
+                            readonly
+                            class="amountbox">
+                        </td>
+                    </tr>
 
-                <tr>
-                    <td align="center">20</td>
-                    <td align="center">
-                        <input type="number" id="n20" value="0"
-                        onkeyup="calculateTotal()"
-                        class="smallbox">
-                    </td>
-                    <td align="center">
-                        <input type="text" id="t20" value="0" readonly class="totalbox">
-                    </td>
-                </tr>
+                    <tr>
+                        <td>10</td>
+                        <td>
+                            <input type="number" id="n10" value="0"
+                            oninput="calculateTotal()"
+                            class="qtybox">
+                        </td>
+                        <td>
+                            <input type="text" id="t10"
+                            value="0"
+                            readonly
+                            class="amountbox">
+                        </td>
+                    </tr>
 
-                <tr>
-                    <td align="center">10</td>
-                    <td align="center">
-                        <input type="number" id="n10" value="0"
-                        onkeyup="calculateTotal()"
-                        class="smallbox">
-                    </td>
-                    <td align="center">
-                        <input type="text" id="t10" value="0" readonly class="totalbox">
-                    </td>
-                </tr>
+                    <tr>
+                        <td>5</td>
+                        <td>
+                            <input type="number" id="n5" value="0"
+                            oninput="calculateTotal()"
+                            class="qtybox">
+                        </td>
+                        <td>
+                            <input type="text" id="t5"
+                            value="0"
+                            readonly
+                            class="amountbox">
+                        </td>
+                    </tr>
 
-                <tr>
-                    <td align="center">5</td>
-                    <td align="center">
-                        <input type="number" id="n5" value="0"
-                        onkeyup="calculateTotal()"
-                        class="smallbox">
-                    </td>
-                    <td align="center">
-                        <input type="text" id="t5" value="0" readonly class="totalbox">
-                    </td>
-                </tr>
+                    <tr>
+                        <td>Coin</td>
+                        <td>
+                            <input type="number" id="ncoin" value="0"
+                            oninput="calculateTotal()"
+                            class="qtybox">
+                        </td>
+                        <td>
+                            <input type="text" id="tcoin"
+                            value="0"
+                            readonly
+                            class="amountbox">
+                        </td>
+                    </tr>
 
-                <tr>
-                    <td align="center">Coin</td>
-                    <td align="center">
-                        <input type="number" id="ncoin" value="0"
-                        onkeyup="calculateTotal()"
-                        class="smallbox">
-                    </td>
-                    <td align="center">
-                        <input type="text" id="tcoin" value="0" readonly class="totalbox">
-                    </td>
-                </tr>
-
-            </table>
-
-            <br>
-
-            <!-- GRAND TOTAL -->
-
-            <div style="display:flex;justify-content:space-between;align-items:center;">
-
-                <h2 style="color:maroon;">
-                    Grand Total :
-                </h2>
-
-                <input type="text"
-                id="grandtotal"
-                value="0"
-                readonly
-                style="width:200px;height:40px;
-                font-size:22px;
-                text-align:center;
-                font-weight:bold;
-                color:maroon;">
+                </table>
 
             </div>
 
-            <br>
+            <!-- AMOUNT WORDS -->
 
-            <!-- WORD AMOUNT -->
-
-            <div style="background:#fff3cd;
-            padding:15px;
-            border-radius:5px;
-            border:1px solid #ffeeba;">
+            <div class="amount-word-box">
 
                 <b>Amount In Words :</b>
 
@@ -475,47 +472,31 @@ body{
 
             </div>
 
-            <br>
-
             <!-- BUTTONS -->
 
-            <div style="display:flex;gap:15px;">
+            <div class="button-section">
 
-                <button class="btn savebtn">
-                    SAVE
-                </button>
+                <button class="btn savebtn">SAVE</button>
 
-                <button class="btn updatebtn">
-                    UPDATE
-                </button>
+                <button class="btn updatebtn">UPDATE</button>
 
-                <button class="btn deletebtn">
-                    DELETE
-                </button>
+                <button class="btn deletebtn">DELETE</button>
 
-                <button class="btn clearbtn">
-                    CLEAR
-                </button>
+                <button class="btn clearbtn">CLEAR</button>
 
             </div>
 
         </div>
 
-        <!-- RIGHT SIDE GRID -->
+        <!-- RIGHT GRID -->
 
-        <div class="form-box" style="width:45%;">
+        <div class="deposit-grid">
 
-            <h2 style="color:maroon;">
-                Today's Deposit Entries
-            </h2>
+            <h2 class="form-title">Today's Deposit Entry</h2>
 
-            <br>
+            <table class="grid-table">
 
-            <table style="width:100%;
-            border-collapse:collapse;"
-            border="1">
-
-                <tr style="background:maroon;color:white;height:40px;">
+                <tr class="table-head">
 
                     <th>ID</th>
                     <th>Name</th>
@@ -523,22 +504,22 @@ body{
 
                 </tr>
 
-                <tr height="35">
-                    <td align="center">1</td>
-                    <td align="center">Ravi Kumar</td>
-                    <td align="center">25000</td>
+                <tr>
+                    <td>1</td>
+                    <td>Prince Arya</td>
+                    <td>25000</td>
                 </tr>
 
-                <tr height="35">
-                    <td align="center">2</td>
-                    <td align="center">Prince Arya</td>
-                    <td align="center">12000</td>
+                <tr>
+                    <td>2</td>
+                    <td>Ravi Kumar</td>
+                    <td>15000</td>
                 </tr>
 
-                <tr height="35">
-                    <td align="center">3</td>
-                    <td align="center">Amit</td>
-                    <td align="center">5500</td>
+                <tr>
+                    <td>3</td>
+                    <td>Amit</td>
+                    <td>8500</td>
                 </tr>
 
             </table>
@@ -549,40 +530,136 @@ body{
 
 </div>
 
-<!-- STYLE -->
+<!-- ========================= -->
+<!-- CSS -->
+<!-- ========================= -->
 
 <style>
 
+.page-title{
+    color:maroon;
+    margin-bottom:10px;
+}
+
+.deposit-container{
+    display:flex;
+    gap:15px;
+}
+
+.deposit-form{
+    width:58%;
+    background:white;
+    padding:12px;
+    border-radius:6px;
+    box-shadow:0 0 5px rgba(0,0,0,0.2);
+}
+
+.deposit-grid{
+    width:42%;
+    background:white;
+    padding:12px;
+    border-radius:6px;
+    box-shadow:0 0 5px rgba(0,0,0,0.2);
+}
+
+.form-title{
+    color:maroon;
+    margin-bottom:10px;
+}
+
+.top-fields{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+}
+
+.field-box label{
+    font-size:13px;
+    font-weight:bold;
+}
+
 .textbox{
     width:100%;
-    height:38px;
+    height:32px;
     border:1px solid #ccc;
-    border-radius:5px;
-    padding-left:10px;
+    border-radius:4px;
+    padding-left:8px;
+    margin-top:5px;
 }
 
-.smallbox{
-    width:80px;
-    height:35px;
-    text-align:center;
-    border:1px solid #ccc;
+.total-main{
+    font-weight:bold;
+    color:maroon;
 }
 
-.totalbox{
-    width:120px;
-    height:35px;
+.cash-section{
+    margin-top:15px;
+}
+
+.cash-title{
+    color:maroon;
+    margin-bottom:10px;
+}
+
+.cash-table{
+    width:100%;
+    border-collapse:collapse;
+}
+
+.cash-table th,
+.cash-table td{
+    border:1px solid #ddd;
     text-align:center;
+    padding:4px;
+    font-size:13px;
+}
+
+.table-head{
+    background:maroon;
+    color:white;
+    height:32px;
+}
+
+.qtybox{
+    width:55px;
+    height:28px;
+    text-align:center;
+    border:1px solid #ccc;
+    border-radius:3px;
+}
+
+.amountbox{
+    width:90px;
+    height:28px;
+    text-align:center;
+    border:1px solid #ccc;
     background:#f5f5f5;
-    border:1px solid #ccc;
+    border-radius:3px;
+}
+
+.amount-word-box{
+    margin-top:15px;
+    background:#fff3cd;
+    border:1px solid #ffe69c;
+    padding:10px;
+    border-radius:5px;
+    font-size:14px;
+}
+
+.button-section{
+    margin-top:15px;
+    display:flex;
+    gap:10px;
 }
 
 .btn{
-    padding:12px 25px;
+    padding:8px 18px;
     border:none;
     color:white;
     cursor:pointer;
+    border-radius:4px;
+    font-size:13px;
     font-weight:bold;
-    border-radius:5px;
 }
 
 .savebtn{
@@ -605,13 +682,31 @@ body{
     opacity:0.8;
 }
 
+.grid-table{
+    width:100%;
+    border-collapse:collapse;
+    margin-top:10px;
+}
+
+.grid-table th,
+.grid-table td{
+    border:1px solid #ddd;
+    text-align:center;
+    padding:8px;
+    font-size:13px;
+}
+
 </style>
 
-<!-- SCRIPT -->
+<!-- ========================= -->
+<!-- JAVASCRIPT -->
+<!-- ========================= -->
 
 <script>
 
 function calculateTotal(){
+
+    // NOTE VALUES
 
     let n500 = parseInt(document.getElementById("n500").value) || 0;
     let n200 = parseInt(document.getElementById("n200").value) || 0;
@@ -622,6 +717,8 @@ function calculateTotal(){
     let n5 = parseInt(document.getElementById("n5").value) || 0;
     let ncoin = parseInt(document.getElementById("ncoin").value) || 0;
 
+    // TOTAL
+
     let t500 = n500 * 500;
     let t200 = n200 * 200;
     let t100 = n100 * 100;
@@ -630,6 +727,8 @@ function calculateTotal(){
     let t10 = n10 * 10;
     let t5 = n5 * 5;
     let tcoin = ncoin;
+
+    // SHOW TOTAL
 
     document.getElementById("t500").value = t500;
     document.getElementById("t200").value = t200;
@@ -640,26 +739,29 @@ function calculateTotal(){
     document.getElementById("t5").value = t5;
     document.getElementById("tcoin").value = tcoin;
 
-    let grand =
-    t500 + t200 + t100 + t50 +
-    t20 + t10 + t5 + tcoin;
+    // GRAND TOTAL
 
-    document.getElementById("grandtotal").value = grand;
+    let grandTotal =
+    t500 + t200 + t100 +
+    t50 + t20 + t10 +
+    t5 + tcoin;
 
-    document.getElementById("amount").value = grand;
+    document.getElementById("grandtotal").value = grandTotal;
+
+    // WORDS
 
     document.getElementById("amountwords").innerHTML =
-    numberToWords(grand) + " Rupees Only";
+    numberToWords(grandTotal) + " Rupees Only";
 
 }
 
 /* NUMBER TO WORDS */
 
-function numberToWords(num) {
+function numberToWords(num){
 
     let a = ['','One ','Two ','Three ','Four ','Five ','Six ','Seven ','Eight ','Nine ','Ten ','Eleven ','Twelve ','Thirteen ','Fourteen ','Fifteen ','Sixteen ','Seventeen ','Eighteen ','Nineteen '];
 
-    let b = ['', '', 'Twenty','Thirty','Forty','Fifty', 'Sixty','Seventy','Eighty','Ninety'];
+    let b = ['', '', 'Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
 
     if ((num = num.toString()).length > 9) return 'Overflow';
 
@@ -700,6 +802,10 @@ function numberToWords(num) {
 
 </script>
 
+<!-- ========================= -->
+<!-- DEPOSIT PAGE END -->
+<!-- ========================= -->
+        
         <!-- WITHDRAWAL -->
 
         <div id="withdrawal" class="page">
