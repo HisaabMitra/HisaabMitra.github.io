@@ -109,10 +109,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         // Trigger specific code routines depending on the incoming view panel
         if (pageName === 'search') {
-            if (typeof initSearchModule === 'function') {
-                initSearchModule();
+            if (typeof initSearchModule === 'function') initSearchModule();
+        } 
+        else if (pageName === 'deposit') {
+            if (typeof initDepositModule === 'function') {
+                initDepositModule();
             } else {
-                console.error("Search engine handler framework script missing execution context.");
+                console.error("Deposit processing module initialization failed.");
             }
         }
     }
