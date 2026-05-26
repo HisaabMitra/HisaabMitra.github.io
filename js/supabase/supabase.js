@@ -1,7 +1,10 @@
-// Check if the library loaded correctly from CDN
+// js/supabase/supabase.js
+
 if (!window.supabase) {
     console.error("Supabase CDN failed to load. Check internet connectivity.");
 }
 
-// Create a single global Supabase client instance to use across all your files
-const supabaseClient = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_KEY);
+// Attach the client directly to the global window scope
+window.supabaseClient = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_KEY);
+
+console.log("Supabase Client initialized successfully.");
