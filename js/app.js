@@ -105,6 +105,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function initializePageModules(pageName) {
-        console.log(`Module loaded: ${pageName}`);
+        console.log(`Current active module initialized: ${pageName}`);
+        
+        // Trigger specific code routines depending on the incoming view panel
+        if (pageName === 'search') {
+            if (typeof initSearchModule === 'function') {
+                initSearchModule();
+            } else {
+                console.error("Search engine handler framework script missing execution context.");
+            }
+        }
     }
 });
