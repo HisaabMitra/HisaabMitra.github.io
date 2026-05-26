@@ -1,1 +1,85 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finance Portal</title>
+    <link rel="icon" href="assets/icons/favicon.ico" type="image/x-icon">
+    
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/layout.css">
+    <link rel="stylesheet" href="css/forms.css">
+    <link rel="stylesheet" href="css/buttons.css">
+</head>
+<body>
+
+    <div id="auth-screen" class="landing-container">
+        <div class="landing-info">
+            <div class="brand">
+                <img src="assets/images/logo.png" alt="Logo" class="logo">
+                <h1>Secure Portal</h1>
+            </div>
+            <p>Welcome to your all-in-one financial ecosystem. Manage dynamic deposits, real-time withdrawals, swift IMPS transfers, and comprehensive end-of-day reporting instantly and securely.</p>
+        </div>
+
+        <div class="login-panel">
+            <h2>User Login</h2>
+            <p class="subtitle">Please enter your credentials to access the system.</p>
+            
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="username">Email Address</label>
+                    <input type="email" id="username" placeholder="name@company.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" placeholder="••••••••" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Sign In</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="main-dashboard" class="dashboard-container hidden">
+        
+        <header class="top-banner">
+            <div class="banner-left">
+                <h2>FINANCIAL PORTAL SYSTEM</h2>
+            </div>
+            <div class="banner-right">
+                <span id="user-display">Welcome, User</span>
+                <button id="logout-btn" class="btn btn-secondary btn-sm">Logout</button>
+            </div>
+        </header>
+
+        <div class="dashboard-body">
+            <aside class="sidebar">
+                <nav class="nav-links">
+                    <button class="nav-btn active" data-page="home">🏠 Home / Overview</button>
+                    <button class="nav-btn" data-page="deposit">💰 Deposit Entry</button>
+                    <button class="nav-btn" data-page="withdrawal">💸 Withdrawal Entry</button>
+                    <button class="nav-btn" data-page="fundtransfer">🔄 Fund Transfer</button>
+                    <button class="nav-btn" data-page="imps">⚡ IMPS</button>
+                    <button class="nav-btn" data-page="report">📊 View Reports</button>
+                    <button class="nav-btn" data-page="expense">📉 Expense Entry</button>
+                </nav>
+            </aside>
+
+            <main class="main-content" id="workspace">
+                <h3>Loading Workspace...</h3>
+            </main>
+        </div>
+
+        <footer class="bottom-panel">
+            <button class="footer-btn" data-page="search">🔍 Quick Search (F4)</button>
+            <button class="footer-btn" data-page="commission">🎟️ Commission Calc</button>
+            <button class="footer-btn" data-page="eod">🏁 Run EOD</button>
+        </footer>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
