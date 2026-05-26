@@ -1,6 +1,6 @@
 // js/app.js
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     // --- Elements ---
     const loginForm = document.getElementById('login-form');
     const authScreen = document.getElementById('auth-screen');
@@ -10,33 +10,63 @@ document.addEventListener('DOMContentLoaded', () => {
     const navButtons = document.querySelectorAll('.nav-btn, .footer-btn');
 
     // ==========================================
-    // 1. AUTHENTICATION TRANSITION (Temporary Mimic)
+    // INITIAL SESSION CHECK (Auto-Login)
+    // ==========================================
+    const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
+    
+    if (session) {
+        showDashboard(session.user.email);
+    }
+
+    // ==========================================
+    // 1. SUPABASE AUTHENTICATION LOGIN
     // ==========================================
     if (loginForm) {
-        loginForm.addEventListener('submit', (e) => {
+        loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            // Temporary validation placeholder until Supabase integration
-            const email = document.getElementById('username').value;
+            const email = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            const submitBtn = loginForm.querySelector('button[type="submit"]');
             
-            // UI Toggle: Hide login, show dashboard
-            authScreen.classList.add('hidden');
-            mainDashboard.classList.remove('hidden');
-            
-            document.getElementById('user-display').textContent = `Welcome, ${email.split('@')[0]}`;
-            
-            // Load the default landing workspace view
-            loadPage('home');
+            // Visual loading state
+            submitBtn.textContent = "Verifying...";
+            submitBtn.disabled = true;
+
+            // Attempt actual login against Supabase Auth database
+            const { data, error } = await supabaseClient.auth.signInWithPassword({
+                email: email,
+                password: password,
+            });
+
+            if (error) {
+                alert(`Authentication Failed: ${error.message}`);
+                submitBtn.textContent = "Sign In";
+                submitBtn.disabled = false;
+            } else {
+                showDashboard(data.user.email);
+            }
         });
     }
 
     if (logoutBtn) {
-        logoutBtn.addEventListener('click', () => {
-            // Reverse UI Toggle
-            mainDashboard.classList.add('hidden');
-            authScreen.classList.remove('hidden');
-            loginForm.reset();
+        logoutBtn.addEventListener('click', async () => {
+            const { error } = await supabaseClient.auth.signOut();
+            if (error) {
+                alert(`Logout error: ${error.message}`);
+            } else {
+                mainDashboard.classList.add('hidden');
+                authScreen.classList.remove('hidden');
+                loginForm.reset();
+            }
         });
+    }
+
+    function showDashboard(userEmail) {
+        authScreen.classList.add('hidden');
+        mainDashboard.classList.remove('hidden');
+        document.getElementById('user-display').textContent = `Welcome, ${userEmail.split('@')[0]}`;
+        loadPage('home');
     }
 
     // ==========================================
@@ -46,7 +76,6 @@ document.addEventListener('DOMContentLoaded', () => {
         button.addEventListener('click', (e) => {
             const pageName = e.target.getAttribute('data-page');
             
-            // Only update "active" highlight styling for sidebar buttons
             if (e.target.classList.contains('nav-btn')) {
                 document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
                 e.target.classList.add('active');
@@ -56,43 +85,26 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    /**
-     * Fetches static HTML component files from the /pages directory 
-     * and injects them seamlessly into the dashboard workspace.
-     */
     async function loadPage(pageName) {
         workspace.innerHTML = `<div class="loading">Loading component...</div>`;
-        
         try {
-            // Note: GitHub pages paths are relative to root repository
-            const response = await fetch(`pages/${pageName}.html`);
-            
-            if (!response.ok) {
-                throw new Error(`Page component could not be retrieved (${response.status})`);
-            }
+            const response = await fetch(`./pages/${pageName}.html`);
+            if (!response.ok) throw new Error(`Page lookup error (${response.status})`);
             
             const htmlContent = await response.text();
             workspace.innerHTML = htmlContent;
-            
-            // Hook up specific module features if a specialized loader exists
             initializePageModules(pageName);
-            
         } catch (error) {
             console.error('Routing Error:', error);
             workspace.innerHTML = `
                 <div style="padding: 20px; color: var(--color-maroon-main); text-align: center;">
                     <h3>⚠️ Component Loading Failure</h3>
-                    <p>The layout module for <strong>"${pageName}.html"</strong> was not found or failed to render.</p>
+                    <p>The layout module for <strong>"${pageName}.html"</strong> failed to render.</p>
                 </div>`;
         }
     }
 
-    /**
-     * Placeholder function where we will initialize functional JS 
-     * (like deposit calculators, charts, tables) depending on which view is injected.
-     */
     function initializePageModules(pageName) {
-        console.log(`Current active module initialized: ${pageName}`);
-        // Future code steps will plug into here (e.g., if (pageName === 'deposit') initDeposit();)
+        console.log(`Module loaded: ${pageName}`);
     }
 });
