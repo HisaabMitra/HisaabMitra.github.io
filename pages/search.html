@@ -1,1 +1,47 @@
 
+<div class="page-header">
+    <h1 style="color: var(--color-maroon-main); margin-bottom: 10px;">Account Registry Lookup</h1>
+    <hr style="border: 0; border-top: 2px solid var(--color-yellow-main); margin-bottom: 20px;">
+</div>
+
+<div style="max-width: 700px; display: flex; flex-direction: column; gap: 20px;">
+    <div style="background: white; padding: 25px; border-radius: 6px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
+        <h3 style="margin-bottom: 15px; color: var(--color-text-dark);">Search Customer Account</h3>
+        <form id="search-account-form" style="display: flex; gap: 10px; align-items: flex-end;">
+            <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                <label for="search-query">Account Number or Phone Number</label>
+                <input type="text" id="search-query" placeholder="e.g., ACC1001 or 9876543210" required>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width: auto; padding: 12px 30px; height: 46px;">Search</button>
+        </form>
+    </div>
+
+    <div id="search-result-card" class="hidden" style="background: white; padding: 30px; border-radius: 6px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); border-top: 6px solid var(--color-maroon-main);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h3 style="color: var(--color-maroon-main);" id="res-name">Customer Name</h3>
+            <span id="res-status" style="background: #e6f4ea; color: #137333; padding: 4px 12px; border-radius: 50px; font-size: 0.85rem; font-weight: 600;">Active Account</span>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <div>
+                <p style="font-size: 0.85rem; color: var(--color-text-muted);">Account Number</p>
+                <p style="font-size: 1.1rem; font-weight: 600; color: var(--color-text-dark);" id="res-account-no">-</p>
+            </div>
+            <div>
+                <p style="font-size: 0.85rem; color: var(--color-text-muted);">Registered Contact</p>
+                <p style="font-size: 1.1rem; font-weight: 600; color: var(--color-text-dark);" id="res-phone">-</p>
+            </div>
+        </div>
+
+        <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+
+        <div style="background-color: var(--color-bg-light); padding: 15px 20px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-weight: 600; color: var(--color-text-dark);">Available Book Balance:</span>
+            <span style="font-size: 1.8rem; font-weight: 700; color: var(--color-maroon-dark);" id="res-balance">$0.00</span>
+        </div>
+    </div>
+
+    <div id="search-error-card" class="hidden" style="background: #fce8e6; color: #c5221f; padding: 15px 20px; border-radius: 6px; border-left: 5px solid #c5221f;">
+        <strong>⚠️ No Account Record Found:</strong> The requested parameters do not match any profile in the database.
+    </div>
+</div>
