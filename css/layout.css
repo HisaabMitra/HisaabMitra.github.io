@@ -1,1 +1,58 @@
+.main-layout{
+    color:white;
+    padding:20px;
+}
 
+.logo-box{
+    text-align:center;
+    margin-bottom:30px;
+}
+
+.logo-box img{
+    width:80px;
+}
+
+.menu{
+    list-style:none;
+}
+
+.menu li{
+    margin:15px 0;
+}
+
+.menu a{
+    color:white;
+    display:block;
+    padding:12px;
+    border-radius:8px;
+}
+
+.menu a:hover{
+    background:#1f4068;
+}
+
+.content{
+    flex:1;
+    padding:20px;
+}
+
+.topbar{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    background:white;
+    padding:15px;
+    border-radius:10px;
+    margin-bottom:20px;
+}
+
+.user-box{
+    display:flex;
+    align-items:center;
+    gap:10px;
+}
+
+.user-box img{
+    width:40px;
+    border-radius:50%;
+}
