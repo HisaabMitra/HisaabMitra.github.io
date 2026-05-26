@@ -1,1 +1,40 @@
 
+/* css/style.css */
+
+/* 1. Theme Theme Color Variables */
+:root {
+    --color-maroon-dark: #580016;
+    --color-maroon-main: #800020;
+    --color-maroon-light: #A31D3B;
+    
+    --color-yellow-main: #FFCC00;
+    --color-yellow-hover: #E6B800;
+    
+    --color-white: #FFFFFF;
+    --color-bg-light: #F9F9F9;
+    --color-text-dark: #222222;
+    --color-text-muted: #666666;
+    
+    --font-main: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    --transition-fast: 0.3s ease;
+}
+
+/* 2. Global Resets */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: var(--font-main);
+    background-color: var(--color-bg-light);
+    color: var(--text-dark);
+    line-height: 1.6;
+    overflow-x: hidden;
+}
+
+/* Utility classes for quick layout visibility */
+.hidden {
+    display: none !important;
+}
