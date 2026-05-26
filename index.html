@@ -87,7 +87,94 @@ body{
     overflow:auto;
     background:#fff;
 }
+/* HIDE FORMS */
 
+#registerForm,
+#forgotForm{
+    display:none;
+}
+</style>
+</head>
+
+<body>
+
+<!-- LOGIN PAGE -->
+<div class="container" id="loginPage">
+
+    <!-- LOGIN FORM -->
+    <div class="form-box" id="loginForm">
+
+        <h2>BCA LOGIN</h2>
+
+        <div class="input-box">
+            <label>Username</label>
+            <input type="text" id="loginUser">
+        </div>
+
+        <div class="input-box">
+            <label>Password</label>
+            <input type="password" id="loginPass">
+        </div>
+
+        <button class="btn" onclick="login()">Login</button>
+
+        <div class="link">
+            <a onclick="showRegister()">Create Account</a>
+        </div>
+
+        <div class="link">
+            <a onclick="showForgot()">Forgot Password</a>
+        </div>
+
+    </div>
+
+    <!-- REGISTER FORM -->
+    <div class="form-box" id="registerForm">
+
+        <h2>Create Account</h2>
+
+        <div class="input-box">
+            <label>Full Name</label>
+            <input type="text">
+        </div>
+
+        <div class="input-box">
+            <label>Username</label>
+            <input type="text">
+        </div>
+
+        <div class="input-box">
+            <label>Password</label>
+            <input type="password">
+        </div>
+
+        <button class="btn">Register</button>
+
+        <div class="link">
+            <a onclick="showLogin()">Back to Login</a>
+        </div>
+
+    </div>
+
+    <!-- FORGOT PASSWORD -->
+    <div class="form-box" id="forgotForm">
+
+        <h2>Forgot Password</h2>
+
+        <div class="input-box">
+            <label>Enter Email</label>
+            <input type="email">
+        </div>
+
+        <button class="btn">Reset Password</button>
+
+        <div class="link">
+            <a onclick="showLogin()">Back to Login</a>
+        </div>
+
+    </div>
+
+</div>
 /* PAGES */
 
 .page{
