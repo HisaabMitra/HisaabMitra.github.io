@@ -1,1 +1,142 @@
 
+/* css/layout.css */
+
+/* ========================================== */
+/* LANDING PAGE / LOGIN PANEL LAYOUT          */
+/* ========================================== */
+.landing-container {
+    display: flex;
+    height: 100vh;
+    width: 100vw;
+}
+
+.landing-info {
+    flex: 1;
+    background-color: var(--color-maroon-main);
+    color: var(--color-white);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 10%;
+    border-right: 6px solid var(--color-yellow-main);
+}
+
+.landing-info h1 {
+    font-size: 3rem;
+    margin-bottom: 20px;
+}
+
+.login-panel {
+    width: 450px;
+    background-color: var(--color-white);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 50px;
+    box-shadow: -5px 0 25px rgba(0,0,0,0.1);
+}
+
+.login-panel h2 {
+    color: var(--color-maroon-main);
+    font-size: 2rem;
+    margin-bottom: 5px;
+}
+
+.subtitle {
+    color: var(--color-text-muted);
+    margin-bottom: 30px;
+    font-size: 0.9rem;
+}
+
+/* ========================================== */
+/* DASHBOARD FRAMEWORK LAYOUT                 */
+/* ========================================== */
+.dashboard-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+
+/* Top Banner */
+.top-banner {
+    background-color: var(--color-maroon-dark);
+    color: var(--color-white);
+    height: 60px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 20px;
+    border-bottom: 4px solid var(--color-yellow-main);
+}
+
+/* Dashboard Splitting (Sidebar + Workspace) */
+.dashboard-body {
+    display: flex;
+    flex: 1;
+    overflow: hidden; /* Stops scrolling on global body */
+}
+
+/* Left Sidebar Navigation */
+.sidebar {
+    width: 260px;
+    background-color: var(--color-maroon-main);
+    padding-top: 20px;
+}
+
+.nav-links {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.nav-btn {
+    background: none;
+    border: none;
+    color: #FFCCD7;
+    text-align: left;
+    padding: 15px 20px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: var(--transition-fast);
+    border-left: 4px solid transparent;
+}
+
+.nav-btn:hover, .nav-btn.active {
+    background-color: var(--color-maroon-light);
+    color: var(--color-white);
+    border-left: 4px solid var(--color-yellow-main);
+}
+
+/* Main Workspace Content Box */
+.main-content {
+    flex: 1;
+    padding: 30px;
+    background-color: var(--color-bg-light);
+    overflow-y: auto; /* Allow scrolling inside workspace only */
+}
+
+/* Bottom Footer Button Strip */
+.bottom-panel {
+    background-color: #222;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    gap: 15px;
+}
+
+.footer-btn {
+    background-color: var(--color-maroon-light);
+    color: var(--color-white);
+    border: none;
+    padding: 6px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: var(--transition-fast);
+}
+
+.footer-btn:hover {
+    background-color: var(--color-yellow-main);
+    color: var(--color-maroon-dark);
+}
