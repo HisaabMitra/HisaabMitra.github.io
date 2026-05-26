@@ -1,15 +1,1 @@
-@media(max-width:768px){
 
-    .main-layout{
-        flex-direction:column;
-    }
-
-    .sidebar{
-        width:100%;
-    }
-
-    .cards{
-        grid-template-columns:1fr;
-    }
-
-}
