@@ -35,7 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ==========================================
-    // 2. USER REGISTRATION (PENDING APPROVAL)
+    // 2. USER REGISTRATION & RE-SUBMISSION
     // ==========================================
     if (registerForm) {
         registerForm.addEventListener('submit', async (e) => {
@@ -46,31 +46,60 @@ document.addEventListener('DOMContentLoaded', () => {
             const role = document.getElementById('reg-role').value;
             const submitBtn = registerForm.querySelector('button[type="submit"]');
 
-            submitBtn.textContent = "Submitting Request...";
+            submitBtn.textContent = "Processing Request...";
             submitBtn.disabled = true;
 
             try {
-                const { data, error } = await window.supabaseClient
+                // पहले चेक करें कि क्या यह ईमेल पहले से रिजेक्टेड लिस्ट में मौजूद है?
+                const { data: existingUser, error: checkError } = await window.supabaseClient
                     .from('user_roles')
-                    .insert([
-                        { full_name: name, email: email, password_text: password, role: role, status: 'pending' }
-                    ]);
+                    .select('*')
+                    .eq('email', email);
 
-                if (error) throw error;
+                if (checkError) throw checkError;
 
-                alert("✅ Registration Request Submitted! It is pending approval from Super Admin.");
+                if (existingUser && existingUser.length > 0 && existingUser[0].status === 'rejected') {
+                    // सुधार: अगर पुराना यूज़र रिजेक्टेड था, तो उसे 'UPDATE' करें और वापस 'pending' कर दें
+                    const { error: updateError } = await window.supabaseClient
+                        .from('user_roles')
+                        .update({
+                            full_name: name,
+                            password_text: password,
+                            role: role,
+                            status: 'pending', // वापस पेंडिंग कर दिया ताकि सुपर एडमिन को दोबारा दिखे
+                            objection_remark: null // पुराना आब्जेक्शन नोट साफ कर दिया
+                        })
+                        .eq('email', email);
+
+                    if (updateError) throw updateError;
+                    alert("🔄 Request Re-Submitted Successfully! Your corrected details have been sent back to Super Admin for approval.");
+                } else {
+                    // नॉर्मल प्रोसेस: अगर नया यूज़र है, तो फ्रेश इंसर्ट करें
+                    const { error: insertError } = await window.supabaseClient
+                        .from('user_roles')
+                        .insert([
+                            { full_name: name, email: email, password_text: password, role: role, status: 'pending' }
+                        ]);
+
+                    if (insertError) throw insertError;
+                    alert("✅ Registration Request Submitted! It is pending approval from Super Admin.");
+                }
+
+                // फॉर्म रीसेट करें और लॉगिन स्क्रीन पर लौटें
                 registerForm.reset();
+                document.getElementById('reg-email').readOnly = false; // ईमेल को वापस नॉर्मल करें
+                submitBtn.textContent = "Submit Registration";
                 registerPanel.classList.add('hidden');
                 loginPanel.classList.remove('hidden');
 
             } catch (err) {
                 alert(`❌ Request Failed: ${err.message}`);
             } finally {
-                submitBtn.textContent = "Submit Registration";
                 submitBtn.disabled = false;
             }
         });
     }
+    
 
     // ==========================================
     // 3. CUSTOM DATABASE LOGIN & STATUS CHECK
@@ -101,13 +130,36 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const user = users[0];
 
-                // 1. स्टेटस चेक
-                if (user.status !== 'approved') {
-                    alert(`⚠️ Access Denied: Your account status is [${user.status.toUpperCase()}]. Reason: ${user.objection_remark || 'N/A'}`);
+                // --- नया सुधार: REJECTED / OBJECTION HANDLE ---
+                if (user.status === 'rejected') {
+                    const reason = user.objection_remark || "Reason not specified by Admin.";
+                    
+                    // यूज़र को स्क्रीन पर ही कारण दिखाना और दोबारा फॉर्म भरने के लिए तैयार करना
+                    alert(`⚠️ Objection Raised!\n\nReason for Rejection: "${reason}"\n\nPlease click 'Create Account' to correct your details and re-submit your registration.`);
+                    
+                    // पुराने रजिस्ट्रेशन फॉर्म में उसका डेटा ऑटो-फिल कर देना ताकि उसे मेहनत न करनी पड़े
+                    document.getElementById('reg-name').value = user.full_name;
+                    document.getElementById('reg-email').value = user.email;
+                    document.getElementById('reg-email').readOnly = true; // ईमेल को लॉक रखें ताकि नया खाता न बने, वही अपडेट हो
+                    document.getElementById('reg-password').value = user.password_text;
+                    document.getElementById('reg-role').value = user.role;
+                    
+                    // स्क्रीन को तुरंत रजिस्ट्रेशन पैनल पर स्विच कर देना
+                    loginPanel.classList.add('hidden');
+                    registerPanel.classList.remove('hidden');
+                    
+                    // सबमिट बटन का टेक्स्ट बदल देना ताकि उसे पता चले कि वह री-सबमिट कर रहा है
+                    registerPanel.querySelector('button[type="submit"]').textContent = "Re-Submit Updated Request";
                     return;
                 }
 
-                // 2. लाइव एक्सपायरी डेट चेक
+                // --- PENDING CHECK ---
+                if (user.status === 'pending') {
+                    alert(`⏳ Access Pending: Your account is awaiting clearance from Super Admin.`);
+                    return;
+                }
+
+                // --- LIVE EXPIRY CHECK ---
                 if (user.expiry_date) {
                     const today = new Date();
                     const expiry = new Date(user.expiry_date);
@@ -125,14 +177,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 submitBtn.textContent = "Sign In";
                 submitBtn.disabled = false;
             }
-        });
-    }
-
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', () => {
-            mainDashboard.classList.add('hidden');
-            authScreen.classList.remove('hidden');
-            loginForm.reset();
         });
     }
 
