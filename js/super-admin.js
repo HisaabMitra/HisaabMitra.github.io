@@ -77,73 +77,73 @@ async function initSuperAdminModule() {
             const { data: users, error } = await window.supabaseClient
                 .from('user_roles')
                 .select('*')
-                .neq('role', 'super_admin'); // खुद को लिस्ट में न दिखाएं
+                .neq('role', 'super_admin'); 
 
             if (error) throw error;
+            
             if (!users || users.length === 0) {
-                activeTable.innerHTML = `<tr><td colspan="5" style="padding: 15px; text-align: center;">No registered system users found.</td></tr>`;
+                activeTable.innerHTML = `<tr><td colspan="5" style="padding: 15px; text-align: center; color: var(--color-text-muted);">No managed operators or agents registered in the vault yet.</td></tr>`;
                 return;
             }
 
             activeTable.innerHTML = '';
             users.forEach(user => {
-                // एक्सपायरी डेट को सुंदर फॉर्मेट में दिखाना
-                let expiryString = "No Limit";
-                let statusColor = "green";
+                // पेंडिंग यूज़र्स को केवल ऊपर वाले टेबल में ही दिखाएंगे
+                if (user.status === 'pending') return;
+
+                let expiryString = "No Limit Set";
+                let statusColor = "#137333"; // डिफ़ॉल्ट ग्रीन (Approved के लिए)
                 let currentStatus = user.status.toUpperCase();
 
+                // सेफ्टी चेक: अगर एक्सपायरी डेट मौजूद है तभी कैलकुलेशन करें
                 if (user.expiry_date) {
                     const expDate = new Date(user.expiry_date);
-                    expiryString = expDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-                    if (expDate < new Date()) {
-                        expiryString += " ⚠️ (EXPIRED)";
-                        statusColor = "red";
-                        currentStatus = "EXPIRED";
+                    
+                    // अगर तारीख वैलिड है
+                    if (!isNaN(expDate.getTime())) {
+                        expiryString = expDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+                        
+                        // अगर तारीख आज से पुरानी हो चुकी है
+                        if (expDate < new Date() && user.status === 'approved') {
+                            expiryString += " ⚠️ (EXPIRED)";
+                            statusColor = "#c5221f"; // लाल रंग
+                            currentStatus = "EXPIRED";
+                        }
                     }
+                } else if (user.status === 'approved') {
+                    expiryString = "6 Months (Fix Needed)";
                 }
-                if (user.status === 'rejected') statusColor = "red";
+                
+                // अगर यूजर को रिजेक्ट या ब्लॉक किया गया है
+                if (user.status === 'rejected') {
+                    statusColor = "#c5221f"; 
+                    expiryString = "Access Suspended";
+                }
 
                 const tr = document.createElement('tr');
                 tr.style.borderBottom = '1px solid #eee';
                 tr.innerHTML = `
                     <td style="padding: 12px; font-weight:600;">${user.full_name}<br><small style="color:#777;">${user.email}</small></td>
-                    <td style="padding: 12px;"><span style="background:#f0f0f0; padding:2px 6px; border-radius:4px;">${user.role.toUpperCase()}</span></td>
+                    <td style="padding: 12px;"><span style="background:#f0f0f0; padding:2px 6px; border-radius:4px; font-size:0.85rem;">${user.role.toUpperCase()}</span></td>
                     <td style="padding: 12px; color:${statusColor}; font-weight:bold;">${currentStatus}</td>
                     <td style="padding: 12px; font-weight:600;">${expiryString}</td>
                     <td style="padding: 12px; text-align: center; display:flex; gap:8px; justify-content:center;">
-                        <button class="act-btn ren-btn" data-id="${user.id}" style="background:#137333; color:white; border:none; padding:5px 8px; border-radius:4px; cursor:pointer; font-size:0.85rem;">+6 Months</button>
-                        <button class="act-btn blk-btn" data-id="${user.id}" style="background:#222; color:white; border:none; padding:5px 8px; border-radius:4px; cursor:pointer; font-size:0.85rem;">Unauthorize</button>
+                        <button class="act-btn ren-btn" data-id="${user.id}" style="background:#137333; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer; font-size:0.85rem; font-weight:600;">+6 Months</button>
+                        <button class="act-btn blk-btn" data-id="${user.id}" style="background:#222; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer; font-size:0.85rem; font-weight:600;">Unauthorize</button>
                     </td>
                 `;
                 activeTable.appendChild(tr);
             });
+
+            if (activeTable.innerHTML === '') {
+                activeTable.innerHTML = `<tr><td colspan="5" style="padding: 15px; text-align: center; color: var(--color-text-muted);">No authorized/unauthorized users found.</td></tr>`;
+            }
+
             attachActiveControlListeners();
-        } catch (err) { console.error(err); }
-    }
-
-    function attachActiveControlListeners() {
-        document.querySelectorAll('.act-btn').forEach(btn => {
-            btn.addEventListener('click', async (e) => {
-                const uid = e.target.getAttribute('data-id');
-                const isRenew = e.target.classList.contains('ren-btn');
-
-                let updateData = {};
-                if (isRenew) {
-                    let newExp = new Date();
-                    newExp.setDate(newExp.getDate() + 180);
-                    updateData = { status: 'approved', expiry_date: newExp.toISOString() };
-                } else {
-                    updateData = { status: 'rejected', objection_remark: 'Unauthorized by Super Admin' };
-                }
-
-                try {
-                    const { error } = await window.supabaseClient.from('user_roles').update(updateData).eq('id', uid);
-                    if (error) throw error;
-                    alert(isRenew ? "✅ User validity extended by 6 Months!" : "🚫 User Access Revoked (Blocked).");
-                    refreshAllTables();
-                } catch (err) { alert(err.message); }
-            });
-        });
+        } catch (err) { 
+            console.error("Active User UI Error:", err); 
+            activeTable.innerHTML = `<tr><td colspan="5" style="padding:15px; color:red; text-align:center;">Failed to compile terminal users.</td></tr>`;
+        }
     }
 
     // 3. एजेंट्स के बिजनेस का वॉल्यूम ट्रैक करना
