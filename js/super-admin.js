@@ -54,7 +54,7 @@ async function initSuperAdminModule() {
                 let updateData = {};
                 if (isApprove) {
                     let expiry = new Date();
-                    expiry.setDate(expiry.getDate() + 180); // यहाँ ब्रैकेट ठीक कर दिया गया है
+                    expiry.setDate(expiry.getDate() + 180); 
                     updateData = { status: 'approved', expiry_date: expiry.toISOString(), objection_remark: null };
                 } else {
                     updateData = { status: 'rejected', objection_remark: objectionNote || "Rejected by Super Admin" };
@@ -70,7 +70,7 @@ async function initSuperAdminModule() {
         });
     }
 
-    // 2. एक्टिव यूज़र्स मैनेज करना (Renew / Unauthorize)
+    // 2. एक्टिव यूज़र्स मैनेज करना (Renew / Unauthorize / Reset Password)
     async function loadActiveUsers() {
         try {
             const { data: users, error } = await window.supabaseClient
@@ -112,32 +112,30 @@ async function initSuperAdminModule() {
 
                 const tr = document.createElement('tr');
                 tr.style.borderBottom = '1px solid #eee';
-               tr.innerHTML = `
-    <td style="padding: 12px; font-weight:600; display: flex; align-items: center; gap: 8px;">
-        <div>
-            ${user.full_name}
-            <button class="view-details-btn" 
-                    data-name="${user.full_name}"
-                    data-ko="${user.ko_code || 'N/A'}" 
-                    data-mobile="${user.mobile_no || 'N/A'}" 
-                    style="background: transparent; border: none; cursor: pointer; font-size: 1.1rem; padding: 0 4px; display: inline-flex; align-items: center; vertical-align: middle;" 
-                    title="Click to view Contact & KO Details">
-                👁️
-            </button>
-            <br>
-            <small style="color:#777;">${user.email}</small>
-        </div>
-    </td>
-    <td style="padding: 12px;"><span style="background:#f0f0f0; padding:2px 6px; border-radius:4px; font-size:0.85rem;">${user.role.toUpperCase()}</span></td>
-    <td style="padding: 12px; color:${statusColor}; font-weight:bold;">${currentStatus}</td>
-    <td style="padding: 12px; font-weight:600;">${expiryString}</td>
-    <td style="padding: 12px; text-align: center; display:flex; gap:6px; justify-content:center; flex-wrap: wrap;">
-        <button class="act-btn ren-btn" data-id="${user.id}" style="background:#137333; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer; font-size:0.85rem; font-weight:600;">+6 Months</button>
-        <button class="act-btn rst-btn" data-id="${user.id}" data-name="${user.full_name}" style="background:#f2994a; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer; font-size:0.85rem; font-weight:600;">Reset Pass</button>
-        <button class="act-btn blk-btn" data-id="${user.id}" style="background:#222; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer; font-size:0.85rem; font-weight:600;">Unauthorize</button>
-    </td>
-`        
-`;
+                tr.innerHTML = `
+                    <td style="padding: 12px; font-weight:600;">
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                            <span>${user.full_name}</span>
+                            <button class="view-details-btn" 
+                                    data-name="${user.full_name}"
+                                    data-ko="${user.ko_code || 'N/A'}" 
+                                    data-mobile="${user.mobile_no || 'N/A'}" 
+                                    style="background: transparent; border: none; cursor: pointer; font-size: 1.1rem; padding: 0 4px; display: inline-flex; align-items: center;" 
+                                    title="Click to view KO Code & Mobile">
+                                👁️
+                            </button>
+                        </div>
+                        <small style="color:#777;">${user.email}</small>
+                    </td>
+                    <td style="padding: 12px;"><span style="background:#f0f0f0; padding:2px 6px; border-radius:4px; font-size:0.85rem;">${user.role.toUpperCase()}</span></td>
+                    <td style="padding: 12px; color:${statusColor}; font-weight:bold;">${currentStatus}</td>
+                    <td style="padding: 12px; font-weight:600;">${expiryString}</td>
+                    <td style="padding: 12px; text-align: center; display:flex; gap:6px; justify-content:center; flex-wrap: wrap;">
+                        <button class="act-btn ren-btn" data-id="${user.id}" style="background:#137333; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer; font-size:0.85rem; font-weight:600;">+6 Months</button>
+                        <button class="act-btn rst-btn" data-id="${user.id}" data-name="${user.full_name}" style="background:#f2994a; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer; font-size:0.85rem; font-weight:600;">Reset Pass</button>
+                        <button class="act-btn blk-btn" data-id="${user.id}" style="background:#222; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer; font-size:0.85rem; font-weight:600;">Unauthorize</button>
+                    </td>
+                `;
                 activeTable.appendChild(tr);
             });
 
@@ -145,22 +143,8 @@ async function initSuperAdminModule() {
                 activeTable.innerHTML = `<tr><td colspan="5" style="padding: 15px; text-align: center; color: var(--color-text-muted);">No authorized/unauthorized users found.</td></tr>`;
             }
 
-        document.querySelectorAll('.view-details-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-        // बटन या उसके अंदर के आइकॉन पर क्लिक हैंडल करना
-        const targetBtn = e.target.closest('.view-details-btn');
-        const name = targetBtn.getAttribute('data-name');
-        const koCode = targetBtn.getAttribute('data-ko');
-        const mobile = targetBtn.getAttribute('data-mobile');
-
-        alert(`👤 User Security Details\n\nName: ${name}\n🔑 KO Code: ${koCode}\n📱 Mobile No: +91 ${mobile}`);
-    });
-});
-
-
-
             attachActiveControlListeners();
-
+            attachEyeButtonListeners(); // आई-बटन लिसनर यहाँ सेफली अटैच किया गया है
             
         } catch (err) { 
             console.error("Active User UI Error:", err); 
@@ -168,21 +152,29 @@ async function initSuperAdminModule() {
         }
     }
 
+    // आई-बटन क्लिक का स्वतंत्र फंक्शन (सिंटैक्स सेफ)
+    function attachEyeButtonListeners() {
+        document.querySelectorAll('.view-details-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const targetBtn = e.target.closest('.view-details-btn');
+                const name = targetBtn.getAttribute('data-name');
+                const koCode = targetBtn.getAttribute('data-ko');
+                const mobile = targetBtn.getAttribute('data-mobile');
 
+                alert(`👤 User Security Details\n\nName: ${name}\n🔑 KO Code: ${koCode}\n📱 Mobile No: +91 ${mobile}`);
+            });
+        });
+    }
 
-
-
-   function attachActiveControlListeners() {
+    function attachActiveControlListeners() {
         document.querySelectorAll('.act-btn').forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 const uid = e.target.getAttribute('data-id');
                 
-                // 1. यदि पासवर्ड रीसेट बटन दबाया गया है
                 if (e.target.classList.contains('rst-btn')) {
                     const userName = e.target.getAttribute('data-name');
                     const newPassword = prompt(`Enter new password for [${userName}]:`);
                     
-                    // अगर सुपर एडमिन ने कैंसिल कर दिया या खाली छोड़ दिया
                     if (newPassword === null) return; 
                     if (newPassword.trim() === "") {
                         alert("⚠️ Password cannot be empty!");
@@ -196,15 +188,14 @@ async function initSuperAdminModule() {
                             .eq('id', uid);
 
                         if (error) throw error;
-                        alert(`🔑 Password for ${userName} has been successfully updated to: ${newPassword}`);
+                        alert(`🔑 Password for ${userName} has been updated successfully!`);
                         refreshAllTables();
                     } catch (err) { 
-                        alert(`❌ Failed to reset password: ${err.message}`); 
+                        alert(`❌ Failed: ${err.message}`); 
                     }
-                    return; // फंक्शन से बाहर आ जाएं
+                    return;
                 }
 
-                // 2. पुराने रीन्यू और ब्लॉक बटन्स का लॉजिक
                 const isRenew = e.target.classList.contains('ren-btn');
                 let updateData = {};
                 if (isRenew) {
@@ -218,7 +209,7 @@ async function initSuperAdminModule() {
                 try {
                     const { error } = await window.supabaseClient.from('user_roles').update(updateData).eq('id', uid);
                     if (error) throw error;
-                    alert(isRenew ? "✅ User validity extended by 6 Months!" : "🚫 User Access Revoked (Blocked).");
+                    alert(isRenew ? "✅ User validity extended by 6 Months!" : "🚫 User Access Revoked.");
                     refreshAllTables();
                 } catch (err) { alert(err.message); }
             });
@@ -257,8 +248,7 @@ async function initSuperAdminModule() {
                 performanceTable.appendChild(tr);
             });
         } catch (err) { 
-            console.error(err); 
-            performanceTable.innerHTML = `<tr><td colspan="3" style="padding: 15px; text-align: center;">No physical currency movements recorded today.</td></tr>`;
+            performanceTable.innerHTML = `<tr><td colspan="3" style="padding:15px; text-align:center;">No physical currency movements recorded today.</td></tr>`;
         }
     }
 
