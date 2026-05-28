@@ -31,15 +31,16 @@ async function initSuperAdminModule() {
                     <td style="padding: 12px;"><span style="background:#eee; padding:3px 6px; border-radius:4px;">${user.role.toUpperCase()}</span></td>
                     <td style="padding: 12px;"><input type="text" id="objection-${user.id}" placeholder="e.g., Wrong Branch Code" style="width:90%; padding:6px; border:1px solid #ccc; border-radius:4px;"></td>
                     <td style="padding: 12px; text-align: center; display:flex; gap:8px; justify-content:center;">
-                        <button class="p-btn apr-btn" data-id="${user.id}" style="background:#137333; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer;">Approve (6M)</button>
-                        <button class="p-btn rej-btn" data-id="${user.id}" style="background:#c5221f; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer;">Reject</button>
+                        <button class="p-btn apr-btn" data-id="${user.id}" style="background:#137333; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer; font-weight:600;">Approve (6M)</button>
+                        <button class="p-btn rej-btn" data-id="${user.id}" style="background:#c5221f; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer; font-weight:600;">Reject</button>
                     </td>
                 `;
                 pendingTable.appendChild(tr);
             });
             attachPendingListeners();
         } catch (err) {
-            pendingTable.innerHTML = `<tr><td colspan="5" style="padding:15px; color:red;">Error loading vault.</td></tr>`;
+            console.error("Pending Table Error:", err);
+            pendingTable.innerHTML = `<tr><td colspan="5" style="padding:15px; color:red; text-align:center;">Error loading pending requests.</td></tr>`;
         }
     }
 
@@ -52,10 +53,8 @@ async function initSuperAdminModule() {
                 
                 let updateData = {};
                 if (isApprove) {
-                    // आज की तारीख से ठीक 6 महीने (180 दिन) बाद की तारीख निकालना
                     let expiry = new Date();
-                    expiry.setDate(expiry.getDate() + 180;
-                    
+                    expiry.setDate(expiry.getDate() + 180); // यहाँ ब्रैकेट ठीक कर दिया गया है
                     updateData = { status: 'approved', expiry_date: expiry.toISOString(), objection_remark: null };
                 } else {
                     updateData = { status: 'rejected', objection_remark: objectionNote || "Rejected by Super Admin" };
@@ -88,33 +87,24 @@ async function initSuperAdminModule() {
 
             activeTable.innerHTML = '';
             users.forEach(user => {
-                // पेंडिंग यूज़र्स को केवल ऊपर वाले टेबल में ही दिखाएंगे
                 if (user.status === 'pending') return;
 
                 let expiryString = "No Limit Set";
-                let statusColor = "#137333"; // डिफ़ॉल्ट ग्रीन (Approved के लिए)
+                let statusColor = "#137333"; 
                 let currentStatus = user.status.toUpperCase();
 
-                // सेफ्टी चेक: अगर एक्सपायरी डेट मौजूद है तभी कैलकुलेशन करें
                 if (user.expiry_date) {
                     const expDate = new Date(user.expiry_date);
-                    
-                    // अगर तारीख वैलिड है
                     if (!isNaN(expDate.getTime())) {
                         expiryString = expDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-                        
-                        // अगर तारीख आज से पुरानी हो चुकी है
                         if (expDate < new Date() && user.status === 'approved') {
                             expiryString += " ⚠️ (EXPIRED)";
-                            statusColor = "#c5221f"; // लाल रंग
+                            statusColor = "#c5221f"; 
                             currentStatus = "EXPIRED";
                         }
                     }
-                } else if (user.status === 'approved') {
-                    expiryString = "6 Months (Fix Needed)";
                 }
                 
-                // अगर यूजर को रिजेक्ट या ब्लॉक किया गया है
                 if (user.status === 'rejected') {
                     statusColor = "#c5221f"; 
                     expiryString = "Access Suspended";
@@ -144,6 +134,31 @@ async function initSuperAdminModule() {
             console.error("Active User UI Error:", err); 
             activeTable.innerHTML = `<tr><td colspan="5" style="padding:15px; color:red; text-align:center;">Failed to compile terminal users.</td></tr>`;
         }
+    }
+
+    function attachActiveControlListeners() {
+        document.querySelectorAll('.act-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const uid = e.target.getAttribute('data-id');
+                const isRenew = e.target.classList.contains('ren-btn');
+
+                let updateData = {};
+                if (isRenew) {
+                    let newExp = new Date();
+                    newExp.setDate(newExp.getDate() + 180);
+                    updateData = { status: 'approved', expiry_date: newExp.toISOString(), objection_remark: null };
+                } else {
+                    updateData = { status: 'rejected', objection_remark: 'Unauthorized by Super Admin' };
+                }
+
+                try {
+                    const { error } = await window.supabaseClient.from('user_roles').update(updateData).eq('id', uid);
+                    if (error) throw error;
+                    alert(isRenew ? "✅ User validity extended by 6 Months!" : "🚫 User Access Revoked (Blocked).");
+                    refreshAllTables();
+                } catch (err) { alert(err.message); }
+            });
+        });
     }
 
     // 3. एजेंट्स के बिजनेस का वॉल्यूम ट्रैक करना
@@ -177,7 +192,10 @@ async function initSuperAdminModule() {
                 `;
                 performanceTable.appendChild(tr);
             });
-        } catch (err) { console.error(err); }
+        } catch (err) { 
+            console.error(err); 
+            performanceTable.innerHTML = `<tr><td colspan="3" style="padding: 15px; text-align: center;">No physical currency movements recorded today.</td></tr>`;
+        }
     }
 
     function refreshAllTables() {
