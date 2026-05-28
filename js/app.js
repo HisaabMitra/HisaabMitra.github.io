@@ -1,6 +1,34 @@
 // js/app.js
 
 document.addEventListener('DOMContentLoaded', () => {
+    // js/app.js में सबसे ऊपर डोम लोडेड के तुरंत बाद यह फंक्शन डालें:
+window.showSystemAlert = function(message, title = "System Notification", icon = "⚠️") {
+    const modal = document.getElementById('custom-alert-modal');
+    const titleEl = document.getElementById('custom-alert-title');
+    const msgEl = document.getElementById('custom-alert-message');
+    const iconEl = document.getElementById('custom-alert-icon');
+    const btn = document.getElementById('custom-alert-btn');
+
+    // अगर कोई सफलता का संदेश है तो आइकॉन बदलें
+    if (message.includes("✅") || message.includes("Successfully")) icon = "✅";
+    if (message.includes("❌") || message.includes("Failed")) icon = "❌";
+    if (message.includes("🚨") || message.includes("Expired")) icon = "🚨";
+
+    titleEl.textContent = title;
+    msgEl.textContent = message.replace(/✅|❌|⚠️|🚨/g, ''); // डुप्लीकेट आइकॉन हटाना
+    iconEl.textContent = icon;
+    
+    modal.style.display = 'flex';
+
+    // बटन क्लिक पर बंद होने का लॉजिक
+    return new Promise((resolve) => {
+        btn.onclick = () => {
+            modal.style.display = 'none';
+            resolve(true);
+        };
+    });
+};
+    
     // --- UI Panels Elements ---
     const loginPanel = document.getElementById('login-panel');
     const registerPanel = document.getElementById('register-panel');
