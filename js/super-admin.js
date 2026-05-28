@@ -63,9 +63,9 @@ async function initSuperAdminModule() {
                 try {
                     const { error } = await window.supabaseClient.from('user_roles').update(updateData).eq('id', uid);
                     if (error) throw error;
-                    alert(isApprove ? "✅ User Approved with 6 Months validity!" : "❌ User Request Rejected.");
+                    window.showSystemAlert(isApprove ? "✅ User Approved with 6 Months validity!" : "❌ User Request Rejected.");
                     refreshAllTables();
-                } catch (err) { alert(err.message); }
+                } catch (err) { window.showSystemAlert(err.message); }
             });
         });
     }
@@ -153,6 +153,7 @@ async function initSuperAdminModule() {
     }
 
     // आई-बटन क्लिक का स्वतंत्र फंक्शन (सिंटैक्स सेफ)
+  // js/super-admin.js में आई-बटन लिसनर को कस्टमाइज करना
     function attachEyeButtonListeners() {
         document.querySelectorAll('.view-details-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -161,7 +162,12 @@ async function initSuperAdminModule() {
                 const koCode = targetBtn.getAttribute('data-ko');
                 const mobile = targetBtn.getAttribute('data-mobile');
 
-                alert(`👤 User Security Details\n\nName: ${name}\n🔑 KO Code: ${koCode}\n📱 Mobile No: +91 ${mobile}`);
+                // पुराना अलर्ट हटाकर हमारा नया स्क्रीन-सेंटर पॉपअप लगाया
+                window.showSystemAlert(
+                    `🔑 KO Code: ${koCode}\n📱 Mobile No: +91 ${mobile}`, 
+                    `${name} - Operator Profile`, 
+                    "👤"
+                );
             });
         });
     }
