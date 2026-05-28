@@ -86,25 +86,37 @@ document.addEventListener('DOMContentLoaded', () => {
             submitBtn.disabled = true;
 
             try {
-                // हमारे कस्टम टेबल से यूज़र का डेटा निकालें
-                const { data: user, error } = await window.supabaseClient
+                const { data: users, error } = await window.supabaseClient
                     .from('user_roles')
                     .select('*')
                     .eq('email', email)
-                    .eq('password_text', password)
-                    .single();
+                    .eq('password_text', password);
 
-                if (error || !user) {
-                    throw new Error("Invalid Email or Password. Please try again.");
-                }
+                if (error) throw error;
 
-                // अप्रूवल स्टेटस चेक करें
-                if (user.status !== 'approved') {
-                    alert(`⚠️ Access Denied: Your account status is currently [${user.status.toUpperCase()}]. Please contact Super Admin.`);
+                if (!users || users.length === 0) {
+                    alert("❌ Invalid Email or Password. Please try again.");
                     return;
                 }
 
-                // अगर सब सही है तो डैशबोर्ड पर भेजें और रोल पास करें
+                const user = users[0];
+
+                // 1. स्टेटस चेक
+                if (user.status !== 'approved') {
+                    alert(`⚠️ Access Denied: Your account status is [${user.status.toUpperCase()}]. Reason: ${user.objection_remark || 'N/A'}`);
+                    return;
+                }
+
+                // 2. लाइव एक्सपायरी डेट चेक
+                if (user.expiry_date) {
+                    const today = new Date();
+                    const expiry = new Date(user.expiry_date);
+                    if (expiry < today) {
+                        alert("🚨 Access Code Expired! Your 6-month system clearance has ended. Please contact Super Admin for renewal.");
+                        return;
+                    }
+                }
+
                 showDashboard(user);
 
             } catch (err) {
@@ -127,48 +139,45 @@ document.addEventListener('DOMContentLoaded', () => {
     // ==========================================
     // 4. ROLE-BASED MENUS CONFIGURATION (RBAC)
     // ==========================================
-    function showDashboard(user) {
+   function showDashboard(user) {
         authScreen.classList.add('hidden');
         mainDashboard.classList.remove('hidden');
         document.getElementById('user-display').textContent = `${user.full_name} (${user.role.toUpperCase()})`;
         
-        // रोल के हिसाब से मेनू फ़िल्टर करें
         applyMenuPermissions(user.role);
         
-        // डिफ़ॉल्ट पेज लोड करें
-        loadPage('home');
+        // सुपर एडमिन को सीधे उसके कंट्रोल पेज पर भेजें, एजेंट्स को होम पेज पर
+        if (user.role === 'super_admin') {
+            loadPage('super-admin');
+            // साइडबार के एक्टिव क्लास को सेट करें
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                if(btn.getAttribute('data-page') === 'super-admin') btn.classList.add('active');
+                else btn.classList.remove('active');
+            });
+        } else {
+            loadPage('home');
+        }
     }
 
     function applyMenuPermissions(role) {
-        // सभी बटन ढूंढें जिनके पास 'data-page' एट्रिब्यूट है
         const allMenuButtons = document.querySelectorAll('[data-page]');
 
         allMenuButtons.forEach(btn => {
             const page = btn.getAttribute('data-page');
 
             if (role === 'agent') {
-                // Agent को सिर्फ ट्रांजैक्शन और सर्च करने की अनुमति है
                 const allowedAgentPages = ['home', 'deposit', 'withdrawal', 'search'];
-                if (allowedAgentPages.includes(page)) {
-                    btn.style.display = 'block'; // या 'inline-block' footer बटनों के लिए
-                } else {
-                    btn.style.display = 'none'; // बाकी सब छुपा दें
-                }
+                btn.style.display = allowedAgentPages.includes(page) ? 'block' : 'none';
             } 
             else if (role === 'admin') {
-                // Admin को सब कुछ दिखेगा, लेकिन सुपर एडमिन के स्पेशल टूल्स नहीं (जैसे यूजर अप्रूवल)
-                const restrictedAdminPages = ['settlement']; // आप अपने हिसाब से जोड़ सकते हैं
-                if (restrictedAdminPages.includes(page)) {
-                    btn.style.display = 'none';
-                } else {
-                    btn.style.display = 'block';
-                }
+                const restrictedAdminPages = ['super-admin'];
+                btn.style.display = restrictedAdminPages.includes(page) ? 'none' : 'block';
             } 
             else if (role === 'super_admin') {
-             // सुपर एडमिन को सिर्फ होम और उसका नया स्पेशल कंट्रोल सेंटर पेज दिखेगा
-             const allowedSuperPages = ['home', 'super-admin'];
-             btn.style.display = allowedSuperPages.includes(page) ? 'block' : 'none';
-         }
+                // सुपर एडमिन के लिए सिर्फ उसका अपना टूल पेज दिखेगा, होम बटन बिल्कुल छुप जाएगा!
+                const allowedSuperPages = ['super-admin'];
+                btn.style.display = allowedSuperPages.includes(page) ? 'block' : 'none';
+            }
         });
     }
 
