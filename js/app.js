@@ -103,7 +103,7 @@ window.showSystemAlert = function(message, title = "System Notification", icon =
                         .eq('email', email);
 
                     if (updateError) throw updateError;
-                    alert("🔄 Request Re-Submitted Successfully with updated KO Code & Mobile!");
+                    window.showSystemAlert("🔄 Request Re-Submitted Successfully with updated KO Code & Mobile!");
                 } else {
                     // फ्रेश रजिस्ट्रेशन मोड (Insert)
                     const { error: insertError } = await window.supabaseClient
@@ -121,7 +121,7 @@ window.showSystemAlert = function(message, title = "System Notification", icon =
                         ]);
 
                     if (insertError) throw insertError;
-                    alert("✅ Registration Request Submitted with KO Code!");
+                    window.showSystemAlert("✅ Registration Request Submitted with KO Code!");
                 }
 
                 registerForm.reset();
@@ -131,7 +131,7 @@ window.showSystemAlert = function(message, title = "System Notification", icon =
                 loginPanel.classList.remove('hidden');
 
             } catch (err) {
-                alert(`❌ Request Failed: ${err.message}`);
+                window.showSystemAlert(`❌ Request Failed: ${err.message}`);
             } finally {
                 submitBtn.disabled = false;
             }
@@ -161,7 +161,7 @@ window.showSystemAlert = function(message, title = "System Notification", icon =
                 if (error) throw error;
 
                 if (!users || users.length === 0) {
-                    alert("❌ Invalid Email or Password. Please try again.");
+                    window.showSystemAlert("❌ Invalid Email or Password. Please try again.");
                     return;
                 }
 
@@ -172,7 +172,7 @@ window.showSystemAlert = function(message, title = "System Notification", icon =
                     const reason = user.objection_remark || "Reason not specified by Admin.";
                     
                     // यूज़र को स्क्रीन पर ही कारण दिखाना और दोबारा फॉर्म भरने के लिए तैयार करना
-                    alert(`⚠️ Objection Raised!\n\nReason for Rejection: "${reason}"\n\nPlease click 'Create Account' to correct your details and re-submit your registration.`);
+                    window.showSystemAlert(`⚠️ Objection Raised!\n\nReason for Rejection: "${reason}"\n\nPlease click 'Create Account' to correct your details and re-submit your registration.`);
                     
                     // पुराने रजिस्ट्रेशन फॉर्म में उसका डेटा ऑटो-फिल कर देना ताकि उसे मेहनत न करनी पड़े
                     document.getElementById('reg-name').value = user.full_name;
@@ -194,7 +194,7 @@ window.showSystemAlert = function(message, title = "System Notification", icon =
 
                 // --- PENDING CHECK ---
                 if (user.status === 'pending') {
-                    alert(`⏳ Access Pending: Your account is awaiting clearance from Super Admin.`);
+                    window.showSystemAlert(`⏳ Access Pending: Your account is awaiting clearance from Super Admin.`);
                     return;
                 }
 
@@ -203,7 +203,7 @@ window.showSystemAlert = function(message, title = "System Notification", icon =
                     const today = new Date();
                     const expiry = new Date(user.expiry_date);
                     if (expiry < today) {
-                        alert("🚨 Access Code Expired! Your 6-month system clearance has ended. Please contact Super Admin for renewal.");
+                        window.showSystemAlert("🚨 Access Code Expired! Your 6-month system clearance has ended. Please contact Super Admin for renewal.");
                         return;
                     }
                 }
@@ -211,7 +211,7 @@ window.showSystemAlert = function(message, title = "System Notification", icon =
                 showDashboard(user);
 
             } catch (err) {
-                alert(`❌ Auth Error: ${err.message}`);
+               window.showSystemAlert(`❌ Auth Error: ${err.message}`);
             } finally {
                 submitBtn.textContent = "Sign In";
                 submitBtn.disabled = false;
