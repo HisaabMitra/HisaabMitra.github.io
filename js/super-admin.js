@@ -117,11 +117,12 @@ async function initSuperAdminModule() {
                     <td style="padding: 12px;"><span style="background:#f0f0f0; padding:2px 6px; border-radius:4px; font-size:0.85rem;">${user.role.toUpperCase()}</span></td>
                     <td style="padding: 12px; color:${statusColor}; font-weight:bold;">${currentStatus}</td>
                     <td style="padding: 12px; font-weight:600;">${expiryString}</td>
-                    <td style="padding: 12px; text-align: center; display:flex; gap:8px; justify-content:center;">
+                    <td style="padding: 12px; text-align: center; display:flex; gap:6px; justify-content:center; flex-wrap: wrap;">
                         <button class="act-btn ren-btn" data-id="${user.id}" style="background:#137333; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer; font-size:0.85rem; font-weight:600;">+6 Months</button>
+                        <button class="act-btn rst-btn" data-id="${user.id}" data-name="${user.full_name}" style="background:#f2994a; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer; font-size:0.85rem; font-weight:600;">Reset Pass</button>
                         <button class="act-btn blk-btn" data-id="${user.id}" style="background:#222; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer; font-size:0.85rem; font-weight:600;">Unauthorize</button>
-                    </td>
-                `;
+                    </td>         
+`;
                 activeTable.appendChild(tr);
             });
 
@@ -136,12 +137,40 @@ async function initSuperAdminModule() {
         }
     }
 
-    function attachActiveControlListeners() {
+   function attachActiveControlListeners() {
         document.querySelectorAll('.act-btn').forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 const uid = e.target.getAttribute('data-id');
-                const isRenew = e.target.classList.contains('ren-btn');
+                
+                // 1. यदि पासवर्ड रीसेट बटन दबाया गया है
+                if (e.target.classList.contains('rst-btn')) {
+                    const userName = e.target.getAttribute('data-name');
+                    const newPassword = prompt(`Enter new password for [${userName}]:`);
+                    
+                    // अगर सुपर एडमिन ने कैंसिल कर दिया या खाली छोड़ दिया
+                    if (newPassword === null) return; 
+                    if (newPassword.trim() === "") {
+                        alert("⚠️ Password cannot be empty!");
+                        return;
+                    }
 
+                    try {
+                        const { error } = await window.supabaseClient
+                            .from('user_roles')
+                            .update({ password_text: newPassword.trim() })
+                            .eq('id', uid);
+
+                        if (error) throw error;
+                        alert(`🔑 Password for ${userName} has been successfully updated to: ${newPassword}`);
+                        refreshAllTables();
+                    } catch (err) { 
+                        alert(`❌ Failed to reset password: ${err.message}`); 
+                    }
+                    return; // फंक्शन से बाहर आ जाएं
+                }
+
+                // 2. पुराने रीन्यू और ब्लॉक बटन्स का लॉजिक
+                const isRenew = e.target.classList.contains('ren-btn');
                 let updateData = {};
                 if (isRenew) {
                     let newExp = new Date();
