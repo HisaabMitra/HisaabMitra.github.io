@@ -20,24 +20,62 @@
                 <img src="assets/images/logo.png" alt="Logo" class="logo">
                 <h1>Secure Portal</h1>
             </div>
-            <p>Welcome to your all-in-one financial ecosystem. Manage dynamic deposits, real-time withdrawals, swift IMPS transfers, and comprehensive end-of-day reporting instantly and securely.</p>
+            <p>Welcome to your all-in-one financial ecosystem. Manage dynamic deposits, real-time withdrawals, swift IMPS transfers, and comprehensive reporting instantly.</p>
         </div>
 
-        <div class="login-panel">
-            <h2>User Login</h2>
-            <p class="subtitle">Please enter your credentials to access the system.</p>
+        <div class="auth-panel-wrapper">
             
-            <form id="login-form">
-                <div class="form-group">
-                    <label for="username">Email Address</label>
-                    <input type="email" id="username" placeholder="name@company.com" required>
-                </div>
-                <div class="form-group">
-                    <label for="password">Password</label>
-                    <input type="password" id="password" placeholder="••••••••" required>
-                </div>
-                <button type="submit" class="btn btn-primary">Sign In</button>
-            </form>
+            <div id="login-panel" class="login-panel">
+                <h2>User Login</h2>
+                <p class="subtitle">Please enter your credentials to access the system.</p>
+                
+                <form id="login-form">
+                    <div class="form-group">
+                        <label for="username">Email Address</label>
+                        <input type="email" id="username" placeholder="name@company.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" placeholder="••••••••" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Sign In</button>
+                </form>
+                <p style="margin-top: 20px; text-align: center; font-size: 0.9rem; color: var(--color-text-muted);">
+                    New User? <a href="#" id="go-to-register" style="color: var(--color-maroon-main); font-weight: bold; text-decoration: none;">Create Account</a>
+                </p>
+            </div>
+
+            <div id="register-panel" class="login-panel hidden">
+                <h2>Request Access</h2>
+                <p class="subtitle">Fill in details. Sent to Super Admin for approval.</p>
+                
+                <form id="register-form">
+                    <div class="form-group">
+                        <label for="reg-name">Full Name</label>
+                        <input type="text" id="reg-name" placeholder="John Doe" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="reg-email">Email Address</label>
+                        <input type="email" id="reg-email" placeholder="user@company.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="reg-password">Password</label>
+                        <input type="password" id="reg-password" placeholder="Set Password" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="reg-role">Requested System Role</label>
+                        <select id="reg-role" style="width: 100%; padding: 12px; border: 1px solid #ccc; border-radius:4px; font-size:1rem;">
+                            <option value="agent">Agent (Transactions Only)</option>
+                            <option value="admin">Admin (Full Counter Access)</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-secondary">Submit Registration</button>
+                </form>
+                <p style="margin-top: 20px; text-align: center; font-size: 0.9rem; color: var(--color-text-muted);">
+                    Already have account? <a href="#" id="go-to-login" style="color: var(--color-maroon-main); font-weight: bold; text-decoration: none;">Back to Login</a>
+                </p>
+            </div>
+
         </div>
     </div>
 
