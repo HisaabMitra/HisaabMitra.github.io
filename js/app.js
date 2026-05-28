@@ -261,17 +261,99 @@ window.showSystemPrompt = function(message, title = "System Input") {
     // ==========================================
     // 4. ROLE-BASED MENUS CONFIGURATION (RBAC)
     // ==========================================
-   function showDashboard(user) {
+  // ==========================================
+    // 4. ROLE-BASED MENUS & PROFILE INTEGRITY CHECK
+    // ==========================================
+    async function showDashboard(user) {
+        // अगर सुपर एडमिन लॉगिन कर रहा है, तो प्रोफाइल चेक बाईपास करें (क्योंकि सुपर एडमिन का कोई KO कोड नहीं होता)
+        if (user.role === 'super_admin') {
+            proceedToDashboard(user);
+            return;
+        }
+
+        // --- लाइव चेक: क्या प्रोफाइल में कुछ मिसिंग है? ---
+        const isKoMissing = !user.ko_code || user.ko_code.trim() === "";
+        const isMobileMissing = !user.mobile_no || user.mobile_no.trim() === "";
+        const isNameMissing = !user.full_name || user.full_name.trim() === "";
+
+        if (isKoMissing || isMobileMissing || isNameMissing) {
+            // मिसिंग बॉक्स स्क्रीन पर लाना
+            const mdModal = document.getElementById('missing-detail-modal');
+            const mdForm = document.getElementById('missing-detail-form');
+            
+            // सिर्फ वही इनपुट बॉक्स दिखाओ जो वाकई खाली हैं!
+            document.getElementById('md-ko-block').style.display = isKoMissing ? 'block' : 'none';
+            document.getElementById('md-ko-input').required = isKoMissing;
+
+            document.getElementById('md-mobile-block').style.display = isMobileMissing ? 'block' : 'none';
+            document.getElementById('md-mobile-input').required = isMobileMissing;
+
+            document.getElementById('md-name-block').style.display = isNameMissing ? 'block' : 'none';
+            document.getElementById('md-name-input').required = isNameMissing;
+
+            mdModal.style.display = 'flex';
+
+            // फॉर्म सबमिट होने का लाइव इवेंट
+            mdForm.onsubmit = async (e) => {
+                e.preventDefault();
+                const submitBtn = document.getElementById('md-submit-btn');
+                submitBtn.textContent = "Updating Vault Records...";
+                submitBtn.disabled = true;
+
+                // नया डेटा कलेक्ट करना (अगर पुराना भरा हुआ है तो वही रहे, वरना नया इनपुट आए)
+                const updatedKo = isKoMissing ? document.getElementById('md-ko-input').value.trim() : user.ko_code;
+                const updatedMobile = isMobileMissing ? document.getElementById('md-mobile-input').value.trim() : user.mobile_no;
+                const updatedName = isNameMissing ? document.getElementById('md-name-input').value.trim() : user.full_name;
+
+                try {
+                    // डेटाबेस (Supabase) में लाइव अपडेट करना
+                    const { error } = await window.supabaseClient
+                        .from('user_roles')
+                        .update({
+                            ko_code: updatedKo,
+                            mobile_no: updatedMobile,
+                            full_name: updatedName
+                        })
+                        .eq('id', user.id);
+
+                    if (error) throw error;
+
+                    // लोकल यूज़र ऑब्जेक्ट को भी अपडेट कर दें ताकि तुरंत डैशबोर्ड लोड हो सके
+                    user.ko_code = updatedKo;
+                    user.mobile_no = updatedMobile;
+                    user.full_name = updatedName;
+
+                    mdModal.style.display = 'none';
+                    mdForm.reset();
+                    
+                    await window.showSystemAlert("Your profile logs have been updated successfully. Workspace is now unlocked!", "Verification Success", "✅");
+                    
+                    // सब ठीक होने पर डैशबोर्ड में प्रवेश दें
+                    proceedToDashboard(user);
+
+                } catch (err) {
+                    await window.showSystemAlert(`Failed to patch credentials: ${err.message}`, "Security Error", "❌");
+                } finally {
+                    submitBtn.textContent = "Save & Unlock Workspace";
+                    submitBtn.disabled = false;
+                }
+            };
+        } else {
+            // अगर सब कुछ पहले से भरा हुआ है, तो सीधे डैशबोर्ड खोलें
+            proceedToDashboard(user);
+        }
+    }
+
+    // डैशबोर्ड के अंदर भेजने का ओरिजिनल लॉजिक
+    function proceedToDashboard(user) {
         authScreen.classList.add('hidden');
         mainDashboard.classList.remove('hidden');
         document.getElementById('user-display').textContent = `${user.full_name} (${user.role.toUpperCase()})`;
         
         applyMenuPermissions(user.role);
         
-        // सुपर एडमिन को सीधे उसके कंट्रोल पेज पर भेजें, एजेंट्स को होम पेज पर
         if (user.role === 'super_admin') {
             loadPage('super-admin');
-            // साइडबार के एक्टिव क्लास को सेट करें
             document.querySelectorAll('.nav-btn').forEach(btn => {
                 if(btn.getAttribute('data-page') === 'super-admin') btn.classList.add('active');
                 else btn.classList.remove('active');
@@ -279,28 +361,6 @@ window.showSystemPrompt = function(message, title = "System Input") {
         } else {
             loadPage('home');
         }
-    }
-
-    function applyMenuPermissions(role) {
-        const allMenuButtons = document.querySelectorAll('[data-page]');
-
-        allMenuButtons.forEach(btn => {
-            const page = btn.getAttribute('data-page');
-
-            if (role === 'agent') {
-                const allowedAgentPages = ['home', 'deposit', 'withdrawal', 'search'];
-                btn.style.display = allowedAgentPages.includes(page) ? 'block' : 'none';
-            } 
-            else if (role === 'admin') {
-                const restrictedAdminPages = ['super-admin'];
-                btn.style.display = restrictedAdminPages.includes(page) ? 'none' : 'block';
-            } 
-            else if (role === 'super_admin') {
-                // सुपर एडमिन के लिए सिर्फ उसका अपना टूल पेज दिखेगा, होम बटन बिल्कुल छुप जाएगा!
-                const allowedSuperPages = ['super-admin'];
-                btn.style.display = allowedSuperPages.includes(page) ? 'block' : 'none';
-            }
-        });
     }
 
     // ==========================================
