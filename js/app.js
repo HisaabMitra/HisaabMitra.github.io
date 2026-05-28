@@ -1,6 +1,9 @@
 // js/app.js
 
 document.addEventListener('DOMContentLoaded', () => {
+    // ग्लोबल होल्डर (लॉगिन यूजर का डेटा स्टोर रखने के लिए)
+    let currentLoggedInUser = null; 
+
     // ==========================================
     // GLOBAL CUSTOM ALERTS & PROMPTS
     // ==========================================
@@ -313,11 +316,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function proceedToDashboard(user) {
+        currentLoggedInUser = user; 
         authScreen.classList.add('hidden');
         mainDashboard.classList.remove('hidden');
         document.getElementById('user-display').textContent = `${user.full_name} (${user.role.toUpperCase()})`;
         
-        applyMenuPermissions(user.role); // अब यह परफेक्टली काम करेगा!
+        applyMenuPermissions(user.role); 
         
         if (user.role === 'super_admin') {
             loadPage('super-admin');
@@ -354,7 +358,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (page === 'super-admin') {
                     btn.style.setProperty('display', 'none', 'important');
                 } else {
-                    btn.style.setProperty('setProperty', 'block', 'important'); // फिक्स
                     btn.style.setProperty('display', 'block', 'important');
                 }
             } 
@@ -399,14 +402,66 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function initializePageModules(pageName) {
+        if (pageName === 'home') initHomepageModule();
         if (pageName === 'search' && typeof initSearchModule === 'function') initSearchModule();
         if (pageName === 'deposit' && typeof initDepositModule === 'function') initDepositModule();
         if (pageName === 'super-admin' && typeof initSuperAdminModule === 'function') initSuperAdminModule();
+    }
+
+    // ==========================================
+    // 7. MULTI-TENANT KO-CODE LIVE BALANCE LOGIC
+    // ==========================================
+    async function initHomepageModule() {
+        if (!currentLoggedInUser || !currentLoggedInUser.ko_code) return;
+
+        const koCode = currentLoggedInUser.ko_code;
+        const koDisplay = document.getElementById('hp-ko-display');
+        const balanceDisplay = document.getElementById('hp-settlement-balance');
+
+        if (koDisplay) koDisplay.textContent = `KO CODE: ${koCode}`;
+
+        try {
+            let { data: balanceData, error } = await window.supabaseClient
+                .from('ko_balances')
+                .select('*')
+                .eq('ko_code', koCode);
+
+            if (error) throw error;
+
+            if (!balanceData || balanceData.length === 0) {
+                const { data: newRecord, error: insertError } = await window.supabaseClient
+                    .from('ko_balances')
+                    .insert([{ ko_code: koCode }]) 
+                    .select('*');
+
+                if (insertError) throw insertError;
+                balanceData = newRecord;
+            }
+
+            const record = balanceData[0];
+
+            if (balanceDisplay) {
+                balanceDisplay.textContent = `₹ ${parseFloat(record.settlement_balance).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+            }
+
+            if(document.getElementById('note-count-2000')) document.getElementById('note-count-2000').textContent = record.note_2000 || 0;
+            if(document.getElementById('note-count-500')) document.getElementById('note-count-500').textContent = record.note_500 || 0;
+            if(document.getElementById('note-count-200')) document.getElementById('note-count-200').textContent = record.note_200 || 0;
+            if(document.getElementById('note-count-100')) document.getElementById('note-count-100').textContent = record.note_100 || 0;
+            if(document.getElementById('note-count-50')) document.getElementById('note-count-50').textContent = record.note_50 || 0;
+            if(document.getElementById('note-count-20')) document.getElementById('note-count-20').textContent = record.note_20 || 0;
+            if(document.getElementById('note-count-10')) document.getElementById('note-count-10').textContent = record.note_10 || 0;
+            if(document.getElementById('coin-total-count')) document.getElementById('coin-total-count').textContent = record.coins || 0;
+
+        } catch (err) {
+            console.error("Homepage Balance Load Error:", err);
+        }
     }
     
     // लॉगआउट हैंडलर
     if (logoutBtn) {
         logoutBtn.addEventListener('click', () => {
+            currentLoggedInUser = null;
             mainDashboard.classList.add('hidden');
             authScreen.classList.remove('hidden');
             loginPanel.classList.remove('hidden');
