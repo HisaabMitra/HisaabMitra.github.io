@@ -26,6 +26,9 @@
     margin-bottom: 20px;
 }
 
+
+.auth-panel-wrapper { width: 450px; background: white; }
+
 .login-panel {
     width: 450px;
     background-color: var(--color-white);
@@ -34,6 +37,7 @@
     justify-content: center;
     padding: 50px;
     box-shadow: -5px 0 25px rgba(0,0,0,0.1);
+    
 }
 
 .login-panel h2 {
