@@ -165,8 +165,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             } 
             else if (role === 'super_admin') {
-                // Super Admin को हर एक बटन दिखेगा
-                btn.style.display = 'block';
+             // सुपर एडमिन को सिर्फ होम और उसका नया स्पेशल कंट्रोल सेंटर पेज दिखेगा
+             const allowedSuperPages = ['home', 'super-admin'];
+             btn.style.display = allowedSuperPages.includes(page) ? 'block' : 'none';
+         }
             }
         });
     }
@@ -199,8 +201,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function initializePageModules(pageName) {
-        if (pageName === 'search' && typeof initSearchModule === 'function') initSearchModule();
-        if (pageName === 'deposit' && typeof initDepositModule === 'function') initDepositModule();
-    }
+   function initializePageModules(pageName) {
+     if (pageName === 'search' && typeof initSearchModule === 'function') initSearchModule();
+     if (pageName === 'deposit' && typeof initDepositModule === 'function') initDepositModule();
+
+     // सुपर एडमिन का नया पेज इनिशियलाइज़ेशन यहाँ जोड़ें
+     if (pageName === 'super-admin' && typeof initSuperAdminModule === 'function') initSuperAdminModule();
+ }
+    
 });
