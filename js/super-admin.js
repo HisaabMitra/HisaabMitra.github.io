@@ -177,30 +177,37 @@ async function initSuperAdminModule() {
             btn.addEventListener('click', async (e) => {
                 const uid = e.target.getAttribute('data-id');
                 
-                if (e.target.classList.contains('rst-btn')) {
-                    const userName = e.target.getAttribute('data-name');
-                    const newPassword = prompt(`Enter new password for [${userName}]:`);
-                    
-                    if (newPassword === null) return; 
-                    if (newPassword.trim() === "") {
-                        alert("⚠️ Password cannot be empty!");
-                        return;
-                    }
+               if (e.target.classList.contains('rst-btn')) {
+    const userName = e.target.getAttribute('data-name');
+    
+    // पुराना prompt() हटाकर हमारा नया कस्टमाइज्ड प्रॉम्ट लगाया
+    const newPassword = await window.showSystemPrompt(`Set a fresh secure access key for ${userName}:`, "Administrative Password Reset");
+    
+    // अगर कैंसिल किया
+    if (newPassword === null) return; 
+    
+    // अगर बिना कुछ लिखे ओके किया
+    if (newPassword === "") {
+        await window.showSystemAlert("Password cannot be left blank!", "Validation Warning", "⚠️");
+        return;
+    }
 
-                    try {
-                        const { error } = await window.supabaseClient
-                            .from('user_roles')
-                            .update({ password_text: newPassword.trim() })
-                            .eq('id', uid);
+    try {
+        const { error } = await window.supabaseClient
+            .from('user_roles')
+            .update({ password_text: newPassword })
+            .eq('id', uid);
 
-                        if (error) throw error;
-                        alert(`🔑 Password for ${userName} has been updated successfully!`);
-                        refreshAllTables();
-                    } catch (err) { 
-                        alert(`❌ Failed: ${err.message}`); 
-                    }
-                    return;
-                }
+        if (error) throw error;
+        
+        // पुराने alert() को भी नए कस्टमाइज्ड अलर्ट से बदल दिया
+        await window.showSystemAlert(`Password for ${userName} has been successfully modified to: ${newPassword}`, "Action Completed", "✅");
+        refreshAllTables();
+    } catch (err) { 
+        await window.showSystemAlert(`Failed to reset password: ${err.message}`, "Database Error", "❌"); 
+    }
+    return;
+}
 
                 const isRenew = e.target.classList.contains('ren-btn');
                 let updateData = {};
