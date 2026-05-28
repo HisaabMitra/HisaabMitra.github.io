@@ -1,73 +1,63 @@
 // js/app.js
 
 document.addEventListener('DOMContentLoaded', () => {
-    // js/app.js में सबसे ऊपर डोम लोडेड के तुरंत बाद यह फंक्शन डालें:
-window.showSystemAlert = function(message, title = "System Notification", icon = "⚠️") {
-    const modal = document.getElementById('custom-alert-modal');
-    const titleEl = document.getElementById('custom-alert-title');
-    const msgEl = document.getElementById('custom-alert-message');
-    const iconEl = document.getElementById('custom-alert-icon');
-    const btn = document.getElementById('custom-alert-btn');
+    // ==========================================
+    // GLOBAL CUSTOM ALERTS & PROMPTS
+    // ==========================================
+    window.showSystemAlert = function(message, title = "System Notification", icon = "⚠️") {
+        const modal = document.getElementById('custom-alert-modal');
+        const titleEl = document.getElementById('custom-alert-title');
+        const msgEl = document.getElementById('custom-alert-message');
+        const iconEl = document.getElementById('custom-alert-icon');
+        const btn = document.getElementById('custom-alert-btn');
 
-    // अगर कोई सफलता का संदेश है तो आइकॉन बदलें
-    if (message.includes("✅") || message.includes("Successfully")) icon = "✅";
-    if (message.includes("❌") || message.includes("Failed")) icon = "❌";
-    if (message.includes("🚨") || message.includes("Expired")) icon = "🚨";
+        if (message.includes("✅") || message.includes("Successfully")) icon = "✅";
+        if (message.includes("❌") || message.includes("Failed")) icon = "❌";
+        if (message.includes("🚨") || message.includes("Expired")) icon = "🚨";
 
-    titleEl.textContent = title;
-    msgEl.textContent = message.replace(/✅|❌|⚠️|🚨/g, ''); // डुप्लीकेट आइकॉन हटाना
-    iconEl.textContent = icon;
-    
-    modal.style.display = 'flex';
-
-    // बटन क्लिक पर बंद होने का लॉजिक
-    return new Promise((resolve) => {
-        btn.onclick = () => {
-            modal.style.display = 'none';
-            resolve(true);
-        };
-    });
-};
-
-
-// js/app.js में window.showSystemAlert के ठीक नीचे इसे पेस्ट करें:
-window.showSystemPrompt = function(message, title = "System Input") {
-    const modal = document.getElementById('custom-prompt-modal');
-    const titleEl = document.getElementById('custom-prompt-title');
-    const msgEl = document.getElementById('custom-prompt-message');
-    const inputEl = document.getElementById('custom-prompt-input');
-    const submitBtn = document.getElementById('custom-prompt-submit-btn');
-    const cancelBtn = document.getElementById('custom-prompt-cancel-btn');
-
-    titleEl.textContent = title;
-    msgEl.textContent = message;
-    inputEl.value = ''; // पुराना टेक्स्ट साफ़ करें
-    
-    modal.style.display = 'flex';
-    inputEl.focus();
-
-    return new Promise((resolve) => {
-        // सबमिट होने पर
-        submitBtn.onclick = () => {
-            const val = inputEl.value.trim();
-            modal.style.display = 'none';
-            resolve(val); // जो टाइप किया वह वापस भेजें
-        };
+        titleEl.textContent = title;
+        msgEl.textContent = message.replace(/✅|❌|⚠️|🚨/g, ''); 
+        iconEl.textContent = icon;
         
-        // कैंसिल होने पर
-        cancelBtn.onclick = () => {
-            modal.style.display = 'none';
-            resolve(null); // null वापस भेजें
-        };
-    });
-};
+        modal.style.display = 'flex';
 
+        return new Promise((resolve) => {
+            btn.onclick = () => {
+                modal.style.display = 'none';
+                resolve(true);
+            };
+        });
+    };
 
+    window.showSystemPrompt = function(message, title = "System Input") {
+        const modal = document.getElementById('custom-prompt-modal');
+        const titleEl = document.getElementById('custom-prompt-title');
+        const msgEl = document.getElementById('custom-prompt-message');
+        const inputEl = document.getElementById('custom-prompt-input');
+        const submitBtn = document.getElementById('custom-prompt-submit-btn');
+        const cancelBtn = document.getElementById('custom-prompt-cancel-btn');
 
+        titleEl.textContent = title;
+        msgEl.textContent = message;
+        inputEl.value = ''; 
+        
+        modal.style.display = 'flex';
+        inputEl.focus();
 
+        return new Promise((resolve) => {
+            submitBtn.onclick = () => {
+                const val = inputEl.value.trim();
+                modal.style.display = 'none';
+                resolve(val); 
+            };
+            
+            cancelBtn.onclick = () => {
+                modal.style.display = 'none';
+                resolve(null); 
+            };
+        });
+    };
 
-
-    
     // --- UI Panels Elements ---
     const loginPanel = document.getElementById('login-panel');
     const registerPanel = document.getElementById('register-panel');
@@ -111,8 +101,8 @@ window.showSystemPrompt = function(message, title = "System Input") {
             const email = document.getElementById('reg-email').value.trim();
             const password = document.getElementById('reg-password').value;
             const role = document.getElementById('reg-role').value;
-            const koCode = document.getElementById('reg-ko-code').value.trim(); // नया
-            const mobile = document.getElementById('reg-mobile').value.trim(); // नया
+            const koCode = document.getElementById('reg-ko-code').value.trim(); 
+            const mobile = document.getElementById('reg-mobile').value.trim(); 
             const submitBtn = registerForm.querySelector('button[type="submit"]');
 
             submitBtn.textContent = "Processing Request...";
@@ -127,15 +117,14 @@ window.showSystemPrompt = function(message, title = "System Input") {
                 if (checkError) throw checkError;
 
                 if (existingUser && existingUser.length > 0 && existingUser[0].status === 'rejected') {
-                    // री-सबमिशन मोड (Update)
                     const { error: updateError } = await window.supabaseClient
                         .from('user_roles')
                         .update({
                             full_name: name,
                             password_text: password,
                             role: role,
-                            ko_code: koCode,    // नया
-                            mobile_no: mobile,  // नया
+                            ko_code: koCode,    
+                            mobile_no: mobile,  
                             status: 'pending', 
                             objection_remark: null 
                         })
@@ -144,7 +133,6 @@ window.showSystemPrompt = function(message, title = "System Input") {
                     if (updateError) throw updateError;
                     window.showSystemAlert("🔄 Request Re-Submitted Successfully with updated KO Code & Mobile!");
                 } else {
-                    // फ्रेश रजिस्ट्रेशन मोड (Insert)
                     const { error: insertError } = await window.supabaseClient
                         .from('user_roles')
                         .insert([
@@ -153,8 +141,8 @@ window.showSystemPrompt = function(message, title = "System Input") {
                                 email: email, 
                                 password_text: password, 
                                 role: role, 
-                                ko_code: koCode,    // नया
-                                mobile_no: mobile,  // नया
+                                ko_code: koCode,    
+                                mobile_no: mobile,  
                                 status: 'pending' 
                             }
                         ]);
@@ -206,38 +194,31 @@ window.showSystemPrompt = function(message, title = "System Input") {
 
                 const user = users[0];
 
-                // --- नया सुधार: REJECTED / OBJECTION HANDLE ---
                 if (user.status === 'rejected') {
                     const reason = user.objection_remark || "Reason not specified by Admin.";
                     
-                    // यूज़र को स्क्रीन पर ही कारण दिखाना और दोबारा फॉर्म भरने के लिए तैयार करना
                     window.showSystemAlert(`⚠️ Objection Raised!\n\nReason for Rejection: "${reason}"\n\nPlease click 'Create Account' to correct your details and re-submit your registration.`);
                     
-                    // पुराने रजिस्ट्रेशन फॉर्म में उसका डेटा ऑटो-फिल कर देना ताकि उसे मेहनत न करनी पड़े
                     document.getElementById('reg-name').value = user.full_name;
                     document.getElementById('reg-email').value = user.email;
-                    document.getElementById('reg-email').readOnly = true; // ईमेल को लॉक रखें ताकि नया खाता न बने, वही अपडेट हो
+                    document.getElementById('reg-email').readOnly = true; 
                     document.getElementById('reg-ko-code').value = user.ko_code || "";
                     document.getElementById('reg-mobile').value = user.mobile_no || "";
                     document.getElementById('reg-password').value = user.password_text;
                     document.getElementById('reg-role').value = user.role;
                     
-                    // स्क्रीन को तुरंत रजिस्ट्रेशन पैनल पर स्विच कर देना
                     loginPanel.classList.add('hidden');
                     registerPanel.classList.remove('hidden');
                     
-                    // सबमिट बटन का टेक्स्ट बदल देना ताकि उसे पता चले कि वह री-सबमिट कर रहा है
                     registerPanel.querySelector('button[type="submit"]').textContent = "Re-Submit Updated Request";
                     return;
                 }
 
-                // --- PENDING CHECK ---
                 if (user.status === 'pending') {
                     window.showSystemAlert(`⏳ Access Pending: Your account is awaiting clearance from Super Admin.`);
                     return;
                 }
 
-                // --- LIVE EXPIRY CHECK ---
                 if (user.expiry_date) {
                     const today = new Date();
                     const expiry = new Date(user.expiry_date);
@@ -259,29 +240,22 @@ window.showSystemPrompt = function(message, title = "System Input") {
     }
 
     // ==========================================
-    // 4. ROLE-BASED MENUS CONFIGURATION (RBAC)
-    // ==========================================
-  // ==========================================
     // 4. ROLE-BASED MENUS & PROFILE INTEGRITY CHECK
     // ==========================================
     async function showDashboard(user) {
-        // अगर सुपर एडमिन लॉगिन कर रहा है, तो प्रोफाइल चेक बाईपास करें (क्योंकि सुपर एडमिन का कोई KO कोड नहीं होता)
         if (user.role === 'super_admin') {
             proceedToDashboard(user);
             return;
         }
 
-        // --- लाइव चेक: क्या प्रोफाइल में कुछ मिसिंग है? ---
         const isKoMissing = !user.ko_code || user.ko_code.trim() === "";
         const isMobileMissing = !user.mobile_no || user.mobile_no.trim() === "";
         const isNameMissing = !user.full_name || user.full_name.trim() === "";
 
         if (isKoMissing || isMobileMissing || isNameMissing) {
-            // मिसिंग बॉक्स स्क्रीन पर लाना
             const mdModal = document.getElementById('missing-detail-modal');
             const mdForm = document.getElementById('missing-detail-form');
             
-            // सिर्फ वही इनपुट बॉक्स दिखाओ जो वाकई खाली हैं!
             document.getElementById('md-ko-block').style.display = isKoMissing ? 'block' : 'none';
             document.getElementById('md-ko-input').required = isKoMissing;
 
@@ -293,20 +267,17 @@ window.showSystemPrompt = function(message, title = "System Input") {
 
             mdModal.style.display = 'flex';
 
-            // फॉर्म सबमिट होने का लाइव इवेंट
             mdForm.onsubmit = async (e) => {
                 e.preventDefault();
                 const submitBtn = document.getElementById('md-submit-btn');
                 submitBtn.textContent = "Updating Vault Records...";
                 submitBtn.disabled = true;
 
-                // नया डेटा कलेक्ट करना (अगर पुराना भरा हुआ है तो वही रहे, वरना नया इनपुट आए)
                 const updatedKo = isKoMissing ? document.getElementById('md-ko-input').value.trim() : user.ko_code;
                 const updatedMobile = isMobileMissing ? document.getElementById('md-mobile-input').value.trim() : user.mobile_no;
                 const updatedName = isNameMissing ? document.getElementById('md-name-input').value.trim() : user.full_name;
 
                 try {
-                    // डेटाबेस (Supabase) में लाइव अपडेट करना
                     const { error } = await window.supabaseClient
                         .from('user_roles')
                         .update({
@@ -318,7 +289,6 @@ window.showSystemPrompt = function(message, title = "System Input") {
 
                     if (error) throw error;
 
-                    // लोकल यूज़र ऑब्जेक्ट को भी अपडेट कर दें ताकि तुरंत डैशबोर्ड लोड हो सके
                     user.ko_code = updatedKo;
                     user.mobile_no = updatedMobile;
                     user.full_name = updatedName;
@@ -328,7 +298,6 @@ window.showSystemPrompt = function(message, title = "System Input") {
                     
                     await window.showSystemAlert("Your profile logs have been updated successfully. Workspace is now unlocked!", "Verification Success", "✅");
                     
-                    // सब ठीक होने पर डैशबोर्ड में प्रवेश दें
                     proceedToDashboard(user);
 
                 } catch (err) {
@@ -339,18 +308,16 @@ window.showSystemPrompt = function(message, title = "System Input") {
                 }
             };
         } else {
-            // अगर सब कुछ पहले से भरा हुआ है, तो सीधे डैशबोर्ड खोलें
             proceedToDashboard(user);
         }
     }
 
-    // डैशबोर्ड के अंदर भेजने का ओरिजिनल लॉजिक
     function proceedToDashboard(user) {
         authScreen.classList.add('hidden');
         mainDashboard.classList.remove('hidden');
         document.getElementById('user-display').textContent = `${user.full_name} (${user.role.toUpperCase()})`;
         
-        applyMenuPermissions(user.role);
+        applyMenuPermissions(user.role); // अब यह परफेक्टली काम करेगा!
         
         if (user.role === 'super_admin') {
             loadPage('super-admin');
@@ -364,7 +331,47 @@ window.showSystemPrompt = function(message, title = "System Input") {
     }
 
     // ==========================================
-    // 5. Dynamic SPA Routing
+    // 5. STRENGTHENED MENU PERMISSIONS (LOCK SYSTEM)
+    // ==========================================
+    function applyMenuPermissions(role) {
+        const allMenuButtons = document.querySelectorAll('[data-page]');
+
+        allMenuButtons.forEach(btn => {
+            const page = btn.getAttribute('data-page');
+
+            // 1. अगर यूज़र AGENT है: सिर्फ होम, डिपॉजिट, विड्रॉल और सर्च दिखेगा
+            if (role === 'agent') {
+                const allowedAgentPages = ['home', 'deposit', 'withdrawal', 'search'];
+                if (allowedAgentPages.includes(page)) {
+                    btn.style.setProperty('display', 'block', 'important');
+                } else {
+                    btn.style.setProperty('display', 'none', 'important');
+                }
+            } 
+            
+            // 2. अगर यूज़र ADMIN है: उसे सुपर एडमिन को छोड़कर बाकी सब दिखेगा
+            else if (role === 'admin') {
+                if (page === 'super-admin') {
+                    btn.style.setProperty('display', 'none', 'important');
+                } else {
+                    btn.style.setProperty('setProperty', 'block', 'important'); // फिक्स
+                    btn.style.setProperty('display', 'block', 'important');
+                }
+            } 
+            
+            // 3. अगर यूज़र SUPER ADMIN है: उसे केवल और केवल उसका अपना कंट्रोल पैनल दिखेगा
+            else if (role === 'super_admin') {
+                if (page === 'super-admin') {
+                    btn.style.setProperty('display', 'block', 'important');
+                } else {
+                    btn.style.setProperty('display', 'none', 'important');
+                }
+            }
+        });
+    }
+
+    // ==========================================
+    // 6. Dynamic SPA Routing
     // ==========================================
     navButtons.forEach(button => {
         button.addEventListener('click', (e) => {
@@ -391,12 +398,20 @@ window.showSystemPrompt = function(message, title = "System Input") {
         }
     }
 
-   function initializePageModules(pageName) {
-     if (pageName === 'search' && typeof initSearchModule === 'function') initSearchModule();
-     if (pageName === 'deposit' && typeof initDepositModule === 'function') initDepositModule();
-
-     // सुपर एडमिन का नया पेज इनिशियलाइज़ेशन यहाँ जोड़ें
-     if (pageName === 'super-admin' && typeof initSuperAdminModule === 'function') initSuperAdminModule();
- }
+    function initializePageModules(pageName) {
+        if (pageName === 'search' && typeof initSearchModule === 'function') initSearchModule();
+        if (pageName === 'deposit' && typeof initDepositModule === 'function') initDepositModule();
+        if (pageName === 'super-admin' && typeof initSuperAdminModule === 'function') initSuperAdminModule();
+    }
     
+    // लॉगआउट हैंडलर
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', () => {
+            mainDashboard.classList.add('hidden');
+            authScreen.classList.remove('hidden');
+            loginPanel.classList.remove('hidden');
+            registerPanel.classList.add('hidden');
+            if(loginForm) loginForm.reset();
+        });
+    }
 });
