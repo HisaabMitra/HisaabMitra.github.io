@@ -169,7 +169,6 @@ document.addEventListener('DOMContentLoaded', () => {
              const allowedSuperPages = ['home', 'super-admin'];
              btn.style.display = allowedSuperPages.includes(page) ? 'block' : 'none';
          }
-            }
         });
     }
 
