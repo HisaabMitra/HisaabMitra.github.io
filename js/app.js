@@ -28,6 +28,45 @@ window.showSystemAlert = function(message, title = "System Notification", icon =
         };
     });
 };
+
+
+// js/app.js में window.showSystemAlert के ठीक नीचे इसे पेस्ट करें:
+window.showSystemPrompt = function(message, title = "System Input") {
+    const modal = document.getElementById('custom-prompt-modal');
+    const titleEl = document.getElementById('custom-prompt-title');
+    const msgEl = document.getElementById('custom-prompt-message');
+    const inputEl = document.getElementById('custom-prompt-input');
+    const submitBtn = document.getElementById('custom-prompt-submit-btn');
+    const cancelBtn = document.getElementById('custom-prompt-cancel-btn');
+
+    titleEl.textContent = title;
+    msgEl.textContent = message;
+    inputEl.value = ''; // पुराना टेक्स्ट साफ़ करें
+    
+    modal.style.display = 'flex';
+    inputEl.focus();
+
+    return new Promise((resolve) => {
+        // सबमिट होने पर
+        submitBtn.onclick = () => {
+            const val = inputEl.value.trim();
+            modal.style.display = 'none';
+            resolve(val); // जो टाइप किया वह वापस भेजें
+        };
+        
+        // कैंसिल होने पर
+        cancelBtn.onclick = () => {
+            modal.style.display = 'none';
+            resolve(null); // null वापस भेजें
+        };
+    });
+};
+
+
+
+
+
+
     
     // --- UI Panels Elements ---
     const loginPanel = document.getElementById('login-panel');
