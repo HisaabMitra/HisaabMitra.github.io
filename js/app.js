@@ -44,13 +44,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const email = document.getElementById('reg-email').value.trim();
             const password = document.getElementById('reg-password').value;
             const role = document.getElementById('reg-role').value;
+            const koCode = document.getElementById('reg-ko-code').value.trim(); // नया
+            const mobile = document.getElementById('reg-mobile').value.trim(); // नया
             const submitBtn = registerForm.querySelector('button[type="submit"]');
 
             submitBtn.textContent = "Processing Request...";
             submitBtn.disabled = true;
 
             try {
-                // पहले चेक करें कि क्या यह ईमेल पहले से रिजेक्टेड लिस्ट में मौजूद है?
                 const { data: existingUser, error: checkError } = await window.supabaseClient
                     .from('user_roles')
                     .select('*')
@@ -59,35 +60,44 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (checkError) throw checkError;
 
                 if (existingUser && existingUser.length > 0 && existingUser[0].status === 'rejected') {
-                    // सुधार: अगर पुराना यूज़र रिजेक्टेड था, तो उसे 'UPDATE' करें और वापस 'pending' कर दें
+                    // री-सबमिशन मोड (Update)
                     const { error: updateError } = await window.supabaseClient
                         .from('user_roles')
                         .update({
                             full_name: name,
                             password_text: password,
                             role: role,
-                            status: 'pending', // वापस पेंडिंग कर दिया ताकि सुपर एडमिन को दोबारा दिखे
-                            objection_remark: null // पुराना आब्जेक्शन नोट साफ कर दिया
+                            ko_code: koCode,    // नया
+                            mobile_no: mobile,  // नया
+                            status: 'pending', 
+                            objection_remark: null 
                         })
                         .eq('email', email);
 
                     if (updateError) throw updateError;
-                    alert("🔄 Request Re-Submitted Successfully! Your corrected details have been sent back to Super Admin for approval.");
+                    alert("🔄 Request Re-Submitted Successfully with updated KO Code & Mobile!");
                 } else {
-                    // नॉर्मल प्रोसेस: अगर नया यूज़र है, तो फ्रेश इंसर्ट करें
+                    // फ्रेश रजिस्ट्रेशन मोड (Insert)
                     const { error: insertError } = await window.supabaseClient
                         .from('user_roles')
                         .insert([
-                            { full_name: name, email: email, password_text: password, role: role, status: 'pending' }
+                            { 
+                                full_name: name, 
+                                email: email, 
+                                password_text: password, 
+                                role: role, 
+                                ko_code: koCode,    // नया
+                                mobile_no: mobile,  // नया
+                                status: 'pending' 
+                            }
                         ]);
 
                     if (insertError) throw insertError;
-                    alert("✅ Registration Request Submitted! It is pending approval from Super Admin.");
+                    alert("✅ Registration Request Submitted with KO Code!");
                 }
 
-                // फॉर्म रीसेट करें और लॉगिन स्क्रीन पर लौटें
                 registerForm.reset();
-                document.getElementById('reg-email').readOnly = false; // ईमेल को वापस नॉर्मल करें
+                document.getElementById('reg-email').readOnly = false;
                 submitBtn.textContent = "Submit Registration";
                 registerPanel.classList.add('hidden');
                 loginPanel.classList.remove('hidden');
@@ -99,7 +109,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-    
 
     // ==========================================
     // 3. CUSTOM DATABASE LOGIN & STATUS CHECK
@@ -141,6 +150,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     document.getElementById('reg-name').value = user.full_name;
                     document.getElementById('reg-email').value = user.email;
                     document.getElementById('reg-email').readOnly = true; // ईमेल को लॉक रखें ताकि नया खाता न बने, वही अपडेट हो
+                    document.getElementById('reg-ko-code').value = user.ko_code || "";
+                    document.getElementById('reg-mobile').value = user.mobile_no || "";
                     document.getElementById('reg-password').value = user.password_text;
                     document.getElementById('reg-role').value = user.role;
                     
