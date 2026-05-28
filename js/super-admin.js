@@ -112,16 +112,31 @@ async function initSuperAdminModule() {
 
                 const tr = document.createElement('tr');
                 tr.style.borderBottom = '1px solid #eee';
-                tr.innerHTML = `
-                    <td style="padding: 12px; font-weight:600;">${user.full_name}<br><small style="color:#777;">${user.email}</small></td>
-                    <td style="padding: 12px;"><span style="background:#f0f0f0; padding:2px 6px; border-radius:4px; font-size:0.85rem;">${user.role.toUpperCase()}</span></td>
-                    <td style="padding: 12px; color:${statusColor}; font-weight:bold;">${currentStatus}</td>
-                    <td style="padding: 12px; font-weight:600;">${expiryString}</td>
-                    <td style="padding: 12px; text-align: center; display:flex; gap:6px; justify-content:center; flex-wrap: wrap;">
-                        <button class="act-btn ren-btn" data-id="${user.id}" style="background:#137333; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer; font-size:0.85rem; font-weight:600;">+6 Months</button>
-                        <button class="act-btn rst-btn" data-id="${user.id}" data-name="${user.full_name}" style="background:#f2994a; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer; font-size:0.85rem; font-weight:600;">Reset Pass</button>
-                        <button class="act-btn blk-btn" data-id="${user.id}" style="background:#222; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer; font-size:0.85rem; font-weight:600;">Unauthorize</button>
-                    </td>         
+               tr.innerHTML = `
+    <td style="padding: 12px; font-weight:600; display: flex; align-items: center; gap: 8px;">
+        <div>
+            ${user.full_name}
+            <button class="view-details-btn" 
+                    data-name="${user.full_name}"
+                    data-ko="${user.ko_code || 'N/A'}" 
+                    data-mobile="${user.mobile_no || 'N/A'}" 
+                    style="background: transparent; border: none; cursor: pointer; font-size: 1.1rem; padding: 0 4px; display: inline-flex; align-items: center; vertical-align: middle;" 
+                    title="Click to view Contact & KO Details">
+                👁️
+            </button>
+            <br>
+            <small style="color:#777;">${user.email}</small>
+        </div>
+    </td>
+    <td style="padding: 12px;"><span style="background:#f0f0f0; padding:2px 6px; border-radius:4px; font-size:0.85rem;">${user.role.toUpperCase()}</span></td>
+    <td style="padding: 12px; color:${statusColor}; font-weight:bold;">${currentStatus}</td>
+    <td style="padding: 12px; font-weight:600;">${expiryString}</td>
+    <td style="padding: 12px; text-align: center; display:flex; gap:6px; justify-content:center; flex-wrap: wrap;">
+        <button class="act-btn ren-btn" data-id="${user.id}" style="background:#137333; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer; font-size:0.85rem; font-weight:600;">+6 Months</button>
+        <button class="act-btn rst-btn" data-id="${user.id}" data-name="${user.full_name}" style="background:#f2994a; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer; font-size:0.85rem; font-weight:600;">Reset Pass</button>
+        <button class="act-btn blk-btn" data-id="${user.id}" style="background:#222; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer; font-size:0.85rem; font-weight:600;">Unauthorize</button>
+    </td>
+`        
 `;
                 activeTable.appendChild(tr);
             });
@@ -130,12 +145,32 @@ async function initSuperAdminModule() {
                 activeTable.innerHTML = `<tr><td colspan="5" style="padding: 15px; text-align: center; color: var(--color-text-muted);">No authorized/unauthorized users found.</td></tr>`;
             }
 
+        document.querySelectorAll('.view-details-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+        // बटन या उसके अंदर के आइकॉन पर क्लिक हैंडल करना
+        const targetBtn = e.target.closest('.view-details-btn');
+        const name = targetBtn.getAttribute('data-name');
+        const koCode = targetBtn.getAttribute('data-ko');
+        const mobile = targetBtn.getAttribute('data-mobile');
+
+        alert(`👤 User Security Details\n\nName: ${name}\n🔑 KO Code: ${koCode}\n📱 Mobile No: +91 ${mobile}`);
+    });
+});
+
+
+
             attachActiveControlListeners();
+
+            
         } catch (err) { 
             console.error("Active User UI Error:", err); 
             activeTable.innerHTML = `<tr><td colspan="5" style="padding:15px; color:red; text-align:center;">Failed to compile terminal users.</td></tr>`;
         }
     }
+
+
+
+
 
    function attachActiveControlListeners() {
         document.querySelectorAll('.act-btn').forEach(btn => {
