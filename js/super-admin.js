@@ -1,5 +1,21 @@
 // js/super-admin.js
 
+
+
+
+// Function ke start mein ye lagayein
+async function debugSupabase() {
+    console.log("Testing connection...");
+    const { data, error } = await window.supabaseClient.from('user_roles').select('*').limit(1);
+    if (error) {
+        console.error("CONNECTION FAILED:", error.message);
+    } else {
+        console.log("CONNECTION SUCCESSFUL. Data found:", data);
+    }
+}
+debugSupabase()
+
+
 async function initSuperAdminModule() {
     const pendingTable = document.getElementById('sa-pending-table');
     const activeTable = document.getElementById('sa-active-users-table');
