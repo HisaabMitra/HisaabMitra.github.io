@@ -1,5 +1,6 @@
 .styled-table {
     width: 100%;
+    margin: 0 auto;
     border-collapse: collapse;
     font-family: var(--font-main);
 }
@@ -17,4 +18,11 @@
 }
 .styled-table tbody tr:hover {
     background-color: #f1f1f1;
+}
+
+.transaction-container {
+    width: 100% !important;     /* चौड़ाई पूरी रखें */
+    margin-top: 20px;           /* ऊपर से जगह दें */
+    display: block;             /* इसे ब्लॉक बनाएं ताकि यह अपनी अलग लाइन ले */
+    clear: both;                /* किसी भी फ्लोटिंग एलिमेंट को साफ़ करे */
 }
