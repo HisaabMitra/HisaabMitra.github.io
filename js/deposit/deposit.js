@@ -5,26 +5,21 @@ window.initDepositPage = async function (currentUser) {
     try {
         const response = await fetch('pages/deposit.html');
         if (!response.ok) throw new Error("Deposit page load failed");
+        
         workspace.innerHTML = await response.text();
 
-        // DOM Elements
-        const accInput = document.getElementById('dep-account-no');
-        const custNameInput = document.getElementById('dep-cust-name');
-        const amountInput = document.getElementById('dep-amount');
-        const wordsDisplay = document.getElementById('dep-amount-words');
-        const remarksInput = document.getElementById('dep-remarks');
-        const ncModal = document.getElementById('new-cust-modal');
-        const ncAccInput = document.getElementById('nc-account-no');
-        const ncNameInput = document.getElementById('nc-name');
-        const ncMobileInput = document.getElementById('nc-mobile');
-        const ncAddressInput = document.getElementById('nc-address');
+        // 1. काउंटर KO Code सेट करें
+        const koCodeLabel = document.getElementById('lbl-ko-code');
+        if (koCodeLabel) koCodeLabel.innerText = currentUser.ko_code;
 
-        // Capitalize Logic
-        [ncNameInput, ncAddressInput].forEach(el => {
-            if(el) el.addEventListener('input', function() { this.value = this.value.toUpperCase(); });
-        });
+        // 2. डिनॉमिनेशन कंपोनेंट
+        if (window.DenominationComponent) {
+            setTimeout(() => {
+                window.DenominationComponent.render('denomination-widget-container');
+            }, 100); 
+        }
 
-        // --- टेबल लोड लॉजिक ---
+        // --- टेबल रिफ्रेश लॉजिक (आज की एंट्रीज) ---
         async function loadTodayTransactions() {
             const tbody = document.getElementById('today-tx-body');
             if (!tbody) return;
@@ -48,7 +43,49 @@ window.initDepositPage = async function (currentUser) {
         }
         loadTodayTransactions();
 
-        // --- अकाउंट फॉर्मेटिंग ---
+        // 4. DOM एलिमेंट्स
+        const accInput = document.getElementById('dep-account-no');
+        const custNameInput = document.getElementById('dep-cust-name');
+        const amountInput = document.getElementById('dep-amount');
+        const wordsDisplay = document.getElementById('dep-amount-words');
+        const speakBtn = document.getElementById('btn-speak-hindi');
+        const remarksInput = document.getElementById('dep-remarks');
+        
+        const ncModal = document.getElementById('new-cust-modal');
+        const ncAccInput = document.getElementById('nc-account-no');
+        const ncNameInput = document.getElementById('nc-name');
+        const ncMobileInput = document.getElementById('nc-mobile');
+        const ncAddressInput = document.getElementById('nc-address');
+
+        [ncNameInput, ncAddressInput].forEach(el => {
+            if(el) el.addEventListener('input', function() { this.value = this.value.toUpperCase(); });
+        });
+
+        let lastSavedTransaction = null;
+
+        amountInput.addEventListener('input', () => {
+            const amt = parseInt(amountInput.value) || 0;
+            wordsDisplay.innerText = amt === 0 ? "Zero Rupees Only" : `${window.numberToHindiWords(amt)} रुपए मात्र`;
+        });
+        amountInput.addEventListener('wheel', e => e.preventDefault());
+
+        // हिंदी वॉयस असिस्टेंट
+        let systemVoices = [];
+        function loadVoices() { systemVoices = window.speechSynthesis.getVoices(); }
+        loadVoices();
+        if (window.speechSynthesis.onvoiceschanged !== undefined) window.speechSynthesis.onvoiceschanged = loadVoices;
+
+        speakBtn.addEventListener('click', () => {
+            const amt = parseInt(amountInput.value) || 0;
+            if (amt === 0) return window.showSystemAlert("कृपया पहले सही अमाउंट दर्ज करें!", "Validation Error", "⚠️");
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(`${window.numberToHindiWords(amt)} रुपए जमा के लिए तैयार है`);
+            utterance.lang = 'hi-IN';
+            let hindiVoice = systemVoices.find(v => v.lang.startsWith('hi') || v.name.includes('Hindi'));
+            if (hindiVoice) utterance.voice = hindiVoice;
+            window.speechSynthesis.speak(utterance);
+        });
+
         function formatAccountNumber(inputAcc, solId) {
             let acc = inputAcc.trim();
             if (acc.length > 10 || !acc.includes('-')) return acc;
@@ -60,56 +97,75 @@ window.initDepositPage = async function (currentUser) {
             let accountNo = accInput.value.trim();
             if (!accountNo) return;
             const userSolId = currentUser.sol_id || '193000'; 
-            const formatted = formatAccountNumber(accountNo, userSolId);
-            if (formatted !== accountNo) { accInput.value = formatted; accountNo = formatted; }
-
-            const { data, error } = await window.supabaseClient.from('banking_customers').select('customer_name').eq('account_number', accountNo).single();
-            if (data) custNameInput.value = data.customer_name;
-            else { ncAccInput.value = accountNo; ncModal.style.display = 'flex'; }
+            const formattedAccountNo = formatAccountNumber(accountNo, userSolId);
+            if (formattedAccountNo !== accountNo) { accInput.value = formattedAccountNo; accountNo = formattedAccountNo; }
+            try {
+                const { data, error } = await window.supabaseClient.from('banking_customers').select('customer_name').eq('account_number', accountNo).single();
+                if (data) custNameInput.value = data.customer_name;
+                else { ncAccInput.value = accountNo; ncModal.style.display = 'flex'; }
+            } catch (err) { console.error("Search error:", err.message); }
         }
         accInput.addEventListener('blur', searchCustomer);
 
-        // --- सेव ट्रांजैक्शन ---
+        document.getElementById('btn-nc-continue').addEventListener('click', async () => {
+            const accNo = ncAccInput.value.trim();
+            const cName = ncNameInput.value.trim();
+            const cMobile = ncMobileInput.value.trim();
+            const cAddress = ncAddressInput.value.trim();
+            if (!cName || !cMobile) return window.showSystemAlert("नाम और मोबाइल नंबर अनिवार्य हैं!", "Validation Error", "❌");
+            try {
+                const { error } = await window.supabaseClient.from('banking_customers').insert([{ account_number: accNo, customer_name: cName, mobile_number: cMobile, customer_address: cAddress, registered_by_ko: currentUser.ko_code }]);
+                if (error) throw error;
+                custNameInput.value = cName;
+                ncModal.style.display = 'none';
+                window.showSystemAlert("कस्टमर पंजीकृत!", "Success", "✅");
+            } catch (err) { window.showSystemAlert("विफल: " + err.message, "Error", "❌"); }
+        });
+
+        document.getElementById('btn-nc-cancel').addEventListener('click', () => { ncModal.style.display = 'none'; accInput.value = ""; custNameInput.value = ""; });
+
+        // सेव ट्रांजैक्शन (टेबल रिफ्रेश के साथ)
         document.getElementById('btn-dep-save').addEventListener('click', async () => {
             const accountNo = accInput.value.trim();
             const custName = custNameInput.value.trim();
             const amount = parseFloat(amountInput.value) || 0;
+            const remarks = remarksInput.value.trim();
             const netCash = window.DenominationComponent.calculate();
 
-            if (!accountNo || !custName || amount <= 0) return window.showSystemAlert("सभी फ़ील्ड सही भरें!", "Validation Error", "❌");
+            if (!accountNo || !custName || amount <= 0) return window.showSystemAlert("सभी फ़ील्ड भरें!", "Validation Error", "❌");
 
-            const executeSave = async () => {
-                const calcCommission = Math.min(amount * 0.004, 50); // कमीशन कैलकुलेशन
+            const saveTransactionData = async () => {
+                let calcCommission = Math.min(amount * 0.004, 50);
                 try {
-                    const { error } = await window.supabaseClient
+                    const { data: txData, error: txError } = await window.supabaseClient
                         .from('deposit_transactions')
-                        .insert([{ 
-                            ko_code: currentUser.ko_code, 
-                            account_number: accountNo, 
-                            amount: amount, 
-                            commission: calcCommission, // अब यहाँ commission जाएगा
-                            ...window.DenominationComponent.getValues() 
-                        }]);
-                    if (error) throw error;
+                        .insert([{ ko_code: currentUser.ko_code, account_number: accountNo, amount: amount, commission: calcCommission, remarks: remarks, ...window.DenominationComponent.getValues() }])
+                        .select().single();
+                    if (txError) throw txError;
+                    lastSavedTransaction = txData;
+                    document.getElementById('btn-dep-print').removeAttribute('disabled');
                     window.showSystemAlert("ट्रांजैक्शन सफल!", "Success", "✅");
-                    loadTodayTransactions();
+                    loadTodayTransactions(); // 🌟 टेबल रिफ्रेश
                     document.getElementById('btn-dep-clear').click();
                 } catch (err) { window.showSystemAlert("त्रुटि: " + err.message, "Error", "❌"); }
             };
 
-            if (netCash === 0) window.showSystemConfirm("बिना कैश डिनॉमिनेशन के आगे बढ़ें?", "Warning", executeSave);
-            else if (netCash !== amount) window.showSystemAlert(`डिनॉमिनेशन योग ₹${netCash} और जमा राशि ₹${amount} मेल नहीं खा रहे!`, "Mismatch", "❌");
-            else executeSave();
+            if (netCash === 0) window.showSystemConfirm("बिना कैश आगे बढ़ें?", "Warning", saveTransactionData);
+            else if (netCash !== amount) window.showSystemAlert("डिनॉमिनेशन और राशि मैच नहीं!", "Error", "❌");
+            else saveTransactionData();
         });
 
-        // --- अन्य इवेंट्स ---
-        amountInput.addEventListener('input', () => {
-            const amt = parseInt(amountInput.value) || 0;
-            wordsDisplay.innerText = amt === 0 ? "Zero Rupees Only" : `${window.numberToHindiWords(amt)} रुपए मात्र`;
-        });
         document.getElementById('btn-dep-clear').addEventListener('click', () => {
-            accInput.value = ""; custNameInput.value = ""; amountInput.value = "";
+            accInput.value = ""; custNameInput.value = ""; amountInput.value = ""; remarksInput.value = "";
+            wordsDisplay.innerText = "Zero Rupees Only";
             window.DenominationComponent.clear();
+        });
+
+        document.getElementById('btn-dep-print').addEventListener('click', () => {
+            if (!lastSavedTransaction) return;
+            const printWindow = window.open('', '_blank', 'width=600,height=600');
+            printWindow.document.write(`<html><body style="font-family:monospace; padding:20px;"><h2>RECEIPT</h2><p>Account: ${lastSavedTransaction.account_number}</p><p>Amount: ₹${lastSavedTransaction.amount}</p><script>window.print(); window.close();<\/script></body></html>`);
+            printWindow.document.close();
         });
 
     } catch (error) { console.error("Error:", error); }
