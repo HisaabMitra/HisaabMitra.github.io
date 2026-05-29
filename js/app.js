@@ -409,7 +409,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
    // ==========================================
-    // 7. MULTI-TENANT KO-CODE LIVE BALANCE LOGIC WITH CASH-IN-HAND
+    // 7. MULTI-TENANT KO-CODE LIVE BALANCE & FRONTEND COMMISSION LOGIC
     // ==========================================
     async function initHomepageModule() {
         if (!currentLoggedInUser || !currentLoggedInUser.ko_code) return;
@@ -417,11 +417,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const koCode = currentLoggedInUser.ko_code;
         const koDisplay = document.getElementById('hp-ko-display');
         const balanceDisplay = document.getElementById('hp-settlement-balance');
-        const cashInHandDisplay = document.getElementById('hp-cash-in-hand'); // नया एलिमेंट
+        const cashInHandDisplay = document.getElementById('hp-cash-in-hand');
+        const commissionDisplay = document.getElementById('hp-today-commission'); 
 
         if (koDisplay) koDisplay.textContent = `KO CODE: ${koCode}`;
 
         try {
+            // --- 1. को-बैलेंस और डिनॉमिनेशन फ़ेच करना ---
             let { data: balanceData, error } = await window.supabaseClient
                 .from('ko_balances')
                 .select('*')
@@ -441,12 +443,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const record = balanceData[0];
 
-            // 1. सेटलमेंट वॉलेट बैलेंस दिखाना
+            // सेटलमेंट वॉलेट बैलेंस दिखाना
             if (balanceDisplay) {
                 balanceDisplay.textContent = `₹ ${parseFloat(record.settlement_balance).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
             }
 
-            // 2. गल्ले का टोटल लाइव कैश कैलकुलेट करना (बिना 2000 के)
+            // गल्ले का टोटल लाइव कैश कैलकुलेट करना
             const n500 = parseInt(record.note_500) || 0;
             const n200 = parseInt(record.note_200) || 0;
             const n100 = parseInt(record.note_100) || 0;
@@ -457,12 +459,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const finalCashInHand = (n500 * 500) + (n200 * 200) + (n100 * 100) + (n50 * 50) + (n20 * 20) + (n10 * 10) + totalCoins;
 
-            // 3. कैश इन हैंड स्क्रीन पर रेंडर करना
             if (cashInHandDisplay) {
                 cashInHandDisplay.textContent = `₹ ${finalCashInHand.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
             }
 
-            // 4. नीचे अलग-अलग डिब्बों में पीसेस अपडेट करना
+            // --- 2. फ्रंटएंड कमीशन (अभी डेटाबेस को टच नहीं करेगा) ---
+            // जब हम डिपॉजिट/विड्रॉल का तगड़ा लॉजिक बनाएंगे, तब इसे एक साथ सिंक करेंगे
+            let totalTodayCommission = 0; 
+
+            if (commissionDisplay) {
+                commissionDisplay.textContent = `₹ ${totalTodayCommission.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+            }
+
+            // --- 3. नीचे अलग-अलग डिब्बों में पीसेस अपडेट करना ---
             if(document.getElementById('note-count-500')) document.getElementById('note-count-500').textContent = n500;
             if(document.getElementById('note-count-200')) document.getElementById('note-count-200').textContent = n200;
             if(document.getElementById('note-count-100')) document.getElementById('note-count-100').textContent = n100;
