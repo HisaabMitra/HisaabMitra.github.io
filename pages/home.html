@@ -12,8 +12,20 @@
 
     <div style="background: linear-gradient(135deg, var(--color-maroon-main), var(--color-maroon-dark)); color: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); margin-bottom: 30px; position: relative; overflow: hidden;">
         <div style="position: absolute; right: -20px; bottom: -20px; font-size: 8rem; color: rgba(255,255,255,0.05); font-weight: bold; user-select: none;">₹</div>
-        <p style="margin: 0; text-transform: uppercase; font-size: 0.85rem; letter-spacing: 1px; color: rgba(255,255,255,0.8);">Settlement Account Balance</p>
-        <h1 style="margin: 10px 0 0 0; font-size: 2.8rem; font-weight: 700;" id="hp-settlement-balance">₹ 0.00</h1>
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px; position: relative; z-index: 2;">
+            
+            <div>
+                <p style="margin: 0; text-transform: uppercase; font-size: 0.85rem; letter-spacing: 1px; color: rgba(255,255,255,0.8);">Settlement Account Balance</p>
+                <h1 style="margin: 10px 0 0 0; font-size: 2.5rem; font-weight: 700;" id="hp-settlement-balance">₹ 0.00</h1>
+            </div>
+
+            <div style="text-align: right; border-left: 2px solid rgba(255,255,255,0.2); padding-left: 25px;">
+                <p style="margin: 0; text-transform: uppercase; font-size: 0.85rem; letter-spacing: 1px; color: rgba(255,255,255,0.8);">💵 Cash In Hand</p>
+                <h1 style="margin: 10px 0 0 0; font-size: 2.5rem; font-weight: 700; color: #2ecc71;" id="hp-cash-in-hand">₹ 0.00</h1>
+            </div>
+
+        </div>
     </div>
 
     <h3 style="color: #333; border-bottom: 2px solid #eee; padding-bottom: 8px; margin-bottom: 20px; font-size: 1.1rem; display: flex; align-items: center; gap: 8px;">
