@@ -3,40 +3,51 @@
 // ==========================================
 
 // 1. नंबर को शब्दों में बदलने का फंक्शन (Number to Words)
-function numberToWords(amount) {
-    if (amount === 0) return "Zero Rupees Only";
-    const single = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"];
-    const tens = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
-    
-    function convertLessThanOneThousand(number) {
-        let rem = number % 100;
-        let word = "";
-        if (number >= 100) {
-            word += single[Math.floor(number / 100)] + " Hundred ";
-        }
-        if (rem < 20) {
-            word += single[rem];
-        } else {
-            word += tens[Math.floor(rem / 10)];
-            if (rem % 10 > 0) word += " " + single[rem % 10];
-        }
-        return word;
+// ========================================================
+// शुद्ध हिंदी नंबर्स टू वर्ड्स कनवर्टर (फॉर हिंदी वॉयस असिस्टेंट)
+// ========================================================
+function numberToHindiWords(amount) {
+    if (amount === 0) return "शून्य";
+
+    const hindiOnes = ["", "एक", "दो", "तीन", "चार", "पाँच", "छह", "सात", "आठ", "नौ", "दस", 
+                       "ग्यारह", "बारह", "तेरह", "चौदह", "पंद्रह", "सोलह", "सत्रह", "अठारह", "उन्नीस", "बीस",
+                       "इक्कीस", "बाईस", "तेईस", "चौबीस", "पच्चीस", "छब्बीस", "सत्ताईस", "अट्ठाइस", "उनतीस", "तीस",
+                       "इकत्तीस", "बत्तीस", "तैंतीस", "चौंतीस", "पैंतीस", "छत्तीस", "सैंतीस", "अड़तीस", "उनतालीस", "चालिस",
+                       "इकतालीस", "बयालीस", "तैंतालीस", "चैंतालीस", "पैंतालीस", "छियालीस", "सैंतालीस", "अड़तालीस", "उनचास", "पचास",
+                       "इक्कावन", "बावन", "तिरेपन", "चौवन", "पचपन", "छप्पन", "सतावन", "अठावन", "उनसठ", "साठ",
+                       "इकसठ", "बासठ", "तिरसठ", "चौंसठ", "पैंसठ", "छियासठ", "सरसठ", "अड़सठ", "उनहत्तर", "सत्तर",
+                       "इहत्तर", "बहत्तर", "तिहत्तर", "चौहत्तर", "पचहत्तर", "छियाहत्तर", "सतहत्तर", "अठहत्तर", "उनासी", "अस्सी",
+                       "इक्यासी", "बयासी", "तिरासी", "चौरासी", "पचासी", "छियासी", "सतासी", "अठासी", "नवासी", "नब्बे",
+                       "इक्यानवे", "बयानवे", "तिस्यानवे", "चौरानवे", "पंचानवे", "छियानवे", "सत्तानवे", "अट्ठानवे", "निन्यानवे"];
+
+    let words = "";
+
+    // करोड़
+    if (Math.floor(amount / 10000000) > 0) {
+        words += hindiOnes[Math.floor(amount / 10000000)] + " करोड़ ";
+        amount %= 10000000;
+    }
+    // लाख
+    if (Math.floor(amount / 100000) > 0) {
+        words += hindiOnes[Math.floor(amount / 100000)] + " लाख ";
+        amount %= 100000;
+    }
+    // हज़ार
+    if (Math.floor(amount / 1000) > 0) {
+        words += hindiOnes[Math.floor(amount / 1000)] + " हजार ";
+        amount %= 1000;
+    }
+    // सौ
+    if (Math.floor(amount / 100) > 0) {
+        words += hindiOnes[Math.floor(amount / 100)] + " सौ ";
+        amount %= 100;
+    }
+    // दहाई और इकाई (1 से 99)
+    if (amount > 0) {
+        words += hindiOnes[amount];
     }
 
-    let word = "";
-    let crores = Math.floor(amount / 10000000);
-    amount %= 10000000;
-    let lakhs = Math.floor(amount / 100000);
-    amount %= 100000;
-    let thousands = Math.floor(amount / 1000);
-    amount %= 1000;
-
-    if (crores > 0) word += convertLessThanOneThousand(crores) + " Crore ";
-    if (lakhs > 0) word += convertLessThanOneThousand(lakhs) + " Lakh ";
-    if (thousands > 0) word += convertLessThanOneThousand(thousands) + " Thousand ";
-    if (amount > 0) word += convertLessThanOneThousand(amount);
-    
-    return word.trim() + " Rupees Only";
+    return words.trim();
 }
 
 // 2. नंबर को हिंदी शब्दों में बदलने का फंक्शन (For Voice Assistant)
