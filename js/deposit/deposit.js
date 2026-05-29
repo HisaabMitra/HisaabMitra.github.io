@@ -115,24 +115,26 @@ window.initDepositPage = function (currentUser) {
             <div style="flex: 0.9; min-width: 320px; background: #fdfdfd; padding: 20px; border: 1px solid #eef0f2; border-radius: 8px; box-shadow: inset 0 1px 3px rgba(0,0,0,0.02);">
                 <h4 style="margin-top:0; color:#444; font-size:0.95rem; font-weight:700; border-bottom:2px solid #7d0022; padding-bottom:8px; text-transform: uppercase; letter-spacing:0.5px;">Denomination (IN / OUT)</h4>
                 
-                <table style="width: 100%; border-collapse: collapse; text-align: center; margin-top:10px;">
-                    <thead>
-                        <tr style="background:#f4f6f8; color:#666; font-size:0.8rem; text-transform: uppercase; font-weight:700;">
-                            <th style="padding:10px; border-bottom: 1px solid #eaeaea;">Value</th>
-                            <th style="padding:10px; border-bottom: 1px solid #eaeaea; color: #27ae60;">Cash IN</th>
-                            <th style="padding:10px; border-bottom: 1px solid #eaeaea; color: #c0392b;">Cash OUT</th>
-                        </tr>
-                    </thead>
-                    <tbody id="denom-table-body">
-                        ${[500, 200, 100, 50, 20, 10, 5].map(note => `
-                            <tr style="border-bottom: 1px solid #f6f6f6;">
-                                <td style="padding:8px; font-size:0.9rem; color:#333;"><strong>₹${note}</strong></td>
-                                <td style="padding:8px;"><input type="number" class="denom-in" data-note="${note}" value="0" min="0" style="width:65px; padding:6px; text-align:center; border:1px solid #dcdcdc; border-radius:4px; font-weight:600;"></td>
-                                <td style="padding:8px;"><input type="number" class="denom-out" data-note="${note}" value="0" min="0" style="width:65px; padding:6px; text-align:center; border:1px solid #dcdcdc; border-radius:4px; font-weight:600;"></td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
+               <table style="width: 100%; border-collapse: collapse; text-align: center; margin-top:10px;">
+    <thead>
+        <tr style="background:#f4f6f8; color:#666; font-size:0.8rem; text-transform: uppercase; font-weight:700;">
+            <th style="padding:10px; border-bottom: 1px solid #eaeaea;">Value</th>
+            <th style="padding:10px; border-bottom: 1px solid #eaeaea; color: #27ae60;">Cash IN</th>
+            <th style="padding:10px; border-bottom: 1px solid #eaeaea; color: #c0392b;">Cash OUT</th>
+            <th style="padding:10px; border-bottom: 1px solid #eaeaea; color: #2c3e50;">Total</th>
+        </tr>
+    </thead>
+    <tbody id="denom-table-body">
+        ${[500, 200, 100, 50, 20, 10, 5].map(note => `
+            <tr style="border-bottom: 1px solid #f6f6f6;" id="row-${note}">
+                <td style="padding:8px; font-size:0.9rem; color:#333;"><strong>₹${note}</strong></td>
+                <td style="padding:8px;"><input type="number" class="denom-in" data-note="${note}" value="0" min="0" style="width:60px; padding:6px; text-align:center; border:1px solid #dcdcdc; border-radius:4px; font-weight:600;"></td>
+                <td style="padding:8px;"><input type="number" class="denom-out" data-note="${note}" value="0" min="0" style="width:60px; padding:6px; text-align:center; border:1px solid #dcdcdc; border-radius:4px; font-weight:600;"></td>
+                <td style="padding:8px; font-size:0.9rem; color:#2c3e50; font-weight:700;" class="note-row-total">₹0</td>
+            </tr>
+        `).join('')}
+    </tbody>
+</table>
 
                 <div style="margin-top:20px; padding:14px; background:#fdf2f4; border-left:4px solid #7d0022; border-radius:4px; font-weight:bold; display:flex; justify-content:space-between; align-items:center;">
                     <span style="color:#7d0022; font-size:0.9rem; text-transform:uppercase; letter-spacing:0.3px;">Net Cash Total:</span>
