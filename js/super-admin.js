@@ -6,25 +6,22 @@ async function initSuperAdminModule() {
     const performanceTable = document.getElementById('sa-performance-table');
 
     if (!pendingTable || !activeTable) {
-        console.warn("⚠️ Super Admin tables not found in DOM.");
+        console.warn("Tables not found!");
         return;
     }
 
-    // Supabase Client Check
     if (!window.supabaseClient) {
-        console.error("❌ window.supabaseClient is not defined!");
-        activeTable.innerHTML = `<tr><td colspan="5" style="padding:15px; color:red; text-align:center;">
-            Supabase Client not initialized. Please check script loading order.
-        </td></tr>`;
+        console.error("Supabase Client not found!");
         return;
     }
 
-    console.log("✅ Super Admin Module Initialized");
+    console.log("Super Admin Module Started");
 
-    // ==================== 1. PENDING REQUESTS ====================
+    // ==================== PENDING REQUESTS ====================
     async function loadPendingRequests() {
+        pendingTable.innerHTML = `<tr><td colspan="5" style="padding:20px; text-align:center;">Loading pending requests...</td></tr>`;
+
         try {
-            console.log("🔄 Loading pending requests...");
             const { data: users, error } = await window.supabaseClient
                 .from('user_roles')
                 .select('*')
@@ -34,7 +31,7 @@ async function initSuperAdminModule() {
             if (error) throw error;
 
             if (!users || users.length === 0) {
-                pendingTable.innerHTML = `<tr><td colspan="5" style="padding: 20px; text-align: center; color: green; font-weight:bold;">
+                pendingTable.innerHTML = `<tr><td colspan="5" style="padding:20px; text-align:center; color:green; font-weight:bold;">
                     🎉 No pending registration requests.
                 </td></tr>`;
                 return;
@@ -44,29 +41,13 @@ async function initSuperAdminModule() {
             users.forEach(user => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td style="padding: 12px; font-weight:600;">${user.full_name || 'N/A'}</td>
-                    <td style="padding: 12px;">${user.email || 'N/A'}</td>
-                    <td style="padding: 12px;">
-                        <span style="background:#eee; padding:3px 8px; border-radius:4px; font-size:0.9rem;">
-                            ${user.role ? user.role.toUpperCase() : 'N/A'}
-                        </span>
-                    </td>
-                    <td style="padding: 12px;">
-                        <input type="text" id="objection-${user.id}" 
-                               placeholder="Objection remark (optional)" 
-                               style="width:95%; padding:8px; border:1px solid #ccc; border-radius:4px;">
-                    </td>
-                    <td style="padding: 12px; text-align: center;">
-                        <div style="display:flex; gap:8px; justify-content:center;">
-                            <button class="p-btn apr-btn" data-id="${user.id}" 
-                                style="background:#137333; color:white; border:none; padding:8px 12px; border-radius:4px; cursor:pointer; font-weight:600;">
-                                Approve (6M)
-                            </button>
-                            <button class="p-btn rej-btn" data-id="${user.id}" 
-                                style="background:#c5221f; color:white; border:none; padding:8px 12px; border-radius:4px; cursor:pointer; font-weight:600;">
-                                Reject
-                            </button>
-                        </div>
+                    <td style="padding:12px; font-weight:600;">${user.full_name || 'N/A'}</td>
+                    <td style="padding:12px;">${user.email || 'N/A'}</td>
+                    <td style="padding:12px;"><span style="background:#eee;padding:4px 8px;border-radius:4px;">${(user.role || 'N/A').toUpperCase()}</span></td>
+                    <td style="padding:12px;"><input type="text" id="objection-${user.id}" placeholder="Objection remark" style="width:95%;padding:6px;border:1px solid #ccc;border-radius:4px;"></td>
+                    <td style="padding:12px; text-align:center;">
+                        <button class="p-btn apr-btn" data-id="${user.id}" style="background:#137333;color:white;padding:8px 12px;border:none;border-radius:4px;margin:2px;">Approve (6M)</button>
+                        <button class="p-btn rej-btn" data-id="${user.id}" style="background:#c5221f;color:white;padding:8px 12px;border:none;border-radius:4px;margin:2px;">Reject</button>
                     </td>
                 `;
                 pendingTable.appendChild(tr);
@@ -74,85 +55,53 @@ async function initSuperAdminModule() {
 
             attachPendingListeners();
         } catch (err) {
-            console.error("Pending Requests Error:", err);
-            pendingTable.innerHTML = `<tr><td colspan="5" style="padding:15px; color:red; text-align:center;">
-                Error loading pending requests.<br><small>${err.message}</small>
-            </td></tr>`;
+            console.error("Pending Error:", err);
+            pendingTable.innerHTML = `<tr><td colspan="5" style="padding:15px;color:red;text-align:center;">Error: ${err.message}</td></tr>`;
         }
     }
 
-    // ==================== 2. ACTIVE USERS ====================
+    // ==================== ACTIVE USERS ====================
     async function loadActiveUsers() {
+        activeTable.innerHTML = `<tr><td colspan="5" style="padding:20px; text-align:center;">Loading active users...</td></tr>`;
+
         try {
-            console.log("🔄 Loading active users...");
             const { data: users, error } = await window.supabaseClient
                 .from('user_roles')
                 .select('*')
                 .neq('role', 'super_admin')
-                .order('full_name', { ascending: true });
+                .order('full_name');
 
             if (error) throw error;
 
-            activeTable.innerHTML = '';
-
             if (!users || users.length === 0) {
-                activeTable.innerHTML = `<tr><td colspan="5" style="padding:20px; text-align:center; color:#666;">
-                    No users found.
-                </td></tr>`;
+                activeTable.innerHTML = `<tr><td colspan="5" style="padding:20px; text-align:center;color:#666;">No active users found.</td></tr>`;
                 return;
             }
 
+            activeTable.innerHTML = '';
             users.forEach(user => {
                 if (user.status === 'pending') return;
 
-                let expiryString = "No Expiry";
-                let statusColor = "#137333";
-                let currentStatus = user.status ? user.status.toUpperCase() : "UNKNOWN";
+                let expiryStr = user.expiry_date 
+                    ? new Date(user.expiry_date).toLocaleDateString('en-IN') 
+                    : "No Expiry";
 
-                if (user.expiry_date) {
-                    const expDate = new Date(user.expiry_date);
-                    expiryString = expDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-
-                    if (expDate < new Date() && user.status === 'approved') {
-                        expiryString += " ⚠️ (EXPIRED)";
-                        statusColor = "#c5221f";
-                        currentStatus = "EXPIRED";
-                    }
-                }
-
-                if (user.status === 'rejected') {
-                    statusColor = "#c5221f";
-                    expiryString = "Access Suspended";
-                }
+                let statusColor = user.status === 'approved' ? '#137333' : '#c5221f';
+                let statusText = user.status ? user.status.toUpperCase() : 'UNKNOWN';
 
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td style="padding:12px; font-weight:600;">
-                        <div style="display:flex; align-items:center; gap:8px;">
-                            ${user.full_name}
-                            <button class="view-details-btn" 
-                                data-name="${user.full_name || ''}"
-                                data-ko="${user.ko_code || 'N/A'}" 
-                                data-mobile="${user.mobile_no || 'N/A'}"
-                                title="View Details">
-                                👁️
-                            </button>
-                        </div>
-                        <small style="color:#777;">${user.email || ''}</small>
-                    </td>
                     <td style="padding:12px;">
-                        <span style="background:#f0f0f0; padding:3px 8px; border-radius:4px; font-size:0.85rem;">
-                            ${user.role ? user.role.toUpperCase() : 'N/A'}
-                        </span>
+                        <b>${user.full_name}</b><br>
+                        <small>${user.email}</small>
                     </td>
-                    <td style="padding:12px; color:${statusColor}; font-weight:bold;">${currentStatus}</td>
-                    <td style="padding:12px; font-weight:600;">${expiryString}</td>
+                    <td style="padding:12px;"><span style="background:#f0f0f0;padding:3px 8px;border-radius:4px;">${user.role?.toUpperCase()}</span></td>
+                    <td style="padding:12px; color:${statusColor}; font-weight:bold;">${statusText}</td>
+                    <td style="padding:12px;">${expiryStr}</td>
                     <td style="padding:12px; text-align:center;">
-                        <div style="display:flex; gap:6px; justify-content:center; flex-wrap:wrap;">
-                            <button class="act-btn ren-btn" data-id="${user.id}">+6 Months</button>
-                            <button class="act-btn rst-btn" data-id="${user.id}" data-name="${user.full_name || ''}">Reset Pass</button>
-                            <button class="act-btn blk-btn" data-id="${user.id}">Unauthorize</button>
-                        </div>
+                        <button class="act-btn ren-btn" data-id="${user.id}" style="background:#137333;color:white;padding:6px 10px;border:none;border-radius:4px;margin:2px;">+6M</button>
+                        <button class="act-btn rst-btn" data-id="${user.id}" data-name="${user.full_name}" style="background:#f2994a;color:white;padding:6px 10px;border:none;border-radius:4px;margin:2px;">Reset</button>
+                        <button class="act-btn blk-btn" data-id="${user.id}" style="background:#222;color:white;padding:6px 10px;border:none;border-radius:4px;margin:2px;">Block</button>
                     </td>
                 `;
                 activeTable.appendChild(tr);
@@ -163,9 +112,7 @@ async function initSuperAdminModule() {
 
         } catch (err) {
             console.error("Active Users Error:", err);
-            activeTable.innerHTML = `<tr><td colspan="5" style="padding:15px; color:red; text-align:center;">
-                Failed to load users.<br><small>${err.message}</small>
-            </td></tr>`;
+            activeTable.innerHTML = `<tr><td colspan="5" style="padding:15px;color:red;text-align:center;">Failed to load users.<br>${err.message}</td></tr>`;
         }
     }
 
