@@ -208,42 +208,47 @@ window.initDepositPage = function (currentUser) {
     
     let lastSavedTransaction = null; // प्रिंट रसीद के लिए ट्रैक करने को
 
-    // --- 4. रीयल-टाइम डिनॉमिनेशन कैलकुलेटर लॉजिक (रो-टोटल + ग्रैंड टोटल के साथ) ---
+    // --- 4. रीयल-टाइम डिनॉमिनेशन कैलकुलेटर लॉजिक (सुपर फिक्स्ड) ---
     function calculateDenominationTotal() {
         let grandTotalIn = 0;
         let grandTotalOut = 0;
 
-        // हर एक नोट की रो (Row) पर जाकर इन-आउट कैलकुलेट करना
-        [500, 200, 100, 50, 20, 10, 5].forEach(note => {
-            const row = document.getElementById(`row-${note}`);
-            if (!row) return;
+        const notes = [500, 200, 100, 50, 20, 10, 5];
 
-            const inputIn = row.querySelector('.denom-in');
-            const inputOut = row.querySelector('.denom-out');
-            const rowTotalDisplay = row.querySelector('.note-row-total');
+        notes.forEach(note => {
+            // इनपुट बॉक्स ढूंढना
+            const inputIn = document.querySelector(`.denom-in[data-note="${note}"]`);
+            const inputOut = document.querySelector(`.denom-out[data-note="${note}"]`);
+            const rowTotalDisplay = document.getElementById(`total-display-${note}`);
 
-            const countIn = parseInt(inputIn.value) || 0;
-            const countOut = parseInt(inputOut.value) || 0;
+            if (inputIn && inputOut) {
+                const countIn = parseInt(inputIn.value) || 0;
+                const countOut = parseInt(inputOut.value) || 0;
 
-            // इस पर्टिकुलर नोट का टोटल (In - Out) * Note Value
-            const rowNetValue = (countIn - countOut) * note;
-            
-            // स्क्रीन पर उस नोट के सामने टोटल दिखाना
-            rowTotalDisplay.innerText = `₹${rowNetValue}`;
-            
-            // कलर कोडिंग: अगर वैल्यू प्लस में है तो ग्रीन, माइनस में तो रेड, 0 तो नॉर्मल
-            if (rowNetValue > 0) rowTotalDisplay.style.color = '#27ae60';
-            else if (rowNetValue < 0) rowTotalDisplay.style.color = '#c0392b';
-            else rowTotalDisplay.style.color = '#2c3e50';
+                // इस नोट का टोटल हिसाब (In - Out) * Value
+                const rowNetValue = (countIn - countOut) * note;
 
-            // ग्रैंड टोटल के लिए जोड़ना
-            grandTotalIn += countIn * note;
-            grandTotalOut += countOut * note;
+                // स्क्रीन पर नोट का टोटल दिखाएं
+                if (rowTotalDisplay) {
+                    rowTotalDisplay.innerText = `₹${rowNetValue}`;
+                    
+                    // प्लस/माइनस कलर कोडिंग
+                    if (rowNetValue > 0) rowTotalDisplay.style.color = '#27ae60';
+                    else if (rowNetValue < 0) rowTotalDisplay.style.color = '#c0392b';
+                    else rowTotalDisplay.style.color = '#2c3e50';
+                }
+
+                // ग्रैंड टोटल में जोड़ें
+                grandTotalIn += countIn * note;
+                grandTotalOut += countOut * note;
+            }
         });
 
-        // सबसे नीचे का ग्रैंड टोटल
+        // सबसे नीचे का नेट कैश ग्रैंड टोटल
         const netCash = grandTotalIn - grandTotalOut;
-        netCashDisplay.innerText = `₹${netCash}`;
+        if (netCashDisplay) {
+            netCashDisplay.innerText = `₹${netCash}`;
+        }
         return netCash;
     }
 
