@@ -56,6 +56,21 @@ window.initDepositPage = function (currentUser) {
 
     // यूआई रेंडर करना (Upgraded Maroon Theme & Compact Buttons Layout)
     workspace.innerHTML = `
+    // यूआई रेंडर करना (Upgraded Maroon Theme, Compact Layout & Custom CSS)
+    workspace.innerHTML = `
+    <style>
+        /* इनपुट बॉक्स से ऊपर-नीचे वाले ऐरो (Spin Buttons) हटाने के लिए */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+        input[type=number] {
+            -moz-appearance: textfield; /* Firefox के लिए */
+        }
+    </style>  
+        
+    
     <div class="deposit-wrapper" style="padding: 24px; background: #fff; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); animation: modalFadeIn 0.3s ease;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
             <h2 style="color: #7d0022; margin: 0; font-size: 1.6rem; font-weight: 700; letter-spacing: 0.5px;">💰 DEPOSIT ENTRY</h2>
