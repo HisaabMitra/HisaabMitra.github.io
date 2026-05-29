@@ -320,7 +320,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function initializePageModules(pageName) {
         if (pageName === 'home') initHomepageModule();
-        if (pageName === 'deposit' && typeof initDepositModule === 'function') initDepositModule();
+       // if (pageName === 'deposit' && typeof initDepositModule === 'function') initDepositModule();
+// js/app.js के नेविगेशन बटन हैंडलर के अंदर:
+if (page === 'deposit') {
+    window.initDepositPage(currentUserObject); // currentUserObject वो ऑब्जेक्ट है जो लॉगिन के बाद मिलता है
+}
     }
 
     // ==========================================
