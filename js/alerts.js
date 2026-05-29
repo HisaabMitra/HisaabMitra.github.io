@@ -1,5 +1,5 @@
 // ग्लोबल कस्टम अलर्ट ऑब्जेक्ट
-window.CustomAlert = {
+window.showSystemAlert = {
     // प्रकार: 'success' (हरा), 'error' (लाल), 'confirm' (सवाल)
     show: function(message, type = 'success', onConfirm = null) {
         // अगर पहले से कोई अलर्ट खुला है तो उसे हटाओ
