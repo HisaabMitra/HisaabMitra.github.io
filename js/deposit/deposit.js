@@ -20,27 +20,37 @@ window.initDepositPage = async function (currentUser) {
         }
 
         // --- टेबल रिफ्रेश लॉजिक (आज की एंट्रीज) ---
-        async function loadTodayTransactions() {
-            const tbody = document.getElementById('today-tx-body');
-            if (!tbody) return;
-            const today = new Date().toISOString().split('T')[0];
+       async function loadTodayTransactions() {
+    const tbody = document.getElementById('today-tx-body');
+    if (!tbody) return;
+    
+    // आज की तारीख का सही फॉर्मेट
+    const today = new Date().toISOString().split('T')[0]; 
 
-            try {
-                const { data, error } = await window.supabaseClient
-                    .from('deposit_transactions')
-                    .select('account_number, amount, created_at, banking_customers(customer_name)')
-                    .gte('created_at', `${today}T00:00:00`)
-                    .order('created_at', { ascending: false });
+    try {
+        // अगर 'banking_customers' का रिलेशन सेट नहीं है, तो सिर्फ deposit_transactions फेच करें
+        const { data, error } = await window.supabaseClient
+            .from('deposit_transactions')
+            .select('account_number, amount, created_at') // फ़िलहाल नाम हटा दिया है टेस्ट करने के लिए
+            .gte('created_at', `${today}T00:00:00`)
+            .order('created_at', { ascending: false });
 
-                if (error) throw error;
-                tbody.innerHTML = '';
-                data.forEach(tx => {
-                    const time = new Date(tx.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                    const name = tx.banking_customers?.customer_name || 'N/A';
-                    tbody.insertAdjacentHTML('beforeend', `<tr><td>${tx.account_number}</td><td>${name}</td><td>₹${tx.amount}</td><td>${time}</td></tr>`);
-                });
-            } catch (err) { console.error("Table Load Error:", err.message); }
+        if (error) throw error;
+        
+        tbody.innerHTML = '';
+        if (data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">आज कोई ट्रांजैक्शन नहीं हुआ</td></tr>';
+            return;
         }
+
+        data.forEach(tx => {
+            const time = new Date(tx.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            tbody.insertAdjacentHTML('beforeend', `<tr><td>${tx.account_number}</td><td>-</td><td>₹${tx.amount}</td><td>${time}</td></tr>`);
+        });
+    } catch (err) { 
+        console.error("Table Load Error:", err.message); 
+    }
+}
         loadTodayTransactions();
 
         // 4. DOM एलिमेंट्स
