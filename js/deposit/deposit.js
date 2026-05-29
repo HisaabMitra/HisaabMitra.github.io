@@ -63,27 +63,71 @@ window.initDepositPage = async function (currentUser) {
             window.speechSynthesis.speak(utterance);
         });
 
-        // --- Supabase कस्टमर सर्च लॉजिक ---
-        async function searchCustomer() {
-            const accountNo = accInput.value.trim();
-            if (!accountNo) return;
-            try {
-                const { data, error } = await window.supabaseClient
-                    .from('banking_customers')
-                    .select('customer_name')
-                    .eq('account_number', accountNo).single();
+       // --- कस्टमर सर्च से पहले अकाउंट नंबर को ऑटो-फॉर्मेट करने का फंक्शन ---
+function formatAccountNumber(inputAcc, solId) {
+    let acc = inputAcc.trim();
 
-                if (error && error.code !== 'PGRST116') throw error;
-                if (data) {
-                    custNameInput.value = data.customer_name;
-                } else {
-                    ncAccInput.value = accountNo;
-                    ncNameInput.value = ""; ncMobileInput.value = ""; ncAddressInput.value = "";
-                    ncModal.style.display = 'flex';
-                }
-            } catch (err) { console.error("Fetch error:", err.message); }
+    // नियम 1: अगर 10 डिजिट से बड़ा है, तो कोई छेड़छाड़ नहीं
+    if (acc.length > 10) {
+        return acc;
+    }
+
+    // नियम 2: अगर अकाउंट नंबर में डैश (-) मौजूद है
+    if (acc.includes('-')) {
+        const parts = acc.split('-');
+        const prefix = parts[0].padStart(2, '0'); // 2 डिजिट फिक्स (जैसे: 01, 17)
+        const suffix = parts[1].padStart(8, '0'); // 🌟 अब ये बिल्कुल सही 8 डिजिट फिक्स करेगा (जैसे: 00020039)
+
+        // सबको मिलाकर फाइनल 16 डिजिट का अकाउंट नंबर तैयार
+        const fullAccountNumber = `${solId}${prefix}${suffix}`;
+        return fullAccountNumber;
+    }
+
+    return acc;
+}
+
+// --- संशोधित कस्टमर सर्च लॉजिक ---
+async function searchCustomer() {
+    let accountNo = accInput.value.trim();
+    if (!accountNo) return;
+
+    // मान लेते हैं कि वर्तमान यूजर की sol_id आपके पास currentUser.sol_id में उपलब्ध है
+    // अगर उपलब्ध न हो तो आप यहाँ डायरेक्ट '193000' भी लिख सकते हैं।
+    const userSolId = currentUser.sol_id || '193000'; 
+
+    // लॉजिक अप्लाई करें
+    const formattedAccountNo = formatAccountNumber(accountNo, userSolId);
+
+    // अगर नंबर बदला है, तो इनपुट बॉक्स में भी नया बड़ा नंबर सेट कर दें ताकि यूजर देख सके
+    if (formattedAccountNo !== accountNo) {
+        accInput.value = formattedAccountNo;
+        accountNo = formattedAccountNo; // सर्च के लिए अपडेटेड नंबर इस्तेमाल करें
+    }
+
+    try {
+        // अब डेटाबेस में इस फुल-फॉर्मेटेड नंबर से सर्च होगा
+        const { data, error } = await window.supabaseClient
+            .from('banking_customers')
+            .select('customer_name')
+            .eq('account_number', accountNo).single();
+
+        if (error && error.code !== 'PGRST116') throw error;
+        
+        if (data) {
+            custNameInput.value = data.customer_name;
+        } else {
+            // अगर कस्टमर नहीं मिला, तो नए रजिस्ट्रेशन मोडल में भी यही बड़ा नंबर पास होगा
+            ncAccInput.value = accountNo;
+            ncNameInput.value = ""; ncMobileInput.value = ""; ncAddressInput.value = "";
+            ncModal.style.display = 'flex';
         }
-        accInput.addEventListener('blur', searchCustomer);
+    } catch (err) { 
+        console.error("Fetch error:", err.message); 
+    }
+}
+
+// इनपुट बॉक्स से फोकस हटते ही (Blur) यह फंक्शन रन होगा
+accInput.addEventListener('blur', searchCustomer);
 
         // नया कस्टमर सबमिट
         document.getElementById('btn-nc-continue').addEventListener('click', async () => {
