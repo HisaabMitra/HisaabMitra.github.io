@@ -20,21 +20,20 @@ window.initDepositPage = async function (currentUser) {
         }
 
         // --- टेबल रिफ्रेश लॉजिक (आज की एंट्रीज) ---
-      async function loadTodayTransactions() {
+     async function loadTodayTransactions() {
     const tbody = document.getElementById('today-tx-body');
     if (!tbody) return;
 
-    // Supabase से आज का डेटा निकालें
-    // 'new Date().toISOString()' का मतलब है 2026-05-29T...
-    const today = new Date().toISOString().split('T')[0]; 
+    // आज की तारीख (YYYY-MM-DD)
+    const today = new Date().toISOString().split('T')[0];
 
     try {
-        // सिर्फ मुख्य कॉलम फेच करें
+        // यहाँ हमने 'created_at' को बदलकर 'transaction_date' कर दिया है
         const { data, error } = await window.supabaseClient
             .from('deposit_transactions')
-            .select('account_number, amount, created_at')
-            .gte('created_at', `${today}T00:00:00`)
-            .order('created_at', { ascending: false });
+            .select('account_number, amount, transaction_date') 
+            .gte('transaction_date', `${today}T00:00:00`)
+            .order('transaction_date', { ascending: false });
 
         if (error) {
             console.error("Supabase Error:", error);
@@ -49,10 +48,9 @@ window.initDepositPage = async function (currentUser) {
         }
 
         data.forEach(tx => {
-            // टाइम फॉर्मेटिंग
-            const time = new Date(tx.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            // यहाँ भी 'transaction_date' का उपयोग करें
+            const time = new Date(tx.transaction_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             
-            // टेबल में रो जोड़ें
             const row = `<tr>
                 <td>${tx.account_number}</td>
                 <td>--</td>
