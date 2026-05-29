@@ -1,5 +1,5 @@
 <style>
-    /* इनपुट बॉक्स से ऐरो हटाने के लिए */
+     /* इनपुट बॉक्स से ऐरो हटाने के लिए */
     input[type=number]::-webkit-inner-spin-button, 
     input[type=number]::-webkit-outer-spin-button { 
         -webkit-appearance: none; 
@@ -9,6 +9,22 @@
         -moz-appearance: textfield;
     }
 </style>  
+
+
+
+<div class="transaction-container"> <h3>Today's Transactions</h3>
+    <table class="styled-table"> <thead>
+            <tr>
+                <th>Account</th>
+                <th>Name</th>
+                <th>Amount</th>
+                <th>Time</th>
+            </tr>
+        </thead>
+        <tbody id="today-tx-body"></tbody>
+    </table>
+</div>
+
     
 <div class="deposit-wrapper" style="padding: 24px; background: #fff; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
