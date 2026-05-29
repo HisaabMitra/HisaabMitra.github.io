@@ -1,19 +1,21 @@
 <style>
     /* इनपुट बॉक्स से ऐरो हटाने के लिए */
     input[type=number]::-webkit-inner-spin-button, 
-    input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-    input[type=number] { -moz-appearance: textfield; }
-    
+    input[type=number]::-webkit-outer-spin-button { 
+        -webkit-appearance: none; 
+        margin: 0; 
+    }
+    input[type=number] {
+        -moz-appearance: textfield;
+    }
     /* टेबल के लिए स्टाइल */
-    .transaction-container { margin-top: 30px; background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
     .styled-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-    .styled-table th, .styled-table td { padding: 12px; border-bottom: 1px solid #eee; text-align: left; font-size: 0.9rem; }
-    .styled-table thead { background: #fdf2f4; }
+    .styled-table th, .styled-table td { padding: 12px; border-bottom: 1px solid #eee; text-align: left; }
 </style>
 
 <div class="deposit-wrapper" style="padding: 24px; background: #fff; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-        <h2 style="color: #7d0022; margin: 0; font-size: 1.6rem; font-weight: 700;">💰 DEPOSIT ENTRY</h2>
+        <h2 style="color: #7d0022; margin: 0; font-size: 1.6rem; font-weight: 700; letter-spacing: 0.5px;">💰 DEPOSIT ENTRY</h2>
         <span style="background: #fdf2f4; color: #7d0022; padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; border: 1px solid #f9d5dc;">
             Counter KO Code: <strong id="lbl-ko-code">--</strong>
         </span>
@@ -24,7 +26,7 @@
         <div style="flex: 1.1; min-width: 340px; display: flex; flex-direction: column; gap: 18px;">
             <div class="form-group">
                 <label style="font-weight:600; color: #444; display:block; margin-bottom:6px; font-size:0.9rem;">Customer Account Number *</label>
-                <input type="text" id="dep-account-no" placeholder="Enter Account Number" style="width:100%; padding: 11px 14px; font-size:1.1rem; font-weight:bold; border: 1px solid #dcdcdc; border-radius:6px; box-sizing: border-box;">
+                <input type="text" id="dep-account-no" placeholder="Enter Account Number" style="width:100%; padding: 11px 14px; font-size:1.1rem; font-weight:bold; border: 1px solid #dcdcdc; border-radius:6px; box-sizing: border-box; transition: all 0.3s;">
             </div>
             <div class="form-group">
                 <label style="font-weight:600; color: #444; display:block; margin-bottom:6px; font-size:0.9rem;">Customer Name</label>
@@ -37,27 +39,35 @@
             <div style="background: #fafafa; padding: 12px 15px; border: 1px solid #eaeaea; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;">
                 <div style="flex: 1; padding-right: 10px;">
                     <span style="font-size: 0.75rem; color:#888; display:block; text-transform: uppercase; font-weight:700;">Amount in Words</span>
-                    <strong id="dep-amount-words" style="color: #2c3e50; font-size: 0.9rem;">Zero Rupees Only</strong>
+                    <strong id="dep-amount-words" style="color: #2c3e50; font-size: 0.9rem; word-break: break-word;">Zero Rupees Only</strong>
                 </div>
-                <button id="btn-speak-hindi" type="button" style="background: #7d0022; border:none; color:white; cursor:pointer; font-size:0.8rem; padding: 8px 12px; border-radius:6px; font-weight:600;">🔊 सुने</button>
+                <button id="btn-speak-hindi" type="button" style="background: #7d0022; border:none; color:white; cursor:pointer; font-size:0.8rem; padding: 8px 12px; border-radius:6px; font-weight:600; display:flex; align-items:center; gap:5px; transition: background 0.2s;">
+                    🔊 सुने
+                </button>
             </div>
             <div class="form-group">
                 <label style="font-weight:600; color: #444; display:block; margin-bottom:6px; font-size:0.9rem;">Remarks</label>
                 <input type="text" id="dep-remarks" placeholder="Optional notes" style="width:100%; padding: 11px 14px; border: 1px solid #dcdcdc; border-radius:6px; box-sizing: border-box;">
             </div>
-            <div style="display: flex; gap: 10px; margin-top: 10px;">
-                <button id="btn-dep-save" style="flex: 1; background: #7d0022; color:white; padding: 12px; font-weight:bold; cursor:pointer; border-radius:6px; border:none;">💾 Save</button>
-                <button id="btn-dep-print" style="flex: 1; background: #2980b9; color:white; padding: 12px; font-weight:bold; cursor:pointer; border-radius:6px; border:none;" disabled>🖨️ Print</button>
-                <button id="btn-dep-clear" style="flex: 0.9; background: #7f8c8d; color:white; padding: 12px; font-weight:bold; cursor:pointer; border-radius:6px; border:none;">🧹 Clear</button>
+            <div style="display: flex; gap: 10px; margin-top: 10px; box-sizing: border-box;">
+                <button id="btn-dep-save" class="btn" style="flex: 1; background: #7d0022; color:white; padding: 12px 5px; font-weight:bold; font-size:0.85rem; cursor:pointer; border-radius:6px; border:none; text-transform: uppercase; letter-spacing: 0.3px; transition: background 0.2s; box-shadow: 0 2px 6px rgba(125,0,34,0.2);">
+                    💾 Save
+                </button>
+                <button id="btn-dep-print" class="btn" style="flex: 1; background: #2980b9; color:white; padding: 12px 5px; font-weight:bold; font-size:0.85rem; cursor:pointer; border-radius:6px; border:none; text-transform: uppercase; letter-spacing: 0.3px; transition: background 0.2s;" disabled>
+                    🖨️ Print
+                </button>
+                <button id="btn-dep-clear" class="btn" style="flex: 0.9; background: #7f8c8d; color:white; padding: 12px 5px; font-weight:bold; font-size:0.85rem; cursor:pointer; border-radius:6px; border:none; text-transform: uppercase; letter-spacing: 0.3px; transition: background 0.2s;">
+                    🧹 Clear
+                </button>
             </div>
         </div>
-
-        <div id="denomination-widget-container" style="flex: 0.9; min-width: 320px; background: #fdfdfd; padding: 20px; border: 1px solid #eef0f2; border-radius: 8px;"></div>
+        <div id="denomination-widget-container" style="flex: 0.9; min-width: 320px; background: #fdfdfd; padding: 20px; border: 1px solid #eef0f2; border-radius: 8px; box-shadow: inset 0 1px 3px rgba(0,0,0,0.02);">
+        </div>
     </div>
 </div>
 
-<div class="transaction-container">
-    <h3 style="color: #444; margin-bottom: 15px;">Today's Transactions</h3>
+<div class="transaction-container" style="margin-top: 25px; padding: 24px; background: #fff; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
+    <h3>Today's Transactions</h3>
     <table class="styled-table">
         <thead>
             <tr>
@@ -71,16 +81,32 @@
     </table>
 </div>
 
-<div id="new-cust-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.55); z-index: 99999; align-items: center; justify-content: center;">
-    <div style="background: white; padding: 25px; border-radius: 10px; max-width: 400px; width: 90%; border-top: 6px solid #7d0022;">
-        <h3 style="color:#7d0022; margin-top:0;">New Customer Detected</h3>
-        <input type="text" id="nc-account-no" readonly style="width:100%; padding:10px; margin-bottom:10px; background:#f8f9fa;">
-        <input type="text" id="nc-name" placeholder="Full Name" style="width:100%; padding:10px; margin-bottom:10px;">
-        <input type="tel" id="nc-mobile" placeholder="Mobile" style="width:100%; padding:10px; margin-bottom:10px;">
-        <input type="text" id="nc-address" placeholder="Address" style="width:100%; padding:10px; margin-bottom:20px;">
-        <div style="display: flex; gap:10px;">
-            <button id="btn-nc-cancel" style="padding:10px; flex:1;">Cancel</button>
-            <button id="btn-nc-continue" style="padding:10px; flex:1; background:#7d0022; color:white; border:none;">Register</button>
+<div id="new-cust-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.55); backdrop-filter: blur(3px); z-index: 99999; align-items: center; justify-content: center;">
+    <div style="background: white; padding: 25px 30px; border-radius: 10px; max-width: 400px; width: 90%; text-align: left; box-shadow: 0 10px 30px rgba(0,0,0,0.2); border-top: 6px solid #7d0022;">
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom: 8px;">
+            <span style="font-size: 1.5rem;">🔍</span>
+            <h3 style="color:#7d0022; margin:0; font-size:1.3rem; font-weight:700;">New Customer Detected</h3>
+        </div>
+        <p style="font-size:0.85rem; color:#666; margin-bottom:20px; line-height:1.4;">This account is not registered in the system. Complete the quick registration to proceed:</p>
+        <div style="margin-bottom:14px;">
+            <label style="font-size:0.8rem; font-weight:600; color:#555; display:block; margin-bottom:4px;">Account Number</label>
+            <input type="text" id="nc-account-no" readonly style="width:100%; padding:10px; background:#f8f9fa; border:1px solid #e9ecef; border-radius:6px; font-weight:bold; box-sizing:border-box; color:#444;">
+        </div>
+        <div style="margin-bottom:14px;">
+            <label style="font-size:0.8rem; font-weight:600; color:#555; display:block; margin-bottom:4px;">Customer Full Name *</label>
+            <input type="text" id="nc-name" placeholder="Enter full name" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:6px; box-sizing:border-box; font-size:0.9rem;">
+        </div>
+        <div style="margin-bottom:14px;">
+            <label style="font-size:0.8rem; font-weight:600; color:#555; display:block; margin-bottom:4px;">Mobile Number *</label>
+            <input type="tel" id="nc-mobile" placeholder="10-digit mobile number" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:6px; box-sizing:border-box; font-size:0.9rem;">
+        </div>
+        <div style="margin-bottom:22px;">
+            <label style="font-size:0.8rem; font-weight:600; color:#555; display:block; margin-bottom:4px;">Address</label>
+            <input type="text" id="nc-address" placeholder="City / Branch Area" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:6px; box-sizing:border-box; font-size:0.9rem;">
+        </div>
+        <div style="display: flex; gap:12px; justify-content: flex-end;">
+            <button id="btn-nc-cancel" style="padding:10px 16px; background:#f4f6f8; border:1px solid #ddd; color:#555; cursor:pointer; border-radius:6px; font-weight:600; font-size:0.85rem;">Cancel</button>
+            <button id="btn-nc-continue" style="padding:10px 20px; background:#7d0022; color:white; border:none; cursor:pointer; border-radius:6px; font-weight:700; font-size:0.85rem;">Register & Continue</button>
         </div>
     </div>
 </div>
