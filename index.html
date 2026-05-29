@@ -179,9 +179,42 @@
     <div id="missing-detail-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 99997; align-items: center; justify-content: center;">
         <div style="background: white; padding: 35px; border-radius: 8px; max-width: 450px; width: 90%; text-align: center; box-shadow: 0 4px 25px rgba(0,0,0,0.3); border-top: 5px solid var(--color-yellow-main); animation: modalFadeIn 0.3s ease;">
             <div style="font-size: 3rem; margin-bottom: 15px;">📋</div>
-            <h3 style="color: var(--color-maroon-main); margin-bottom: 8px; font-size: 1.4rem;">Profile Action Required</h3>
+            <h3 style="color: var(--color-maroon-main); margin-bottom: 8px; font-size: 1.4rem; font-weight: bold;">Profile Action Required</h3>
             <p style="color: #555; font-size: 0.95rem; margin-bottom: 20px; line-height: 1.4;">Your terminal operator profile is missing critical operational credentials. Please complete the details below to unlock your workspace:</p>
             
             <form id="missing-detail-form" style="text-align: left; display: flex; flex-direction: column; gap: 15px;">
+                
                 <div id="md-ko-block" style="display: none;">
-                    <label style="font-weight: 600; color: #333; font-size: 0.9rem; display:block; margin-bottom: 5px;">KO Code (Kiosk Operator Code) *</
+                    <label style="font-weight: 600; color: #333; font-size: 0.9rem; display:block; margin-bottom: 5px;">KO Code (Kiosk Operator Code) *</label>
+                    <input type="text" id="md-ko-input" placeholder="e.g., KO123456" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 1rem; box-sizing: border-box;">
+                </div>
+
+                <div id="md-settlement-block" style="display: none;">
+                    <label style="font-weight: 600; color: #333; font-size: 0.9rem; display:block; margin-bottom: 5px;">Settlement Account Number *</label>
+                    <input type="text" id="md-settlement-input" placeholder="Enter Settlement Account" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 1rem; box-sizing: border-box;">
+                </div>
+
+                <div id="md-sol-block" style="display: none;">
+                    <label style="font-weight: 600; color: #333; font-size: 0.9rem; display:block; margin-bottom: 5px;">SOL ID (Branch Code) *</label>
+                    <input type="text" id="md-sol-input" placeholder="Enter SOL ID" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 1rem; box-sizing: border-box;">
+                </div>
+
+                <div id="md-mobile-block" style="display: none;">
+                    <label style="font-weight: 600; color: #333; font-size: 0.9rem; display:block; margin-bottom: 5px;">Mobile Number *</label>
+                    <input type="tel" id="md-mobile-input" placeholder="10 Digit Mobile Number" pattern="[0-9]{10}" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 1rem; box-sizing: border-box;">
+                </div>
+
+                <div id="md-name-block" style="display: none;">
+                    <label style="font-weight: 600; color: #333; font-size: 0.9rem; display:block; margin-bottom: 5px;">Full Name *</label>
+                    <input type="text" id="md-name-input" placeholder="Your Official Name" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 1rem; box-sizing: border-box;">
+                </div>
+
+                <button type="submit" id="md-submit-btn" style="background: var(--color-maroon-main); color: white; border: none; padding: 12px; font-size: 1rem; font-weight: 600; border-radius: 4px; cursor: pointer; width: 100%; margin-top: 10px; display: block !important; transition: background 0.2s;">
+                    Save & Unlock Workspace
+                </button>
+            </form>
+        </div>
+    </div>
+
+</body>
+</html>
