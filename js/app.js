@@ -408,8 +408,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (pageName === 'super-admin' && typeof initSuperAdminModule === 'function') initSuperAdminModule();
     }
 
-    // ==========================================
-    // 7. MULTI-TENANT KO-CODE LIVE BALANCE LOGIC
+   // ==========================================
+    // 7. MULTI-TENANT KO-CODE LIVE BALANCE LOGIC WITH CASH-IN-HAND
     // ==========================================
     async function initHomepageModule() {
         if (!currentLoggedInUser || !currentLoggedInUser.ko_code) return;
@@ -417,6 +417,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const koCode = currentLoggedInUser.ko_code;
         const koDisplay = document.getElementById('hp-ko-display');
         const balanceDisplay = document.getElementById('hp-settlement-balance');
+        const cashInHandDisplay = document.getElementById('hp-cash-in-hand'); // नया एलिमेंट
 
         if (koDisplay) koDisplay.textContent = `KO CODE: ${koCode}`;
 
@@ -440,17 +441,35 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const record = balanceData[0];
 
+            // 1. सेटलमेंट वॉलेट बैलेंस दिखाना
             if (balanceDisplay) {
                 balanceDisplay.textContent = `₹ ${parseFloat(record.settlement_balance).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
             }
 
-            if(document.getElementById('note-count-500')) document.getElementById('note-count-500').textContent = record.note_500 || 0;
-            if(document.getElementById('note-count-200')) document.getElementById('note-count-200').textContent = record.note_200 || 0;
-            if(document.getElementById('note-count-100')) document.getElementById('note-count-100').textContent = record.note_100 || 0;
-            if(document.getElementById('note-count-50')) document.getElementById('note-count-50').textContent = record.note_50 || 0;
-            if(document.getElementById('note-count-20')) document.getElementById('note-count-20').textContent = record.note_20 || 0;
-            if(document.getElementById('note-count-10')) document.getElementById('note-count-10').textContent = record.note_10 || 0;
-            if(document.getElementById('coin-total-count')) document.getElementById('coin-total-count').textContent = record.coins || 0;
+            // 2. गल्ले का टोटल लाइव कैश कैलकुलेट करना (बिना 2000 के)
+            const n500 = parseInt(record.note_500) || 0;
+            const n200 = parseInt(record.note_200) || 0;
+            const n100 = parseInt(record.note_100) || 0;
+            const n50  = parseInt(record.note_50) || 0;
+            const n20  = parseInt(record.note_20) || 0;
+            const n10  = parseInt(record.note_10) || 0;
+            const totalCoins = parseInt(record.coins) || 0;
+
+            const finalCashInHand = (n500 * 500) + (n200 * 200) + (n100 * 100) + (n50 * 50) + (n20 * 20) + (n10 * 10) + totalCoins;
+
+            // 3. कैश इन हैंड स्क्रीन पर रेंडर करना
+            if (cashInHandDisplay) {
+                cashInHandDisplay.textContent = `₹ ${finalCashInHand.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+            }
+
+            // 4. नीचे अलग-अलग डिब्बों में पीसेस अपडेट करना
+            if(document.getElementById('note-count-500')) document.getElementById('note-count-500').textContent = n500;
+            if(document.getElementById('note-count-200')) document.getElementById('note-count-200').textContent = n200;
+            if(document.getElementById('note-count-100')) document.getElementById('note-count-100').textContent = n100;
+            if(document.getElementById('note-count-50')) document.getElementById('note-count-50').textContent = n50;
+            if(document.getElementById('note-count-20')) document.getElementById('note-count-20').textContent = n20;
+            if(document.getElementById('note-count-10')) document.getElementById('note-count-10').textContent = n10;
+            if(document.getElementById('coin-total-count')) document.getElementById('coin-total-count').textContent = totalCoins;
 
         } catch (err) {
             console.error("Homepage Balance Load Error:", err);
