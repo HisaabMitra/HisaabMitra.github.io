@@ -20,30 +20,20 @@ window.initDepositPage = async function (currentUser) {
         }
 
         // --- टेबल रिफ्रेश लॉजिक (आज की एंट्रीज) ---
-    async function loadTodayTransactions() {
+   async function loadTodayTransactions() {
     const tbody = document.getElementById('today-tx-body');
     if (!tbody) return;
 
-    // आज की तारीख का स्ट्रिंग (YYYY-MM-DD)
     const today = new Date().toISOString().split('T')[0];
 
     try {
-        // यहाँ हमने 'transaction_date' का इस्तेमाल किया है
         const { data, error } = await window.supabaseClient
             .from('deposit_transactions')
-            .select(`
-                account_number, 
-                amount, 
-                transaction_date, 
-                banking_customers(customer_name)
-            `)
+            .select('transaction_id, account_number, customer_name, amount, transaction_date')
             .gte('transaction_date', `${today}T00:00:00`)
             .order('transaction_date', { ascending: false });
 
-        if (error) {
-            console.error("Supabase Query Error:", error);
-            return;
-        }
+        if (error) throw error;
 
         tbody.innerHTML = '';
         if (!data || data.length === 0) {
@@ -53,8 +43,9 @@ window.initDepositPage = async function (currentUser) {
 
         data.forEach(tx => {
             const time = new Date(tx.transaction_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            const name = tx.banking_customers ? tx.banking_customers.customer_name : 'N/A';
+            const name = tx.customer_name || "N/A";
             
+            // टेबल रो
             tbody.insertAdjacentHTML('beforeend', `
                 <tr>
                     <td>${tx.account_number}</td>
@@ -65,10 +56,14 @@ window.initDepositPage = async function (currentUser) {
             `);
         });
     } catch (err) { 
-        console.error("Table Load Exception:", err); 
+        console.error("Table Load Error:", err); 
     }
 }
-        loadTodayTransactions();
+
+// पेज लोड होते ही टेबल चलाएं
+document.addEventListener('DOMContentLoaded', loadTodayTransactions);
+        
+    //    loadTodayTransactions();
 
         // 4. DOM एलिमेंट्स
         const accInput = document.getElementById('dep-account-no');
