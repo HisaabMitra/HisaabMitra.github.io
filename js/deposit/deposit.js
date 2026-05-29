@@ -9,10 +9,10 @@ function numberToHindiWords(amount) {
     if (amount === 0) return "शून्य";
 
     const hindiOnes = ["", "एक", "दो", "तीन", "चार", "पाँच", "छह", "सात", "आठ", "नौ", "दस", 
-                       "ग्यारह", "बारह", "तेरह", "चौदह", "पंद्रह", "सोलह", "सत्रह", "अठारह", "उन्नीस", "बीस",
+                       "ग्याराह", "बारह", "तेरह", "चौदह", "पंद्रह", "सोलह", "सत्रह", "अठारह", "उन्नीस", "बीस",
                        "इक्कीस", "बाईस", "तेईस", "चौबीस", "पच्चीस", "छब्बीस", "सत्ताईस", "अट्ठाइस", "उनतीस", "तीस",
                        "इकत्तीस", "बत्तीस", "तैंतीस", "चौंतीस", "पैंतीस", "छत्तीस", "सैंतीस", "अड़तीस", "उनतालीस", "चालिस",
-                       "इकतालीस", "बयालीस", "तैंतालीस", "चैंतालीस", "पैंतालीस", "छियालीस", "सैंतालीस", "अड़तालीस", "उनचास", "पचास",
+                       "इकतालीस", "बयालीस", "तैंतालीस", "चैंतालीस", "पैंतालीस", "छियालीस", "सैंतालीस", "अड़तालीस", "उनचाas", "पचास",
                        "इक्कावन", "बावन", "तिरेपन", "चौवन", "पचपन", "छप्पन", "सतावन", "अठावन", "उनसठ", "साठ",
                        "इकसठ", "बासठ", "तिरसठ", "चौंसठ", "पैंसठ", "छियासठ", "सरसठ", "अड़सठ", "उनहत्तर", "सत्तर",
                        "इहत्तर", "बहत्तर", "तिहत्तर", "चौहत्तर", "पचहत्तर", "छियाहत्तर", "सतहत्तर", "अठहत्तर", "उनासी", "अस्सी",
@@ -49,26 +49,12 @@ function numberToHindiWords(amount) {
     return words.trim();
 }
 
-// 2. नंबर को हिंदी शब्दों में बदलने का फंक्शन (For Voice Assistant)
-function numberToHindiWords(amount) {
-    if (amount === 0) return "शून्य";
-    // साधारण बोलचाल के लिए मुख्य नंबर्स
-    if (amount === 1000) return "एक हजार";
-    if (amount === 2000) return "दो हजार";
-    if (amount === 5000) return "पाँच हजार";
-    if (amount === 10000) return "दस हजार";
-    
-    // डिफ़ॉल्ट इंग्लिश ट्रांसलेशन सपोर्ट या बेसिक स्ट्रिंग
-    return amount + " रुपए";
-}
-
 // 3. मुख्य डिपॉजिट मॉड्यूल इनिशियलाइज़ेशन
 window.initDepositPage = function (currentUser) {
     const workspace = document.getElementById('workspace');
     if (!workspace) return;
 
-    // यूआई रेंडर करना
-   // यूआई रेंडर करना (Upgraded Maroon Theme & Compact Buttons Layout)
+    // यूआई रेंडर करना (Upgraded Maroon Theme & Compact Buttons Layout)
     workspace.innerHTML = `
     <div class="deposit-wrapper" style="padding: 24px; background: #fff; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); animation: modalFadeIn 0.3s ease;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
@@ -232,10 +218,16 @@ window.initDepositPage = function (currentUser) {
         input.addEventListener('input', calculateDenominationTotal);
     });
 
-    // --- 5. अमाउंट इनपुट चेंजेस और नंबर-टू-वर्ड्स सिंक ---
+    // --- 5. अमाउंट इनपुट चेंजेस और नंबर-टू-वर्ड्स सिंक (FIXED: Calls Correct Hindi Function) ---
     amountInput.addEventListener('input', () => {
         const amt = parseInt(amountInput.value) || 0;
-        wordsDisplay.innerText = numberToWords(amt);
+        if (amt === 0) {
+            wordsDisplay.innerText = "Zero Rupees Only";
+            return;
+        }
+        // लाइव स्क्रीन पर हिंदी शब्द दिखाना
+        const hindiWords = numberToHindiWords(amt);
+        wordsDisplay.innerText = `${hindiWords} रुपए मात्र`;
     });
 
     // --- 6. हिंदी आवाज़ असिस्टेंट (सुपर फिक्स्ड वॉइस इंजन) ---
@@ -357,7 +349,7 @@ window.initDepositPage = function (currentUser) {
 
         // डिनॉमिनेशन ब्लैंक/ज़ीरो अलर्ट बाईपास चेक
         if (netCash === 0) {
-            const proceedWithoutDenom = confirm("⚠️ डिनॉमिनेशन ऐड नहीं है। क्या आप बिना कैश डिटेल के आगे बढ़ना चाहते हैं?");
+            const proceedWithoutDenom = confirm("⚠️ डिनॉमिनेशन ऐड नहीं है। क्या आप बिना कैश डिटेल के आगे बढ़ना चाहते हैं?");
             if (!proceedWithoutDenom) return;
         } else if (netCash !== amount) {
             // अगर डिनॉमिनेशन नेट कैश अमाउंट से मैच नहीं होता
@@ -370,7 +362,7 @@ window.initDepositPage = function (currentUser) {
         if (calcCommission > 50) calcCommission = 50;
 
         try {
-            // स्टेप A: डिपॉजिट ट्रांजैक्शन रिकॉर्ड को सेव करना
+            // स्टेप A: डिपॉजिट ट्रांजैक्शन记录 को सेव करना
             const denomDetails = {};
             [500, 200, 100, 50, 20, 10, 5].forEach(note => {
                 denomDetails[`denom_in_${note}`] = parseInt(document.querySelector(`.denom-in[data-note="${note}"]`).value) || 0;
