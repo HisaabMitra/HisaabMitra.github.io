@@ -13,6 +13,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const iconEl = document.getElementById('custom-alert-icon');
         const btn = document.getElementById('custom-alert-btn');
 
+        if (!modal) {
+            alert(message);
+            return Promise.resolve(true);
+        }
+
         if (message.includes("✅") || message.includes("Successfully")) icon = "✅";
         if (message.includes("❌") || message.includes("Failed")) icon = "❌";
         if (message.includes("🚨") || message.includes("Expired")) icon = "🚨";
@@ -61,7 +66,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ==========================================
-    // 2. USER REGISTRATION & RE-SUBMISSION (WITH SETTLEMENT & SOL ID)
+    // 2. USER REGISTRATION & RE-SUBMISSION
     // ==========================================
     if (registerForm) {
         registerForm.addEventListener('submit', async (e) => {
@@ -72,8 +77,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const role = document.getElementById('reg-role').value;
             const koCode = document.getElementById('reg-ko-code').value.trim(); 
             const mobile = document.getElementById('reg-mobile').value.trim(); 
-            const settlementAcc = document.getElementById('reg-settlement-acc').value.trim(); // नया
-            const solId = document.getElementById('reg-sol-id').value.trim(); // नया
+            const settlementAcc = document.getElementById('reg-settlement-acc').value.trim();
+            const solId = document.getElementById('reg-sol-id').value.trim();
             const submitBtn = registerForm.querySelector('button[type="submit"]');
 
             submitBtn.textContent = "Processing Request...";
@@ -87,15 +92,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (checkError) throw checkError;
 
-                // फ्रंटएंड पर ही ऑब्जेक्ट तैयार करना ताकि बाद में एक साथ डेटाबेस सिंक कर सकें
                 const payload = {
                     full_name: name,
                     password_text: password,
                     role: role,
                     ko_code: koCode,    
                     mobile_no: mobile,  
-                    settlement_account: settlementAcc, // फ्रंटएंड मैप
-                    sol_id: solId,                     // फ्रंटएंड मैप
+                    settlement_account: settlementAcc,
+                    sol_id: solId,                     
                     status: 'pending',
                     objection_remark: null
                 };
@@ -195,7 +199,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-   // ==========================================
+    // ==========================================
     // 4. PROFILE INTEGRITY CHECK (REAL DATABASE SYNC)
     // ==========================================
     async function showDashboard(user) {
@@ -204,7 +208,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // अब डेटाबेस से असली चेक होगा
         const isKoMissing = !user.ko_code || user.ko_code.trim() === "";
         const isMobileMissing = !user.mobile_no || user.mobile_no.trim() === "";
         const isNameMissing = !user.full_name || user.full_name.trim() === "";
@@ -232,7 +235,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const updatedSol = isSolMissing ? document.getElementById('md-sol-input').value.trim() : user.sol_id;
 
                 try {
-                    // डेटाबेस में असली अपडेट फायर होगा क्योंकि अब कॉलम मौजूद हैं!
                     const { error } = await window.supabaseClient
                         .from('user_roles')
                         .update({
@@ -240,7 +242,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             mobile_no: updatedMobile,
                             full_name: updatedName,
                             settlement_account: updatedSettlement, 
-                            sol_id: updatedSol                     
+                            sol_id: updatedSol                      
                         })
                         .eq('id', user.id);
 
@@ -264,6 +266,7 @@ document.addEventListener('DOMContentLoaded', () => {
             proceedToDashboard(user);
         }
     }
+
     function proceedToDashboard(user) {
         currentLoggedInUser = user; 
         authScreen.classList.add('hidden');
@@ -296,10 +299,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     navButtons.forEach(button => {
         button.addEventListener('click', (e) => {
-            const pageName = e.target.getAttribute('data-page');
-            if (e.target.classList.contains('nav-btn')) {
-                document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
-                e.target.classList.add('active');
+            // बबल्स/चाइल्ड एलिमेंट्स से सेफ्टी के लिए क्लोजेस्ट बटन एलीमेंट ढूंढना
+            const btnTarget = e.target.closest('[data-page]');
+            if (!btnTarget) return;
+
+            const pageName = btnTarget.getAttribute('data-page');
+            
+            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+            if (btnTarget.classList.contains('nav-btn')) {
+                btnTarget.classList.add('active');
             }
             loadPage(pageName);
         });
@@ -318,13 +326,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // === फिक्स किया हुआ मॉड्यूल इनिशियलाइज़र ===
     function initializePageModules(pageName) {
-        if (pageName === 'home') initHomepageModule();
-       // if (pageName === 'deposit' && typeof initDepositModule === 'function') initDepositModule();
-// js/app.js के नेविगेशन बटन हैंडलर के अंदर:
-if (page === 'deposit') {
-    window.initDepositPage(currentUserObject); // currentUserObject वो ऑब्जेक्ट है जो लॉगिन के बाद मिलता है
-}
+        if (pageName === 'home') {
+            initHomepageModule();
+        }
+        if (pageName === 'deposit') {
+            if (typeof window.initDepositPage === 'function') {
+                window.initDepositPage(currentLoggedInUser); // सही वेरिएबल के साथ मैप किया गया
+            } else {
+                console.error("initDepositPage function missing in deposit.js");
+            }
+        }
     }
 
     // ==========================================
@@ -342,57 +355,49 @@ if (page === 'deposit') {
         if (koDisplay) koDisplay.textContent = `KO CODE: ${koCode}`;
 
         try {
-            let { data: balanceData, error } = await window.supabaseClient
-                .from('ko_balances')
+            // लाइव डेटा हमेशा डेटाबेस (user_roles) से सिंक रखें
+            const { data: userUpdate, error: fetchErr } = await window.supabaseClient
+                .from('user_roles')
                 .select('*')
-                .eq('ko_code', koCode);
+                .eq('id', currentLoggedInUser.id)
+                .single();
 
-            if (error) throw error;
-
-            if (!balanceData || balanceData.length === 0) {
-                const { data: newRecord, error: insertError } = await window.supabaseClient
-                    .from('ko_balances')
-                    .insert([{ ko_code: koCode }]) 
-                    .select('*');
-
-                if (insertError) throw insertError;
-                balanceData = newRecord;
+            if (!fetchErr && userUpdate) {
+                currentLoggedInUser = userUpdate; // लोकल ऑब्जेक्ट सिंक रखना
             }
 
-            const record = balanceData[0];
-
+            // होमपेज यूआई पर सेटलमेंट बैलेंस अपडेट करना
             if (balanceDisplay) {
-                balanceDisplay.textContent = `₹ ${parseFloat(record.settlement_balance).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+                const sBal = parseFloat(currentLoggedInUser.settlement_balance) || 0;
+                balanceDisplay.textContent = `₹ ${sBal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
             }
 
-            const n500 = parseInt(record.note_500) || 0;
-            const n200 = parseInt(record.note_200) || 0;
-            const n100 = parseInt(record.note_100) || 0;
-            const n50  = parseInt(record.note_50) || 0;
-            const n20  = parseInt(record.note_20) || 0;
-            const n10  = parseInt(record.note_10) || 0;
-            const totalCoins = parseInt(record.coins) || 0;
+            // अवेलेबल डिनॉमिनेशन काउंटिंग
+            const n500 = parseInt(currentLoggedInUser.cash_500) || 0;
+            const n200 = parseInt(currentLoggedInUser.cash_200) || 0;
+            const n100 = parseInt(currentLoggedInUser.cash_100) || 0;
+            const n50  = parseInt(currentLoggedInUser.cash_50) || 0;
+            const n20  = parseInt(currentLoggedInUser.cash_20) || 0;
+            const n10  = parseInt(currentLoggedInUser.cash_10) || 0;
+            const n5   = parseInt(currentLoggedInUser.cash_5) || 0;
 
-            const finalCashInHand = (n500 * 500) + (n200 * 200) + (n100 * 100) + (n50 * 50) + (n20 * 20) + (n10 * 10) + totalCoins;
+            const finalCashInHand = (n500 * 500) + (n200 * 200) + (n100 * 100) + (n50 * 50) + (n20 * 20) + (n10 * 10) + (n5 * 5);
 
             if (cashInHandDisplay) {
                 cashInHandDisplay.textContent = `₹ ${finalCashInHand.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
             }
 
-            if (commissionDisplay) {
-                commissionDisplay.textContent = `₹ 0.00`;
-            }
-
+            // डोम कार्ड्स में सिंगल नोट काउंटिंग को प्रदर्शित करना
             if(document.getElementById('note-count-500')) document.getElementById('note-count-500').textContent = n500;
             if(document.getElementById('note-count-200')) document.getElementById('note-count-200').textContent = n200;
             if(document.getElementById('note-count-100')) document.getElementById('note-count-100').textContent = n100;
             if(document.getElementById('note-count-50')) document.getElementById('note-count-50').textContent = n50;
             if(document.getElementById('note-count-20')) document.getElementById('note-count-20').textContent = n20;
             if(document.getElementById('note-count-10')) document.getElementById('note-count-10').textContent = n10;
-            if(document.getElementById('coin-total-count')) document.getElementById('coin-total-count').textContent = totalCoins;
+            if(document.getElementById('note-count-5')) document.getElementById('note-count-5').textContent = n5;
 
         } catch (err) {
-            console.error(err);
+            console.error("Homepage Module Sync Error:", err);
         }
     }
     
