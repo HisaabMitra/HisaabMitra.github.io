@@ -444,7 +444,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 balanceDisplay.textContent = `₹ ${parseFloat(record.settlement_balance).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
             }
 
-            if(document.getElementById('note-count-2000')) document.getElementById('note-count-2000').textContent = record.note_2000 || 0;
             if(document.getElementById('note-count-500')) document.getElementById('note-count-500').textContent = record.note_500 || 0;
             if(document.getElementById('note-count-200')) document.getElementById('note-count-200').textContent = record.note_200 || 0;
             if(document.getElementById('note-count-100')) document.getElementById('note-count-100').textContent = record.note_100 || 0;
