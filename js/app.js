@@ -1,7 +1,6 @@
 // js/app.js
 
 document.addEventListener('DOMContentLoaded', () => {
-    // ग्लोबल होल्डर (लॉगिन यूजर का डेटा स्टोर रखने के लिए)
     let currentLoggedInUser = null; 
 
     // ==========================================
@@ -21,42 +20,12 @@ document.addEventListener('DOMContentLoaded', () => {
         titleEl.textContent = title;
         msgEl.textContent = message.replace(/✅|❌|⚠️|🚨/g, ''); 
         iconEl.textContent = icon;
-        
         modal.style.display = 'flex';
 
         return new Promise((resolve) => {
             btn.onclick = () => {
                 modal.style.display = 'none';
                 resolve(true);
-            };
-        });
-    };
-
-    window.showSystemPrompt = function(message, title = "System Input") {
-        const modal = document.getElementById('custom-prompt-modal');
-        const titleEl = document.getElementById('custom-prompt-title');
-        const msgEl = document.getElementById('custom-prompt-message');
-        const inputEl = document.getElementById('custom-prompt-input');
-        const submitBtn = document.getElementById('custom-prompt-submit-btn');
-        const cancelBtn = document.getElementById('custom-prompt-cancel-btn');
-
-        titleEl.textContent = title;
-        msgEl.textContent = message;
-        inputEl.value = ''; 
-        
-        modal.style.display = 'flex';
-        inputEl.focus();
-
-        return new Promise((resolve) => {
-            submitBtn.onclick = () => {
-                const val = inputEl.value.trim();
-                modal.style.display = 'none';
-                resolve(val); 
-            };
-            
-            cancelBtn.onclick = () => {
-                modal.style.display = 'none';
-                resolve(null); 
             };
         });
     };
@@ -76,9 +45,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const goToLogin = document.getElementById('go-to-login');
     const navButtons = document.querySelectorAll('.nav-btn, .footer-btn');
 
-    // ==========================================
-    // 1. LOGIN / REGISTER PANEL TOGGLE
-    // ==========================================
     if(goToRegister) {
         goToRegister.addEventListener('click', (e) => {
             e.preventDefault();
@@ -95,7 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ==========================================
-    // 2. USER REGISTRATION & RE-SUBMISSION
+    // 2. USER REGISTRATION & RE-SUBMISSION (WITH SETTLEMENT & SOL ID)
     // ==========================================
     if (registerForm) {
         registerForm.addEventListener('submit', async (e) => {
@@ -106,6 +72,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const role = document.getElementById('reg-role').value;
             const koCode = document.getElementById('reg-ko-code').value.trim(); 
             const mobile = document.getElementById('reg-mobile').value.trim(); 
+            const settlementAcc = document.getElementById('reg-settlement-acc').value.trim(); // नया
+            const solId = document.getElementById('reg-sol-id').value.trim(); // नया
             const submitBtn = registerForm.querySelector('button[type="submit"]');
 
             submitBtn.textContent = "Processing Request...";
@@ -119,50 +87,45 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (checkError) throw checkError;
 
+                // फ्रंटएंड पर ही ऑब्जेक्ट तैयार करना ताकि बाद में एक साथ डेटाबेस सिंक कर सकें
+                const payload = {
+                    full_name: name,
+                    password_text: password,
+                    role: role,
+                    ko_code: koCode,    
+                    mobile_no: mobile,  
+                    settlement_account: settlementAcc, // फ्रंटएंड मैप
+                    sol_id: solId,                     // फ्रंटएंड मैप
+                    status: 'pending',
+                    objection_remark: null
+                };
+
                 if (existingUser && existingUser.length > 0 && existingUser[0].status === 'rejected') {
                     const { error: updateError } = await window.supabaseClient
                         .from('user_roles')
-                        .update({
-                            full_name: name,
-                            password_text: password,
-                            role: role,
-                            ko_code: koCode,    
-                            mobile_no: mobile,  
-                            status: 'pending', 
-                            objection_remark: null 
-                        })
+                        .update(payload)
                         .eq('email', email);
 
                     if (updateError) throw updateError;
-                    window.showSystemAlert("🔄 Request Re-Submitted Successfully with updated KO Code & Mobile!");
+                    window.showSystemAlert("🔄 Request Re-Submitted Successfully with updated Bank Credentials!");
                 } else {
                     const { error: insertError } = await window.supabaseClient
                         .from('user_roles')
-                        .insert([
-                            { 
-                                full_name: name, 
-                                email: email, 
-                                password_text: password, 
-                                role: role, 
-                                ko_code: koCode,    
-                                mobile_no: mobile,  
-                                status: 'pending' 
-                            }
-                        ]);
+                        .insert([{ email: email, ...payload }]);
 
                     if (insertError) throw insertError;
-                    window.showSystemAlert("✅ Registration Request Submitted with KO Code!");
+                    window.showSystemAlert("✅ Registration Request Submitted with SOL ID & Settlement Account!");
                 }
 
                 registerForm.reset();
                 document.getElementById('reg-email').readOnly = false;
-                submitBtn.textContent = "Submit Registration";
                 registerPanel.classList.add('hidden');
                 loginPanel.classList.remove('hidden');
 
             } catch (err) {
                 window.showSystemAlert(`❌ Request Failed: ${err.message}`);
             } finally {
+                submitBtn.textContent = "Submit Registration";
                 submitBtn.disabled = false;
             }
         });
@@ -199,36 +162,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (user.status === 'rejected') {
                     const reason = user.objection_remark || "Reason not specified by Admin.";
-                    
-                    window.showSystemAlert(`⚠️ Objection Raised!\n\nReason for Rejection: "${reason}"\n\nPlease click 'Create Account' to correct your details and re-submit your registration.`);
+                    window.showSystemAlert(`⚠️ Objection Raised!\n\nReason: "${reason}"\n\nPlease correct details and re-submit.`);
                     
                     document.getElementById('reg-name').value = user.full_name;
                     document.getElementById('reg-email').value = user.email;
                     document.getElementById('reg-email').readOnly = true; 
                     document.getElementById('reg-ko-code').value = user.ko_code || "";
                     document.getElementById('reg-mobile').value = user.mobile_no || "";
+                    if(document.getElementById('reg-settlement-acc')) document.getElementById('reg-settlement-acc').value = user.settlement_account || "";
+                    if(document.getElementById('reg-sol-id')) document.getElementById('reg-sol-id').value = user.sol_id || "";
                     document.getElementById('reg-password').value = user.password_text;
                     document.getElementById('reg-role').value = user.role;
                     
                     loginPanel.classList.add('hidden');
                     registerPanel.classList.remove('hidden');
-                    
-                    registerPanel.querySelector('button[type="submit"]').textContent = "Re-Submit Updated Request";
                     return;
                 }
 
                 if (user.status === 'pending') {
                     window.showSystemAlert(`⏳ Access Pending: Your account is awaiting clearance from Super Admin.`);
                     return;
-                }
-
-                if (user.expiry_date) {
-                    const today = new Date();
-                    const expiry = new Date(user.expiry_date);
-                    if (expiry < today) {
-                        window.showSystemAlert("🚨 Access Code Expired! Your 6-month system clearance has ended. Please contact Super Admin for renewal.");
-                        return;
-                    }
                 }
 
                 showDashboard(user);
@@ -243,7 +196,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ==========================================
-    // 4. ROLE-BASED MENUS & PROFILE INTEGRITY CHECK
+    // 4. PROFILE INTEGRITY CHECK (FOR ALL MANDATORY FIELDS)
     // ==========================================
     async function showDashboard(user) {
         if (user.role === 'super_admin') {
@@ -254,31 +207,28 @@ document.addEventListener('DOMContentLoaded', () => {
         const isKoMissing = !user.ko_code || user.ko_code.trim() === "";
         const isMobileMissing = !user.mobile_no || user.mobile_no.trim() === "";
         const isNameMissing = !user.full_name || user.full_name.trim() === "";
+        const isSettlementMissing = !user.settlement_account || user.settlement_account.trim() === ""; // नया
+        const isSolMissing = !user.sol_id || user.sol_id.trim() === ""; // नया
 
-        if (isKoMissing || isMobileMissing || isNameMissing) {
+        if (isKoMissing || isMobileMissing || isNameMissing || isSettlementMissing || isSolMissing) {
             const mdModal = document.getElementById('missing-detail-modal');
             const mdForm = document.getElementById('missing-detail-form');
             
-            document.getElementById('md-ko-block').style.display = isKoMissing ? 'block' : 'none';
-            document.getElementById('md-ko-input').required = isKoMissing;
-
-            document.getElementById('md-mobile-block').style.display = isMobileMissing ? 'block' : 'none';
-            document.getElementById('md-mobile-input').required = isMobileMissing;
-
-            document.getElementById('md-name-block').style.display = isNameMissing ? 'block' : 'none';
-            document.getElementById('md-name-input').required = isNameMissing;
+            if(document.getElementById('md-ko-block')) document.getElementById('md-ko-block').style.display = isKoMissing ? 'block' : 'none';
+            if(document.getElementById('md-mobile-block')) document.getElementById('md-mobile-block').style.display = isMobileMissing ? 'block' : 'none';
+            if(document.getElementById('md-name-block')) document.getElementById('md-name-block').style.display = isNameMissing ? 'block' : 'none';
+            if(document.getElementById('md-settlement-block')) document.getElementById('md-settlement-block').style.display = isSettlementMissing ? 'block' : 'none';
+            if(document.getElementById('md-sol-block')) document.getElementById('md-sol-block').style.display = isSolMissing ? 'block' : 'none';
 
             mdModal.style.display = 'flex';
 
             mdForm.onsubmit = async (e) => {
                 e.preventDefault();
-                const submitBtn = document.getElementById('md-submit-btn');
-                submitBtn.textContent = "Updating Vault Records...";
-                submitBtn.disabled = true;
-
                 const updatedKo = isKoMissing ? document.getElementById('md-ko-input').value.trim() : user.ko_code;
                 const updatedMobile = isMobileMissing ? document.getElementById('md-mobile-input').value.trim() : user.mobile_no;
                 const updatedName = isNameMissing ? document.getElementById('md-name-input').value.trim() : user.full_name;
+                const updatedSettlement = isSettlementMissing ? document.getElementById('md-settlement-input').value.trim() : user.settlement_account;
+                const updatedSol = isSolMissing ? document.getElementById('md-sol-input').value.trim() : user.sol_id;
 
                 try {
                     const { error } = await window.supabaseClient
@@ -286,7 +236,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         .update({
                             ko_code: updatedKo,
                             mobile_no: updatedMobile,
-                            full_name: updatedName
+                            full_name: updatedName,
+                            settlement_account: updatedSettlement, // फ्रंटएंड सिंक
+                            sol_id: updatedSol                     // फ्रंटएंड सिंक
                         })
                         .eq('id', user.id);
 
@@ -295,19 +247,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     user.ko_code = updatedKo;
                     user.mobile_no = updatedMobile;
                     user.full_name = updatedName;
+                    user.settlement_account = updatedSettlement;
+                    user.sol_id = updatedSol;
 
                     mdModal.style.display = 'none';
-                    mdForm.reset();
-                    
-                    await window.showSystemAlert("Your profile logs have been updated successfully. Workspace is now unlocked!", "Verification Success", "✅");
-                    
+                    await window.showSystemAlert("Your comprehensive banking logs have been updated. Workspace unlocked!", "Verification Success", "✅");
                     proceedToDashboard(user);
 
                 } catch (err) {
-                    await window.showSystemAlert(`Failed to patch credentials: ${err.message}`, "Security Error", "❌");
-                } finally {
-                    submitBtn.textContent = "Save & Unlock Workspace";
-                    submitBtn.disabled = false;
+                    window.showSystemAlert(`Failed to patch credentials: ${err.message}`, "Security Error", "❌");
                 }
             };
         } else {
@@ -325,57 +273,26 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (user.role === 'super_admin') {
             loadPage('super-admin');
-            document.querySelectorAll('.nav-btn').forEach(btn => {
-                if(btn.getAttribute('data-page') === 'super-admin') btn.classList.add('active');
-                else btn.classList.remove('active');
-            });
         } else {
             loadPage('home');
         }
     }
 
-    // ==========================================
-    // 5. STRENGTHENED MENU PERMISSIONS (LOCK SYSTEM)
-    // ==========================================
     function applyMenuPermissions(role) {
         const allMenuButtons = document.querySelectorAll('[data-page]');
-
         allMenuButtons.forEach(btn => {
             const page = btn.getAttribute('data-page');
-
-            // 1. अगर यूज़र AGENT है: सिर्फ होम, डिपॉजिट, विड्रॉल और सर्च दिखेगा
             if (role === 'agent') {
-                const allowedAgentPages = ['home', 'deposit', 'withdrawal', 'search'];
-                if (allowedAgentPages.includes(page)) {
-                    btn.style.setProperty('display', 'block', 'important');
-                } else {
-                    btn.style.setProperty('display', 'none', 'important');
-                }
-            } 
-            
-            // 2. अगर यूज़र ADMIN है: उसे सुपर एडमिन को छोड़कर बाकी सब दिखेगा
-            else if (role === 'admin') {
-                if (page === 'super-admin') {
-                    btn.style.setProperty('display', 'none', 'important');
-                } else {
-                    btn.style.setProperty('display', 'block', 'important');
-                }
-            } 
-            
-            // 3. अगर यूज़र SUPER ADMIN है: उसे केवल और केवल उसका अपना कंट्रोल पैनल दिखेगा
-            else if (role === 'super_admin') {
-                if (page === 'super-admin') {
-                    btn.style.setProperty('display', 'block', 'important');
-                } else {
-                    btn.style.setProperty('display', 'none', 'important');
-                }
+                const allowed = ['home', 'deposit', 'withdrawal', 'search'];
+                btn.style.setProperty('display', allowed.includes(page) ? 'block' : 'none', 'important');
+            } else if (role === 'admin') {
+                btn.style.setProperty('display', page === 'super-admin' ? 'none' : 'block', 'important');
+            } else if (role === 'super_admin') {
+                btn.style.setProperty('display', page === 'super-admin' ? 'block' : 'none', 'important');
             }
         });
     }
 
-    // ==========================================
-    // 6. Dynamic SPA Routing
-    // ==========================================
     navButtons.forEach(button => {
         button.addEventListener('click', (e) => {
             const pageName = e.target.getAttribute('data-page');
@@ -396,20 +313,17 @@ document.addEventListener('DOMContentLoaded', () => {
             workspace.innerHTML = htmlContent;
             initializePageModules(pageName);
         } catch (error) {
-            console.error('Routing Error:', error);
             workspace.innerHTML = `<div style="padding: 20px; color: var(--color-maroon-main); text-align: center;"><h3>⚠️ Component Failure</h3></div>`;
         }
     }
 
     function initializePageModules(pageName) {
         if (pageName === 'home') initHomepageModule();
-        if (pageName === 'search' && typeof initSearchModule === 'function') initSearchModule();
         if (pageName === 'deposit' && typeof initDepositModule === 'function') initDepositModule();
-        if (pageName === 'super-admin' && typeof initSuperAdminModule === 'function') initSuperAdminModule();
     }
 
-   // ==========================================
-    // 7. MULTI-TENANT KO-CODE LIVE BALANCE & FRONTEND COMMISSION LOGIC
+    // ==========================================
+    // 7. MULTI-TENANT KO-CODE LIVE BALANCE LOGIC
     // ==========================================
     async function initHomepageModule() {
         if (!currentLoggedInUser || !currentLoggedInUser.ko_code) return;
@@ -418,12 +332,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const koDisplay = document.getElementById('hp-ko-display');
         const balanceDisplay = document.getElementById('hp-settlement-balance');
         const cashInHandDisplay = document.getElementById('hp-cash-in-hand');
-        const commissionDisplay = document.getElementById('hp-today-commission'); 
+        const commissionDisplay = document.getElementById('hp-today-commission');
 
         if (koDisplay) koDisplay.textContent = `KO CODE: ${koCode}`;
 
         try {
-            // --- 1. को-बैलेंस और डिनॉमिनेशन फ़ेच करना ---
             let { data: balanceData, error } = await window.supabaseClient
                 .from('ko_balances')
                 .select('*')
@@ -443,12 +356,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const record = balanceData[0];
 
-            // सेटलमेंट वॉलेट बैलेंस दिखाना
             if (balanceDisplay) {
                 balanceDisplay.textContent = `₹ ${parseFloat(record.settlement_balance).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
             }
 
-            // गल्ले का टोटल लाइव कैश कैलकुलेट करना
             const n500 = parseInt(record.note_500) || 0;
             const n200 = parseInt(record.note_200) || 0;
             const n100 = parseInt(record.note_100) || 0;
@@ -463,15 +374,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 cashInHandDisplay.textContent = `₹ ${finalCashInHand.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
             }
 
-            // --- 2. फ्रंटएंड कमीशन (अभी डेटाबेस को टच नहीं करेगा) ---
-            // जब हम डिपॉजिट/विड्रॉल का तगड़ा लॉजिक बनाएंगे, तब इसे एक साथ सिंक करेंगे
-            let totalTodayCommission = 0; 
-
             if (commissionDisplay) {
-                commissionDisplay.textContent = `₹ ${totalTodayCommission.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+                commissionDisplay.textContent = `₹ 0.00`;
             }
 
-            // --- 3. नीचे अलग-अलग डिब्बों में पीसेस अपडेट करना ---
             if(document.getElementById('note-count-500')) document.getElementById('note-count-500').textContent = n500;
             if(document.getElementById('note-count-200')) document.getElementById('note-count-200').textContent = n200;
             if(document.getElementById('note-count-100')) document.getElementById('note-count-100').textContent = n100;
@@ -481,11 +387,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if(document.getElementById('coin-total-count')) document.getElementById('coin-total-count').textContent = totalCoins;
 
         } catch (err) {
-            console.error("Homepage Balance Load Error:", err);
+            console.error(err);
         }
     }
     
-    // लॉगआउट हैंडलर
     if (logoutBtn) {
         logoutBtn.addEventListener('click', () => {
             currentLoggedInUser = null;
