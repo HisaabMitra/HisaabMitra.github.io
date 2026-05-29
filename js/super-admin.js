@@ -88,39 +88,42 @@ async function initSuperAdminModule() {
 
     // 2. एक्टिव यूज़र्स मैनेज करना (Renew / Unauthorize / Reset Password)
     async function loadActiveUsers() {
-        try {
-            const { data: users, error } = await window.supabaseClient
-                .from('user_roles')
-                .select('*')
-                .neq('role', 'super_admin'); 
+    console.log("Loading Active Users...");
+    try {
+        // Step 1: Sara data fetch karke dekhte hain
+        const { data: users, error } = await window.supabaseClient
+            .from('user_roles')
+            .select('*');
 
-            if (error) throw error;
-            
-            if (!users || users.length === 0) {
-                activeTable.innerHTML = `<tr><td colspan="5" style="padding: 15px; text-align: center; color: var(--color-text-muted);">No managed operators or agents registered in the vault yet.</td></tr>`;
-                return;
-            }
+        if (error) throw error;
 
-            activeTable.innerHTML = '';
-            users.forEach(user => {
-                if (user.status === 'pending') return;
+        console.log("Total Users in Database:", users); 
 
-                let expiryString = "No Limit Set";
-                let statusColor = "#137333"; 
-                let currentStatus = user.status.toUpperCase();
+        // Step 2: Client-side par manually filter karte hain
+        // Isse pata chal jayega ki problem SQL query mein hai ya data mein
+        const filtered = users.filter(user => user.status !== 'pending' && user.role !== 'super_admin');
+        
+        console.log("Filtered Users for Active Table:", filtered);
 
-                if (user.expiry_date) {
-                    const expDate = new Date(user.expiry_date);
-                    if (!isNaN(expDate.getTime())) {
-                        expiryString = expDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-                        if (expDate < new Date() && user.status === 'approved') {
-                            expiryString += " ⚠️ (EXPIRED)";
-                            statusColor = "#c5221f"; 
-                            currentStatus = "EXPIRED";
-                        }
-                    }
-                }
-                
+        if (!filtered || filtered.length === 0) {
+            activeTable.innerHTML = `<tr><td colspan="5" style="text-align:center;">Koi Approved User nahi mila.</td></tr>`;
+            return;
+        }
+
+        activeTable.innerHTML = filtered.map(user => `
+            <tr>
+                <td>${user.full_name}</td>
+                <td>${user.role}</td>
+                <td>${user.status}</td>
+                <td>${user.expiry_date || 'N/A'}</td>
+                <td>Data Row Loaded</td>
+            </tr>
+        `).join('');
+
+    } catch (err) {
+        console.error("Active User Error:", err);
+    }
+}
                 if (user.status === 'rejected') {
                     statusColor = "#c5221f"; 
                     expiryString = "Access Suspended";
