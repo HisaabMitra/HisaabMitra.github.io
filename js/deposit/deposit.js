@@ -20,50 +20,52 @@ window.initDepositPage = async function (currentUser) {
         }
 
         // --- टेबल रिफ्रेश लॉजिक (आज की एंट्रीज) ---
-     async function loadTodayTransactions() {
+    async function loadTodayTransactions() {
     const tbody = document.getElementById('today-tx-body');
     if (!tbody) return;
-    
-    // Aaj ki date (Format: YYYY-MM-DD)
+
+    // आज की तारीख का स्ट्रिंग (YYYY-MM-DD)
     const today = new Date().toISOString().split('T')[0];
 
     try {
-        // Yahan 'banking_customers(customer_name)' ka use kar rahe hain
+        // यहाँ हमने 'transaction_date' का इस्तेमाल किया है
         const { data, error } = await window.supabaseClient
             .from('deposit_transactions')
             .select(`
                 account_number, 
                 amount, 
                 transaction_date, 
-                banking_customers (customer_name)
+                banking_customers(customer_name)
             `)
             .gte('transaction_date', `${today}T00:00:00`)
             .order('transaction_date', { ascending: false });
 
-        if (error) throw error;
+        if (error) {
+            console.error("Supabase Query Error:", error);
+            return;
+        }
 
         tbody.innerHTML = '';
         if (!data || data.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Aaj koi transaction nahi mila</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">आज कोई ट्रांजैक्शन नहीं मिला</td></tr>';
             return;
         }
 
         data.forEach(tx => {
             const time = new Date(tx.transaction_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            
-            // Yahan naam fetch kar rahe hain, agar nahi mila to 'N/A' dikhaega
             const name = tx.banking_customers ? tx.banking_customers.customer_name : 'N/A';
             
-            const row = `<tr>
-                <td>${tx.account_number}</td>
-                <td>${name}</td>
-                <td>₹${tx.amount}</td>
-                <td>${time}</td>
-            </tr>`;
-            tbody.insertAdjacentHTML('beforeend', row);
+            tbody.insertAdjacentHTML('beforeend', `
+                <tr>
+                    <td>${tx.account_number}</td>
+                    <td>${name}</td>
+                    <td>₹${tx.amount}</td>
+                    <td>${time}</td>
+                </tr>
+            `);
         });
     } catch (err) { 
-        console.error("Table Load Error:", err.message); 
+        console.error("Table Load Exception:", err); 
     }
 }
         loadTodayTransactions();
