@@ -19,53 +19,51 @@ window.initDepositPage = async function (currentUser) {
             }, 100); 
         }
 
-        // --- टेबल रिफ्रेश लॉजिक (आज की एंट्रीज) ---
-   async function loadTodayTransactions() {
-    const tbody = document.getElementById('today-tx-body');
-    if (!tbody) return;
+        // --- टेबल रिफ्रेश लॉजिक ---
+        async function loadTodayTransactions() {
+            const tbody = document.getElementById('today-tx-body');
+            if (!tbody) return;
 
-    const today = new Date().toISOString().split('T')[0];
+            const today = new Date().toISOString().split('T')[0];
 
-    try {
-        const { data, error } = await window.supabaseClient
-            .from('deposit_transactions')
-            .select('transaction_id, account_number, customer_name, amount, transaction_date')
-            .gte('transaction_date', `${today}T00:00:00`)
-            .order('transaction_date', { ascending: false });
+            try {
+                const { data, error } = await window.supabaseClient
+                    .from('deposit_transactions')
+                    .select('transaction_id, account_number, customer_name, amount, transaction_date')
+                    .gte('transaction_date', `${today}T00:00:00`)
+                    .order('transaction_date', { ascending: false });
 
-        if (error) throw error;
+                if (error) throw error;
 
-        tbody.innerHTML = '';
-        if (!data || data.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">आज कोई ट्रांजैक्शन नहीं मिला</td></tr>';
-            return;
+                tbody.innerHTML = '';
+                if (!data || data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">आज कोई ट्रांजैक्शन नहीं मिला</td></tr>';
+                    return;
+                }
+
+                data.forEach(tx => {
+                    const time = new Date(tx.transaction_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    const name = tx.customer_name || "N/A";
+                    
+                    tbody.insertAdjacentHTML('beforeend', `
+                        <tr>
+                            <td>${tx.account_number}</td>
+                            <td>${name}</td>
+                            <td>₹${tx.amount}</td>
+                            <td>${time}</td>
+                        </tr>
+                    `);
+                });
+            } catch (err) { 
+                console.error("Table Load Error:", err); 
+            }
         }
 
-        data.forEach(tx => {
-            const time = new Date(tx.transaction_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            const name = tx.customer_name || "N/A";
-            
-            // टेबल रो
-            tbody.insertAdjacentHTML('beforeend', `
-                <tr>
-                    <td>${tx.account_number}</td>
-                    <td>${name}</td>
-                    <td>₹${tx.amount}</td>
-                    <td>${time}</td>
-                </tr>
-            `);
-        });
-    } catch (err) { 
-        console.error("Table Load Error:", err); 
-    }
-}
+        // इसे ग्लोबल ताकि deposit-save.js इसे कॉल कर सके
+        window.loadTodayTransactions = loadTodayTransactions;
+        loadTodayTransactions();
 
-// पेज लोड होते ही टेबल चलाएं
-document.addEventListener('DOMContentLoaded', loadTodayTransactions);
-        
-    //    loadTodayTransactions();
-
-        // 4. DOM एलिमेंट्स
+        // 3. DOM एलिमेंट्स
         const accInput = document.getElementById('dep-account-no');
         const custNameInput = document.getElementById('dep-cust-name');
         const amountInput = document.getElementById('dep-amount');
@@ -79,12 +77,12 @@ document.addEventListener('DOMContentLoaded', loadTodayTransactions);
         const ncMobileInput = document.getElementById('nc-mobile');
         const ncAddressInput = document.getElementById('nc-address');
 
+        // नाम और पता Uppercase में बदलें
         [ncNameInput, ncAddressInput].forEach(el => {
             if(el) el.addEventListener('input', function() { this.value = this.value.toUpperCase(); });
         });
 
-        let lastSavedTransaction = null;
-
+        // अमाउंट इन वर्ड्स
         amountInput.addEventListener('input', () => {
             const amt = parseInt(amountInput.value) || 0;
             wordsDisplay.innerText = amt === 0 ? "Zero Rupees Only" : `${window.numberToHindiWords(amt)} रुपए मात्र`;
@@ -129,6 +127,7 @@ document.addEventListener('DOMContentLoaded', loadTodayTransactions);
         }
         accInput.addEventListener('blur', searchCustomer);
 
+        // नया कस्टमर रजिस्ट्रेशन
         document.getElementById('btn-nc-continue').addEventListener('click', async () => {
             const accNo = ncAccInput.value.trim();
             const cName = ncNameInput.value.trim();
@@ -146,48 +145,11 @@ document.addEventListener('DOMContentLoaded', loadTodayTransactions);
 
         document.getElementById('btn-nc-cancel').addEventListener('click', () => { ncModal.style.display = 'none'; accInput.value = ""; custNameInput.value = ""; });
 
-        // सेव ट्रांजैक्शन (टेबल रिफ्रेश के साथ)
-        document.getElementById('btn-dep-save').addEventListener('click', async () => {
-            const accountNo = accInput.value.trim();
-            const custName = custNameInput.value.trim();
-            const amount = parseFloat(amountInput.value) || 0;
-            const remarks = remarksInput.value.trim();
-            const netCash = window.DenominationComponent.calculate();
-
-            if (!accountNo || !custName || amount <= 0) return window.showSystemAlert("सभी फ़ील्ड भरें!", "Validation Error", "❌");
-
-            const saveTransactionData = async () => {
-                let calcCommission = Math.min(amount * 0.004, 50);
-                try {
-                    const { data: txData, error: txError } = await window.supabaseClient
-                        .from('deposit_transactions')
-                        .insert([{ ko_code: currentUser.ko_code, account_number: accountNo, amount: amount, commission: calcCommission, remarks: remarks, ...window.DenominationComponent.getValues() }])
-                        .select().single();
-                    if (txError) throw txError;
-                    lastSavedTransaction = txData;
-                    document.getElementById('btn-dep-print').removeAttribute('disabled');
-                    window.showSystemAlert("ट्रांजैक्शन सफल!", "Success", "✅");
-                    loadTodayTransactions(); // 🌟 टेबल रिफ्रेश
-                    document.getElementById('btn-dep-clear').click();
-                } catch (err) { window.showSystemAlert("त्रुटि: " + err.message, "Error", "❌"); }
-            };
-
-            if (netCash === 0) window.showSystemConfirm("बिना कैश आगे बढ़ें?", "Warning", saveTransactionData);
-            else if (netCash !== amount) window.showSystemAlert("डिनॉमिनेशन और राशि मैच नहीं!", "Error", "❌");
-            else saveTransactionData();
-        });
-
+        // Clear बटन
         document.getElementById('btn-dep-clear').addEventListener('click', () => {
             accInput.value = ""; custNameInput.value = ""; amountInput.value = ""; remarksInput.value = "";
             wordsDisplay.innerText = "Zero Rupees Only";
             window.DenominationComponent.clear();
-        });
-
-        document.getElementById('btn-dep-print').addEventListener('click', () => {
-            if (!lastSavedTransaction) return;
-            const printWindow = window.open('', '_blank', 'width=600,height=600');
-            printWindow.document.write(`<html><body style="font-family:monospace; padding:20px;"><h2>RECEIPT</h2><p>Account: ${lastSavedTransaction.account_number}</p><p>Amount: ₹${lastSavedTransaction.amount}</p><script>window.print(); window.close();<\/script></body></html>`);
-            printWindow.document.close();
         });
 
     } catch (error) { console.error("Error:", error); }
