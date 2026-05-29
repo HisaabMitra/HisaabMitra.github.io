@@ -230,7 +230,18 @@ window.initDepositPage = function (currentUser) {
         wordsDisplay.innerText = `${hindiWords} रुपए मात्र`;
     });
 
-// --- 6. हिंदी आवाज़ असिस्टेंट (अल्ट्रा फिक्स्ड वॉइस इंजन पैच) ---
+// --- 6. हिंदी आवाज़ असिस्टेंट (क्रोम + माइक्रोसॉफ्ट एज यूनिवर्सल फिक्स) ---
+    let systemVoices = [];
+
+    // एज ब्राउज़र के लिए वॉयस लिस्ट को बैकग्राउंड में लोड करना
+    function loadVoices() {
+        systemVoices = window.speechSynthesis.getVoices();
+    }
+    loadVoices();
+    if (window.speechSynthesis.onvoiceschanged !== undefined) {
+        window.speechSynthesis.onvoiceschanged = loadVoices;
+    }
+
     speakBtn.addEventListener('click', () => {
         const amt = parseInt(amountInput.value) || 0;
         if (amt === 0) {
@@ -238,33 +249,36 @@ window.initDepositPage = function (currentUser) {
             return;
         }
         
-        // शुद्ध हिंदी शब्दों की स्ट्रिंग तैयार करना
         const hindiText = numberToHindiWords(amt); 
         const finalPhrase = `${hindiText} रुपए जमा के लिए तैयार है`; 
         
-        // ब्राउज़र के वॉयस सिंथेसिस को पूरी तरह रीसेट (साफ) करना
+        // पहले से चल रही आवाज़ को बंद करें
         window.speechSynthesis.cancel(); 
         
         const utterance = new SpeechSynthesisUtterance(finalPhrase);
-        utterance.rate = 0.85;  // थोड़ी नेचुरल और धीमी रफ़्तार
+        utterance.rate = 0.85;  
         utterance.pitch = 1.0; 
-        utterance.lang = 'hi-IN'; // भारतीय हिंदी भाषा कोड
+        utterance.lang = 'hi-IN'; 
 
-        // ब्राउज़र में उपलब्ध सभी आवाज़ों को निकालना
-        let voices = window.speechSynthesis.getVoices();
-        
-        // बेस्ट हिंदी आवाज़ ढूंढने का एडवांस फ़िल्टर
-        let hindiVoice = voices.find(voice => voice.lang === 'hi-IN' || voice.lang.includes('hi_IN') || voice.lang.startsWith('hi'));
-        
-        // अगर डायरेक्ट हिंदी न मिले, तो माइक्रोसॉफ्ट या गूगल की लोकल वॉइस ढूंढना
-        if (!hindiVoice) {
-            hindiVoice = voices.find(voice => voice.name.includes('Hindi') || voice.name.includes('India'));
+        // ताजा वॉयस लिस्ट दोबारा निकालें (एज के लिए सबसे ज़रूरी)
+        if (systemVoices.length === 0) {
+            systemVoices = window.speechSynthesis.getVoices();
         }
 
+        // माइक्रोसॉफ्ट एज (Microsoft Natural Voices) और क्रोम दोनों के लिए बेस्ट हिंदी आवाज़ ढूंढना
+        let hindiVoice = systemVoices.find(voice => 
+            voice.lang === 'hi-IN' || 
+            voice.lang.includes('hi_IN') || 
+            voice.name.includes('Hindi') || 
+            voice.name.includes('Hemant') || 
+            voice.name.includes('Kalpana')
+        );
+        
         if (hindiVoice) {
             utterance.voice = hindiVoice;
+            console.log("Selected Voice for Edge/Chrome:", hindiVoice.name);
         } else {
-            // अगर सिस्टम में हिंदी वॉयस पैक इंस्टॉल ही नहीं है, तो जबरदस्ती भाषा सेट करना
+            // बैकअप अगर कोई लिस्ट न मिले
             utterance.lang = 'hi-IN';
         }
         
