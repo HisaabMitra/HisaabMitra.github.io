@@ -33,6 +33,9 @@ window.initDepositPage = async function (currentUser) {
         const ncModal = document.getElementById('new-cust-modal');
         const ncAccInput = document.getElementById('nc-account-no');
         const ncNameInput = document.getElementById('nc-name');
+        ncNameInput.addEventListener('input', function() {
+    this.value = this.value.toUpperCase();
+});
         const ncMobileInput = document.getElementById('nc-mobile');
         const ncAddressInput = document.getElementById('nc-address');
 
