@@ -15,9 +15,12 @@ window.initDepositPage = async function (currentUser) {
         if (koCodeLabel) koCodeLabel.innerText = currentUser.ko_code;
 
         // 3. रियूजेबल डिनॉमिनेशन कंपोनेंट को राइट साइड के बॉक्स में रेंडर करें
-        if (window.DenominationComponent) {
-            window.DenominationComponent.render('denomination-widget-container');
-        }
+      if (window.DenominationComponent) {
+    // ब्राउज़र को HTML रेंडर करने के लिए 50 मिलीसेकंड का समय दें
+    setTimeout(() => {
+        window.DenominationComponent.render('denomination-widget-container');
+    }, 50); 
+}
 
         // 4. सारे डोम (DOM) एलिमेंट्स के रेफेरेंस ढूंढना
         const accInput = document.getElementById('dep-account-no');
