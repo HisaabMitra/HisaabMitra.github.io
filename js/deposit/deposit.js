@@ -220,16 +220,26 @@ window.initDepositPage = function (currentUser) {
         wordsDisplay.innerText = numberToWords(amt);
     });
 
-    // --- 6. हिंदी आवाज़ असिस्टेंट (Text to Speech) ---
     speakBtn.addEventListener('click', () => {
         const amt = parseInt(amountInput.value) || 0;
         if (amt === 0) {
-            alert("कृपया पहले सही अमाउंट दर्ज करें!");
+            if(window.showSystemAlert) window.showSystemAlert("कृपया पहले सही अमाउंट दर्ज करें!");
             return;
         }
-        const hindiText = numberToHindiWords(amt);
-        const utterance = new SpeechSynthesisUtterance(`${hindiText} रुपए मात्र जमा करने के लिए`);
+        
+        // शुद्ध हिंदी शब्दों में कन्वर्ट करें
+        const hindiText = numberToHindiWords(amt); 
+        
+        // पूरा सेंटेंस जो आपने बोला: "[अमाउंट] रुपए जमा के लिए तैयार है"
+        const finalPhrase = `${hindiText} रुपए जमा के लिए तैयार है`; 
+        
+        // वॉयस सिंथेसिस ट्रिगर
+        window.speechSynthesis.cancel(); // अगर पहले से कुछ बोल रहा हो तो स्टॉप करें
+        const utterance = new SpeechSynthesisUtterance(finalPhrase);
         utterance.lang = 'hi-IN';
+        utterance.rate = 0.9; // बोलने की स्पीड थोड़ी सी कम ताकि साफ़ सुनाई दे
+        utterance.pitch = 1.0; 
+        
         window.speechSynthesis.speak(utterance);
     });
 
