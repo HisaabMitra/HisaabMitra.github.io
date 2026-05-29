@@ -12,7 +12,7 @@ function numberToHindiWords(amount) {
                        "ग्याराह", "बारह", "तेरह", "चौदह", "पंद्रह", "सोलह", "सत्रह", "अठारह", "उन्नीस", "बीस",
                        "इक्कीस", "बाईस", "तेईस", "चौबीस", "पच्चीस", "छब्बीस", "सत्ताईस", "अट्ठाइस", "उनतीस", "तीस",
                        "इकत्तीस", "बत्तीस", "तैंतीस", "चौंतीस", "पैंतीस", "छत्तीस", "सैंतीस", "अड़तीस", "उनतालीस", "चालिस",
-                       "इकतालीस", "बयालीस", "तैंतालीस", "चैंतालीस", "पैंतालीस", "छियालीस", "सैंतालीस", "अड़तालीस", "उनचाas", "पचास",
+                       "इकतालीस", "बयालीस", "तैंतालीस", "चैंतालीस", "पैंतालीस", "छियालीस", "सैंतालीस", "अड़तालीस", "उनचास", "पचास",
                        "इक्कावन", "बावन", "तिरेपन", "चौवन", "पचपन", "छप्पन", "सतावन", "अठावन", "उनसठ", "साठ",
                        "इकसठ", "बासठ", "तिरसठ", "चौंसठ", "पैंसठ", "छियासठ", "सरसठ", "अड़सठ", "उनहत्तर", "सत्तर",
                        "इहत्तर", "बहत्तर", "तिहत्तर", "चौहत्तर", "पचहत्तर", "छियाहत्तर", "सतहत्तर", "अठहत्तर", "उनासी", "अस्सी",
@@ -54,8 +54,6 @@ window.initDepositPage = function (currentUser) {
     const workspace = document.getElementById('workspace');
     if (!workspace) return;
 
-    // यूआई रेंडर करना (Upgraded Maroon Theme & Compact Buttons Layout)
-    workspace.innerHTML = `
     // यूआई रेंडर करना (Upgraded Maroon Theme, Compact Layout & Custom CSS)
     workspace.innerHTML = `
     <style>
@@ -70,7 +68,6 @@ window.initDepositPage = function (currentUser) {
         }
     </style>  
         
-    
     <div class="deposit-wrapper" style="padding: 24px; background: #fff; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); animation: modalFadeIn 0.3s ease;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
             <h2 style="color: #7d0022; margin: 0; font-size: 1.6rem; font-weight: 700; letter-spacing: 0.5px;">💰 DEPOSIT ENTRY</h2>
@@ -130,26 +127,26 @@ window.initDepositPage = function (currentUser) {
             <div style="flex: 0.9; min-width: 320px; background: #fdfdfd; padding: 20px; border: 1px solid #eef0f2; border-radius: 8px; box-shadow: inset 0 1px 3px rgba(0,0,0,0.02);">
                 <h4 style="margin-top:0; color:#444; font-size:0.95rem; font-weight:700; border-bottom:2px solid #7d0022; padding-bottom:8px; text-transform: uppercase; letter-spacing:0.5px;">Denomination (IN / OUT)</h4>
                 
-              <table style="width: 100%; border-collapse: collapse; text-align: center; margin-top:10px;">
-    <thead>
-        <tr style="background:#f4f6f8; color:#666; font-size:0.8rem; text-transform: uppercase; font-weight:700;">
-            <th style="padding:10px; border-bottom: 1px solid #eaeaea;">Value</th>
-            <th style="padding:10px; border-bottom: 1px solid #eaeaea; color: #27ae60;">Cash IN</th>
-            <th style="padding:10px; border-bottom: 1px solid #eaeaea; color: #c0392b;">Cash OUT</th>
-            <th style="padding:10px; border-bottom: 1px solid #eaeaea; color: #2c3e50;">Total</th>
-        </tr>
-    </thead>
-    <tbody id="denom-table-body">
-        ${[500, 200, 100, 50, 20, 10, 5].map(note => `
-            <tr style="border-bottom: 1px solid #f6f6f6;">
-                <td style="padding:8px; font-size:0.9rem; color:#333;"><strong>₹${note}</strong></td>
-                <td style="padding:8px;"><input type="number" class="denom-in" data-note="${note}" value="0" min="0" style="width:60px; padding:6px; text-align:center; border:1px solid #dcdcdc; border-radius:4px; font-weight:600;"></td>
-                <td style="padding:8px;"><input type="number" class="denom-out" data-note="${note}" value="0" min="0" style="width:60px; padding:6px; text-align:center; border:1px solid #dcdcdc; border-radius:4px; font-weight:600;"></td>
-                <td style="padding:8px; font-size:0.9rem; color:#2c3e50; font-weight:700;" id="total-display-${note}">₹0</td>
-            </tr>
-        `).join('')}
-    </tbody>
-</table>
+                <table style="width: 100%; border-collapse: collapse; text-align: center; margin-top:10px;">
+                    <thead>
+                        <tr style="background:#f4f6f8; color:#666; font-size:0.8rem; text-transform: uppercase; font-weight:700;">
+                            <th style="padding:10px; border-bottom: 1px solid #eaeaea;">Value</th>
+                            <th style="padding:10px; border-bottom: 1px solid #eaeaea; color: #27ae60;">Cash IN</th>
+                            <th style="padding:10px; border-bottom: 1px solid #eaeaea; color: #c0392b;">Cash OUT</th>
+                            <th style="padding:10px; border-bottom: 1px solid #eaeaea; color: #2c3e50;">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody id="denom-table-body">
+                        ${[500, 200, 100, 50, 20, 10, 5].map(note => `
+                            <tr style="border-bottom: 1px solid #f6f6f6;">
+                                <td style="padding:8px; font-size:0.9rem; color:#333;"><strong>₹${note}</strong></td>
+                                <td style="padding:8px;"><input type="number" class="denom-in" data-note="${note}" value="0" min="0" style="width:60px; padding:6px; text-align:center; border:1px solid #dcdcdc; border-radius:4px; font-weight:600;"></td>
+                                <td style="padding:8px;"><input type="number" class="denom-out" data-note="${note}" value="0" min="0" style="width:60px; padding:6px; text-align:center; border:1px solid #dcdcdc; border-radius:4px; font-weight:600;"></td>
+                                <td style="padding:8px; font-size:0.9rem; color:#2c3e50; font-weight:700;" id="total-display-${note}">₹0</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
                 <div style="margin-top:20px; padding:14px; background:#fdf2f4; border-left:4px solid #7d0022; border-radius:4px; font-weight:bold; display:flex; justify-content:space-between; align-items:center;">
                     <span style="color:#7d0022; font-size:0.9rem; text-transform:uppercase; letter-spacing:0.3px;">Net Cash Total:</span>
                     <span id="denom-total-calculated" style="color:#7d0022; font-size:1.2rem;">₹0</span>
@@ -238,7 +235,7 @@ window.initDepositPage = function (currentUser) {
                     else rowTotalDisplay.style.color = '#2c3e50';
                 }
 
-                // ग्रैंड टोटल में जोड़ें
+                // ग्रैंड टोटल में जोड़ें
                 grandTotalIn += countIn * note;
                 grandTotalOut += countOut * note;
             }
@@ -252,6 +249,20 @@ window.initDepositPage = function (currentUser) {
         return netCash;
     }
 
+    // --- डिनॉमिनेशन इनपुट्स पर इवेंट लिसनर्स अटैच करना (ताकि लाइव कैलकुलेट हो) ---
+    function attachDenominationListeners() {
+        document.querySelectorAll('.denom-in, .denom-out').forEach(input => {
+            // जब भी कोई वैल्यू टाइप करे, तुरंत कैलकुलेट हो
+            input.addEventListener('input', calculateDenominationTotal);
+
+            // माउस व्हील घुमाने पर वैल्यू बदलने से रोकने के लिए पैच
+            input.addEventListener('wheel', function(e) {
+                e.preventDefault();
+            });
+        });
+    }
+    attachDenominationListeners();
+
     // --- 5. अमाउंट इनपुट चेंजेस और नंबर-टू-वर्ड्स सिंक (FIXED: Calls Correct Hindi Function) ---
     amountInput.addEventListener('input', () => {
         const amt = parseInt(amountInput.value) || 0;
@@ -264,7 +275,12 @@ window.initDepositPage = function (currentUser) {
         wordsDisplay.innerText = `${hindiWords} रुपए मात्र`;
     });
 
-// --- 6. हिंदी आवाज़ असिस्टेंट (क्रोम + माइक्रोसॉफ्ट एज यूनिवर्सल फिक्स) ---
+    // माइनर फिक्स: अमाउंट इनपुट बॉक्स से भी माउस व्हील स्क्रॉल को ब्लॉक करना
+    amountInput.addEventListener('wheel', function(e) {
+        e.preventDefault();
+    });
+
+    // --- 6. हिंदी आवाज़ असिस्टेंट (क्रोम + माइक्रोसॉफ्ट एज यूनिवर्सल फिक्स) ---
     let systemVoices = [];
 
     // एज ब्राउज़र के लिए वॉयस लिस्ट को बैकग्राउंड में लोड करना
