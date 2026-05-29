@@ -2,9 +2,8 @@
 // DEPOSIT MODULE - CORE LOGIC WITH SUPABASE
 // ==========================================
 
-// 1. नंबर को शब्दों में बदलने का फंक्शन (Number to Words)
 // ========================================================
-// शुद्ध हिंदी नंबर्स टू वर्ड्स कनवर्टर (फॉर हिंदी वॉयस असिस्टेंट)
+// शुद्ध हिंदी नंबर्स टू वर्ड्स कनवर्टर (100% देवनागरी टेक्स्ट)
 // ========================================================
 function numberToHindiWords(amount) {
     if (amount === 0) return "शून्य";
@@ -42,7 +41,7 @@ function numberToHindiWords(amount) {
         words += hindiOnes[Math.floor(amount / 100)] + " सौ ";
         amount %= 100;
     }
-    // दहाई और इकाई (1 से 99)
+    // 1 से 99
     if (amount > 0) {
         words += hindiOnes[amount];
     }
@@ -239,26 +238,34 @@ window.initDepositPage = function (currentUser) {
         wordsDisplay.innerText = numberToWords(amt);
     });
 
+    // --- 6. हिंदी आवाज़ असिस्टेंट (सुपर फिक्स्ड वॉइस इंजन) ---
     speakBtn.addEventListener('click', () => {
         const amt = parseInt(amountInput.value) || 0;
         if (amt === 0) {
-            if(window.showSystemAlert) window.showSystemAlert("कृपया पहले सही अमाउंट दर्ज करें!");
+            alert("कृपया पहले सही अमाउंट दर्ज करें!");
             return;
         }
         
-        // शुद्ध हिंदी शब्दों में कन्वर्ट करें
+        // शुद्ध हिंदी शब्दों की स्ट्रिंग तैयार करना
         const hindiText = numberToHindiWords(amt); 
-        
-        // पूरा सेंटेंस जो आपने बोला: "[अमाउंट] रुपए जमा के लिए तैयार है"
         const finalPhrase = `${hindiText} रुपए जमा के लिए तैयार है`; 
         
-        // वॉयस सिंथेसिस ट्रिगर
-        window.speechSynthesis.cancel(); // अगर पहले से कुछ बोल रहा हो तो स्टॉप करें
-        const utterance = new SpeechSynthesisUtterance(finalPhrase);
-        utterance.lang = 'hi-IN';
-        utterance.rate = 0.9; // बोलने की स्पीड थोड़ी सी कम ताकि साफ़ सुनाई दे
-        utterance.pitch = 1.0; 
+        // ब्राउज़र के वॉयस सिंथेसिस को पूरी तरह रीसेट करना
+        window.speechSynthesis.cancel(); 
         
+        const utterance = new SpeechSynthesisUtterance(finalPhrase);
+        utterance.lang = 'hi-IN'; // भारतीय हिंदी कोड
+        utterance.rate = 0.85;    // नेचुरल स्पीड
+        utterance.pitch = 1.0; 
+
+        // ब्राउज़र में उपलब्ध सभी आवाज़ों में से "Google हिंदी" या बेस्ट हिंदी आवाज़ चुनना
+        const voices = window.speechSynthesis.getVoices();
+        const hindiVoice = voices.find(voice => voice.lang === 'hi-IN' || voice.lang.includes('hi'));
+        if (hindiVoice) {
+            utterance.voice = hindiVoice;
+        }
+        
+        // बोलना शुरू करें
         window.speechSynthesis.speak(utterance);
     });
 
