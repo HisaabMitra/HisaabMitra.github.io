@@ -196,7 +196,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
    // ==========================================
-    // 4. PROFILE INTEGRITY CHECK (FOR ALL MANDATORY FIELDS) - FIXED
+    // 4. PROFILE INTEGRITY CHECK (REAL DATABASE SYNC)
     // ==========================================
     async function showDashboard(user) {
         if (user.role === 'super_admin') {
@@ -204,62 +204,48 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // सभी फ़ील्ड्स की जांच (अगर डेटाबेस में वैल्यू नहीं है तो missing मानी जाएगी)
+        // अब डेटाबेस से असली चेक होगा
         const isKoMissing = !user.ko_code || user.ko_code.trim() === "";
         const isMobileMissing = !user.mobile_no || user.mobile_no.trim() === "";
         const isNameMissing = !user.full_name || user.full_name.trim() === "";
         const isSettlementMissing = !user.settlement_account || user.settlement_account.trim() === "";
         const isSolMissing = !user.sol_id || user.sol_id.trim() === "";
 
-        // अगर एक भी चीज़ गायब है, तो ही मोडल दिखाओ
         if (isKoMissing || isMobileMissing || isNameMissing || isSettlementMissing || isSolMissing) {
             const mdModal = document.getElementById('missing-detail-modal');
             const mdForm = document.getElementById('missing-detail-form');
             
-            // जो फ़ील्ड गायब है सिर्फ उसका डिब्बा स्क्रीन पर ब्लॉक (Visible) करो
             if(document.getElementById('md-ko-block')) document.getElementById('md-ko-block').style.display = isKoMissing ? 'block' : 'none';
             if(document.getElementById('md-mobile-block')) document.getElementById('md-mobile-block').style.display = isMobileMissing ? 'block' : 'none';
             if(document.getElementById('md-name-block')) document.getElementById('md-name-block').style.display = isNameMissing ? 'block' : 'none';
             if(document.getElementById('md-settlement-block')) document.getElementById('md-settlement-block').style.display = isSettlementMissing ? 'block' : 'none';
             if(document.getElementById('md-sol-block')) document.getElementById('md-sol-block').style.display = isSolMissing ? 'block' : 'none';
 
-            // पूरे मोडल को स्क्रीन पर लाओ
-            if (mdModal) {
-                mdModal.style.setProperty('display', 'flex', 'important');
-            }
+            if (mdModal) mdModal.style.setProperty('display', 'flex', 'important');
 
             mdForm.onsubmit = async (e) => {
                 e.preventDefault();
-                
-                // अगर इनपुट खुला था तो नई वैल्यू लो, नहीं तो यूजर की पुरानी वैल्यू ही रहने दो
                 const updatedKo = isKoMissing ? document.getElementById('md-ko-input').value.trim() : user.ko_code;
                 const updatedMobile = isMobileMissing ? document.getElementById('md-mobile-input').value.trim() : user.mobile_no;
                 const updatedName = isNameMissing ? document.getElementById('md-name-input').value.trim() : user.full_name;
                 const updatedSettlement = isSettlementMissing ? document.getElementById('md-settlement-input').value.trim() : user.settlement_account;
                 const updatedSol = isSolMissing ? document.getElementById('md-sol-input').value.trim() : user.sol_id;
 
-                // वैलिडेशन चेक: जो इनपुट दिख रहे हैं वो खाली नहीं होने चाहिए
-                if ((isKoMissing && !updatedKo) || (isSettlementMissing && !updatedSettlement) || (isSolMissing && !updatedSol)) {
-                    window.showSystemAlert("❌ Please fill all the visible required fields.");
-                    return;
-                }
-
                 try {
-                    // Supabase डेटाबेस में अपडेट सेव करना
+                    // डेटाबेस में असली अपडेट फायर होगा क्योंकि अब कॉलम मौजूद हैं!
                     const { error } = await window.supabaseClient
                         .from('user_roles')
                         .update({
                             ko_code: updatedKo,
                             mobile_no: updatedMobile,
                             full_name: updatedName,
-                            settlement_account: updatedSettlement,
-                            sol_id: updatedSol
+                            settlement_account: updatedSettlement, 
+                            sol_id: updatedSol                     
                         })
                         .eq('id', user.id);
 
                     if (error) throw error;
 
-                    // लोकल ऑब्जेक्ट को अपडेट करना ताकि डैशबोर्ड पर सही दिखे
                     user.ko_code = updatedKo;
                     user.mobile_no = updatedMobile;
                     user.full_name = updatedName;
@@ -267,7 +253,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     user.sol_id = updatedSol;
 
                     mdModal.style.display = 'none';
-                    await window.showSystemAlert("Your comprehensive banking logs have been updated. Workspace unlocked!", "Verification Success", "✅");
+                    await window.showSystemAlert("Your comprehensive banking logs have been updated in Database. Workspace unlocked!", "Verification Success", "✅");
                     proceedToDashboard(user);
 
                 } catch (err) {
@@ -275,11 +261,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             };
         } else {
-            // अगर सब कुछ पहले से भरा हुआ है, तो सीधा डैशबोर्ड पर ले जाओ
             proceedToDashboard(user);
         }
     }
-
     function proceedToDashboard(user) {
         currentLoggedInUser = user; 
         authScreen.classList.add('hidden');
