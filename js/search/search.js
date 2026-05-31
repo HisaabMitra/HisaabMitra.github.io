@@ -37,11 +37,10 @@ function initSearchModule() {
             document.getElementById('res-phone').textContent = data.phone_no || 'N/A';
             
             // Format monetary readout nicely
-            document.getElementById('res-balance').textContent = new Intl.NumberFormat('en-US', {
-                style: 'currency',
-                currency: 'USD'
-            }).format(data.current_balance);
-
+            document.getElementById('res-balance').textContent = `₹ ${Number(data.current_balance || 0).toLocaleString('en-IN', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+})}`;
             // Reveal result card UI
             resultCard.classList.remove('hidden');
 
