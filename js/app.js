@@ -2,39 +2,6 @@
 
 document.addEventListener('DOMContentLoaded', () => {
     let currentLoggedInUser = null; 
-
-    // ==========================================
-    // GLOBAL CUSTOM ALERTS & PROMPTS
-    // ==========================================
-    window.showSystemAlert = function(message, title = "System Notification", icon = "⚠️") {
-        const modal = document.getElementById('custom-alert-modal');
-        const titleEl = document.getElementById('custom-alert-title');
-        const msgEl = document.getElementById('custom-alert-message');
-        const iconEl = document.getElementById('custom-alert-icon');
-        const btn = document.getElementById('custom-alert-btn');
-
-        if (!modal) {
-            alert(message);
-            return Promise.resolve(true);
-        }
-
-        if (message.includes("✅") || message.includes("Successfully")) icon = "✅";
-        if (message.includes("❌") || message.includes("Failed")) icon = "❌";
-        if (message.includes("🚨") || message.includes("Expired")) icon = "🚨";
-
-        titleEl.textContent = title;
-        msgEl.textContent = message.replace(/✅|❌|⚠️|🚨/g, ''); 
-        iconEl.textContent = icon;
-        modal.style.display = 'flex';
-
-        return new Promise((resolve) => {
-            btn.onclick = () => {
-                modal.style.display = 'none';
-                resolve(true);
-            };
-        });
-    };
-
     // --- UI Panels Elements ---
     const loginPanel = document.getElementById('login-panel');
     const registerPanel = document.getElementById('register-panel');
