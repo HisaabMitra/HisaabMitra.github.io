@@ -29,7 +29,7 @@
 body {
     font-family: var(--font-main);
     background-color: var(--color-bg-light);
-    color: var(--text-dark);
+    color: var(--color-text-dark);
     line-height: 1.6;
     overflow-x: hidden;
 }
