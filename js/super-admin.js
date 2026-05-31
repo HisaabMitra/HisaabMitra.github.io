@@ -87,45 +87,171 @@ async function initSuperAdminModule() {
     }
 
     // 2. एक्टिव यूज़र्स मैनेज करना (Renew / Unauthorize / Reset Password)
-    async function loadActiveUsers() {
+   async function loadActiveUsers() {
     console.log("Loading Active Users...");
+
     try {
-        // Step 1: Sara data fetch karke dekhte hain
         const { data: users, error } = await window.supabaseClient
             .from('user_roles')
             .select('*');
 
         if (error) throw error;
 
-        console.log("Total Users in Database:", users); 
-
-        // Step 2: Client-side par manually filter karte hain
-        // Isse pata chal jayega ki problem SQL query mein hai ya data mein
-        const filtered = users.filter(user => user.status !== 'pending' && user.role !== 'super_admin');
-        
-        console.log("Filtered Users for Active Table:", filtered);
+        const filtered = users.filter(
+            user => user.status !== 'pending' && user.role !== 'super_admin'
+        );
 
         if (!filtered || filtered.length === 0) {
-            activeTable.innerHTML = `<tr><td colspan="5" style="text-align:center;">Koi Approved User nahi mila.</td></tr>`;
+            activeTable.innerHTML = `
+                <tr>
+                    <td colspan="5" style="text-align:center;padding:15px;">
+                        Koi Approved User nahi mila.
+                    </td>
+                </tr>
+            `;
             return;
         }
 
-        activeTable.innerHTML = filtered.map(user => `
-            <tr>
-                <td>${user.full_name}</td>
-                <td>${user.role}</td>
-                <td>${user.status}</td>
-                <td>${user.expiry_date || 'N/A'}</td>
-                <td>Data Row Loaded</td>
-            </tr>
-        `).join('');
+        activeTable.innerHTML = '';
+
+        filtered.forEach(user => {
+
+            let currentStatus = user.status || 'unknown';
+            let statusColor = '#137333';
+            let expiryString = user.expiry_date
+                ? new Date(user.expiry_date).toLocaleDateString('en-IN')
+                : 'N/A';
+
+            if (user.status === 'rejected') {
+                statusColor = '#c5221f';
+                expiryString = 'Access Suspended';
+            }
+
+            const tr = document.createElement('tr');
+
+            tr.innerHTML = `
+                <td style="padding:12px;">
+                    <div style="display:flex;align-items:center;gap:6px;">
+                        <span>${user.full_name}</span>
+
+                        <button
+                            class="view-details-btn"
+                            data-name="${user.full_name}"
+                            data-ko="${user.ko_code || 'N/A'}"
+                            data-mobile="${user.mobile_no || 'N/A'}"
+                            style="
+                                background:transparent;
+                                border:none;
+                                cursor:pointer;
+                                font-size:1rem;
+                            "
+                            title="View KO Code & Mobile"
+                        >
+                            👁️
+                        </button>
+                    </div>
+
+                    <small style="color:#777;">
+                        ${user.email}
+                    </small>
+                </td>
+
+                <td style="padding:12px;">
+                    <span style="
+                        background:#f0f0f0;
+                        padding:2px 6px;
+                        border-radius:4px;
+                        font-size:0.85rem;
+                    ">
+                        ${user.role.toUpperCase()}
+                    </span>
+                </td>
+
+                <td style="
+                    padding:12px;
+                    color:${statusColor};
+                    font-weight:bold;
+                ">
+                    ${currentStatus}
+                </td>
+
+                <td style="padding:12px;font-weight:600;">
+                    ${expiryString}
+                </td>
+
+                <td style="
+                    padding:12px;
+                    display:flex;
+                    gap:6px;
+                    flex-wrap:wrap;
+                    justify-content:center;
+                ">
+                    <button
+                        class="act-btn ren-btn"
+                        data-id="${user.id}"
+                        style="
+                            background:#137333;
+                            color:white;
+                            border:none;
+                            padding:6px 10px;
+                            border-radius:4px;
+                            cursor:pointer;
+                        "
+                    >
+                        +6 Months
+                    </button>
+
+                    <button
+                        class="act-btn rst-btn"
+                        data-id="${user.id}"
+                        data-name="${user.full_name}"
+                        style="
+                            background:#f2994a;
+                            color:white;
+                            border:none;
+                            padding:6px 10px;
+                            border-radius:4px;
+                            cursor:pointer;
+                        "
+                    >
+                        Reset Pass
+                    </button>
+
+                    <button
+                        class="act-btn blk-btn"
+                        data-id="${user.id}"
+                        style="
+                            background:#222;
+                            color:white;
+                            border:none;
+                            padding:6px 10px;
+                            border-radius:4px;
+                            cursor:pointer;
+                        "
+                    >
+                        Unauthorize
+                    </button>
+                </td>
+            `;
+
+            activeTable.appendChild(tr);
+        });
+
+        attachActiveControlListeners();
+        attachEyeButtonListeners();
 
     } catch (err) {
         console.error("Active User Error:", err);
+
+        activeTable.innerHTML = `
+            <tr>
+                <td colspan="5" style="text-align:center;color:red;padding:15px;">
+                    Failed to compile terminal users.
+                </td>
+            </tr>
+        `;
     }
 }
-            
-
 
     // आई-बटन क्लिक का स्वतंत्र फंक्शन (सिंटैक्स सेफ)
   // js/super-admin.js में आई-बटन लिसनर को कस्टमाइज करना
