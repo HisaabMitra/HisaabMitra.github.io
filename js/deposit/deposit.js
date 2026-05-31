@@ -3,10 +3,7 @@ window.initDepositPage = async function (currentUser) {
     if (!workspace) return;
 
     try {
-        const response = await fetch('pages/deposit.html');
-        if (!response.ok) throw new Error("Deposit page load failed");
-        
-        workspace.innerHTML = await response.text();
+
 
         // 1. काउंटर KO Code सेट करें
         const koCodeLabel = document.getElementById('lbl-ko-code');
