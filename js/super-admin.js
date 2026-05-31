@@ -323,9 +323,9 @@ async function initSuperAdminModule() {
                 try {
                     const { error } = await window.supabaseClient.from('user_roles').update(updateData).eq('id', uid);
                     if (error) throw error;
-                    alert(isRenew ? "✅ User validity extended by 6 Months!" : "🚫 User Access Revoked.");
+                    window.showSystemAlert(isRenew ? "✅ User validity extended by 6 Months!" : "🚫 User Access Revoked.");
                     refreshAllTables();
-                } catch (err) { alert(err.message); }
+                } catch (err) { window.showSystemAlert(err.message); }
             });
         });
     }
