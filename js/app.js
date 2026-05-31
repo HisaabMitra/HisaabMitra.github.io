@@ -269,6 +269,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function proceedToDashboard(user) {
         currentLoggedInUser = user; 
+         window.currentUser = user;
         authScreen.classList.add('hidden');
         mainDashboard.classList.remove('hidden');
         document.getElementById('user-display').textContent = `${user.full_name} (${user.role.toUpperCase()})`;
@@ -327,18 +328,32 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // === फिक्स किया हुआ मॉड्यूल इनिशियलाइज़र ===
-    function initializePageModules(pageName) {
-        if (pageName === 'home') {
-            initHomepageModule();
-        }
-        if (pageName === 'deposit') {
-            if (typeof window.initDepositPage === 'function') {
-                window.initDepositPage(currentLoggedInUser); // सही वेरिएबल के साथ मैप किया गया
-            } else {
-                console.error("initDepositPage function missing in deposit.js");
-            }
+   function initializePageModules(pageName) {
+
+    if (pageName === 'home') {
+        initHomepageModule();
+    }
+
+    if (pageName === 'deposit') {
+        if (typeof window.initDepositPage === 'function') {
+            window.initDepositPage(currentLoggedInUser);
+        } else {
+            console.error("initDepositPage function missing in deposit.js");
         }
     }
+
+    if (pageName === 'search') {
+        if (typeof initSearchModule === 'function') {
+            initSearchModule();
+        }
+    }
+
+    if (pageName === 'super-admin') {
+        if (typeof initSuperAdminModule === 'function') {
+            initSuperAdminModule();
+        }
+    }
+}
 
     // ==========================================
     // 7. MULTI-TENANT KO-CODE LIVE BALANCE LOGIC
