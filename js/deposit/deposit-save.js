@@ -25,7 +25,7 @@ document.addEventListener('click', async (e) => {
                 const { data: txData, error: txError } = await window.supabaseClient
                     .from('deposit_transactions')
                     .insert([{ 
-                        ko_code: currentUser.ko_code, 
+                        ko_code: window.currentUser.ko_code, 
                         account_number: accountNo, 
                         customer_name: custName, 
                         amount: amount, 
