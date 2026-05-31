@@ -71,33 +71,48 @@ window.showSystemConfirm = function(message, title = "Confirmation Required", on
 };
 
 // 3. पुराना ओरिजिनल प्रॉम्ट (अगर आपको भविष्य में पासवर्ड रीसेट के लिए इनपुट बॉक्स के साथ यूज़ करना हो)
-window.showSystemPrompt = function(message, title = "Reset Password", onSubmit) {
-    const modal = document.getElementById('custom-prompt-modal');
-    const msgElem = document.getElementById('custom-prompt-message');
-    const titleElem = document.getElementById('custom-prompt-title');
-    const inputElement = document.getElementById('custom-prompt-input');
-    const inputDiv = inputElement ? inputElement.parentElement : null;
-    const cancelBtn = document.getElementById('custom-prompt-cancel-btn');
-    const submitBtn = document.getElementById('custom-prompt-submit-btn');
+window.showSystemPrompt = function(message, title = "Reset Password") {
 
-    if (!modal || !inputElement) return;
+    return new Promise((resolve) => {
 
-    // इनपुट बॉक्स को पक्का दिखाएं और टेक्स्ट रीसेट करें
-    if (inputDiv) inputDiv.style.display = 'block';
-    inputElement.value = "";
-    msgElem.innerText = message;
-    if (titleElem) titleElem.innerText = title;
-    if (submitBtn) submitBtn.innerText = "Update Password";
+        const modal = document.getElementById('custom-prompt-modal');
+        const msgElem = document.getElementById('custom-prompt-message');
+        const titleElem = document.getElementById('custom-prompt-title');
+        const inputElement = document.getElementById('custom-prompt-input');
 
-    modal.style.display = 'flex';
+        const inputDiv = inputElement ? inputElement.parentElement : null;
 
-    submitBtn.onclick = function() {
-        const inputValue = inputElement.value.trim();
-        modal.style.display = 'none';
-        if (onSubmit) onSubmit(inputValue); // टाइप की हुई वैल्यू वापस भेजें
-    };
+        const cancelBtn = document.getElementById('custom-prompt-cancel-btn');
+        const submitBtn = document.getElementById('custom-prompt-submit-btn');
 
-    cancelBtn.onclick = function() {
-        modal.style.display = 'none';
-    };
+        if (!modal || !inputElement) {
+            resolve(prompt(message));
+            return;
+        }
+
+        if (inputDiv) inputDiv.style.display = 'block';
+
+        inputElement.value = "";
+
+        msgElem.innerText = message;
+        titleElem.innerText = title;
+
+        submitBtn.innerText = "Update Password";
+
+        modal.style.display = 'flex';
+
+        submitBtn.onclick = function () {
+            const value = inputElement.value.trim();
+
+            modal.style.display = 'none';
+
+            resolve(value);
+        };
+
+        cancelBtn.onclick = function () {
+            modal.style.display = 'none';
+
+            resolve(null);
+        };
+    });
 };
