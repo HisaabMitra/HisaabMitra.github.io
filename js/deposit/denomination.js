@@ -1,5 +1,7 @@
-// डिनॉमिनेशन प्लगइन मॉड्यूल (Reusable Component)
-// 1. टेबल का HTML लोड करने के लिए फंक्शन (Updated with Tab Index Logic)
+// डिनॉमिनेशन प्लगइन मॉड्यूल (Fully Fixed Reusable Component)
+window.DenominationComponent = {
+    
+    // 1. टेबल का HTML लोड करने के लिए फंक्शन (Updated with Fixed Tab Index Logic)
     render: function(containerId) {
         const container = document.getElementById(containerId);
         if (!container) return;
@@ -25,20 +27,15 @@
                     ${notes.map((note, index) => `
                         <tr style="border-bottom: 1px solid #f6f6f6;">
                             <td style="padding:8px; font-size:0.9rem; color:#333;"><strong>₹${note}</strong></td>
-                            <!-- Cash IN Tab Index: 10, 11, 12... -->
                             <td style="padding:8px;"><input type="number" class="denom-in" data-note="${note}" value="0" min="0" tabindex="${10 + index}" style="width:60px; padding:6px; text-align:center; border:1px solid #dcdcdc; border-radius:4px; font-weight:600;"></td>
-                            <!-- Cash OUT Tab Index: 20, 21, 22... -->
                             <td style="padding:8px;"><input type="number" class="denom-out" data-note="${note}" value="0" min="0" tabindex="${20 + index}" style="width:60px; padding:6px; text-align:center; border:1px solid #dcdcdc; border-radius:4px; font-weight:600;"></td>
                             <td style="padding:8px; font-size:0.9rem; color:#2c3e50; font-weight:700;" id="total-display-${note}">₹0</td>
                         </tr>
                     `).join('')}
                     
-                    <!-- 🪙 Coins Row (Note: notes.length की वैल्यू 7 है, तो index 7 माना जाएगा) -->
                     <tr style="border-bottom: 1px solid #f6f6f6; background: #fffdfd;">
                         <td style="padding:8px; font-size:0.9rem; color:#333;"><strong>🪙 Coins</strong></td>
-                        <!-- Coins Cash IN Tab Index: 17 -->
                         <td style="padding:8px;"><input type="number" class="denom-in" data-note="coins" value="0" min="0" tabindex="17" style="width:60px; padding:6px; text-align:center; border:1px solid #dcdcdc; border-radius:4px; font-weight:600;" placeholder="Value"></td>
-                        <!-- Coins Cash OUT Tab Index: 27 -->
                         <td style="padding:8px;"><input type="number" class="denom-out" data-note="coins" value="0" min="0" tabindex="27" style="width:60px; padding:6px; text-align:center; border:1px solid #dcdcdc; border-radius:4px; font-weight:600;" placeholder="Value"></td>
                         <td style="padding:8px; font-size:0.9rem; color:#2c3e50; font-weight:700;" id="total-display-coins">₹0</td>
                     </tr>
@@ -53,6 +50,7 @@
         this.attachListeners();
     },
 
+    // 2. लाइव गुणा और जोड़ कैलकुलेशन करने के लिए फंक्शन
     calculate: function() {
         let grandTotalIn = 0;
         let grandTotalOut = 0;
@@ -106,6 +104,7 @@
         return netCash;
     },
 
+    // 3. इवेंट लिसनर्स अटैच करने के लिए फंक्शन
     attachListeners: function() {
         document.querySelectorAll('.denom-in, .denom-out').forEach(input => {
             input.addEventListener('input', () => this.calculate());
@@ -113,20 +112,26 @@
         });
     },
 
+    // 4. डेटाबेस में भेजने के लिए सभी वैल्यूज को ऑब्जेक्ट में समेटने का फंक्शन
     getValues: function() {
         const denomDetails = {};
         [500, 200, 100, 50, 20, 10, 5].forEach(note => {
-            denomDetails[`denom_in_${note}`] = parseInt(document.querySelector(`.denom-in[data-note="${note}"]`).value) || 0;
-            denomDetails[`denom_out_${note}`] = parseInt(document.querySelector(`.denom-out[data-note="${note}"]`).value) || 0;
+            const inEl = document.querySelector(`.denom-in[data-note="${note}"]`);
+            const outEl = document.querySelector(`.denom-out[data-note="${note}"]`);
+            denomDetails[`denom_in_${note}`] = inEl ? (parseInt(inEl.value) || 0) : 0;
+            denomDetails[`denom_out_${note}`] = outEl ? (parseInt(outEl.value) || 0) : 0;
         });
         
         // Coins database entry fields
-        denomDetails[`denom_in_coins`] = parseInt(document.querySelector('.denom-in[data-note="coins"]').value) || 0;
-        denomDetails[`denom_out_coins`] = parseInt(document.querySelector('.denom-out[data-note="coins"]').value) || 0;
+        const cInEl = document.querySelector('.denom-in[data-note="coins"]');
+        const cOutEl = document.querySelector('.denom-out[data-note="coins"]');
+        denomDetails[`denom_in_coins`] = cInEl ? (parseInt(cInEl.value) || 0) : 0;
+        denomDetails[`denom_out_coins`] = cOutEl ? (parseInt(cOutEl.value) || 0) : 0;
         
         return denomDetails;
     },
 
+    // 5. पूरा कंपोनेंट रीसेट करने का फंक्शन
     clear: function() {
         document.querySelectorAll('.denom-in, .denom-out').forEach(input => input.value = 0);
         this.calculate();
