@@ -323,7 +323,7 @@ document.addEventListener('DOMContentLoaded', () => {
 }
 
    // ==========================================
-    // 7. MULTI-TENANT KO-CODE LIVE BALANCE LOGIC (UPDATED WITH COINS & LIVE COMMISSION)
+    // 7. MULTI-TENANT KO-CODE LIVE BALANCE LOGIC (UPDATED WITH COINS & SENSITIVE COMMISSION)
     // ==========================================
     async function initHomepageModule() {
         if (!currentLoggedInUser || !currentLoggedInUser.ko_code) return;
@@ -333,6 +333,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const balanceDisplay = document.getElementById('hp-settlement-balance');
         const cashInHandDisplay = document.getElementById('hp-cash-in-hand');
         const commissionDisplay = document.getElementById('hp-today-commission');
+        const toggleCommBtn = document.getElementById('btn-toggle-commission'); // 👈 आँख वाला बटन
 
         if (koDisplay) koDisplay.textContent = `KO CODE: ${koCode}`;
 
@@ -345,7 +346,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 .single();
 
             if (!fetchErr && userUpdate) {
-                currentLoggedInUser = userUpdate; // लोकल ऑब्जेक्ट सिंक रखना
+                currentLoggedInUser = userUpdate; 
             }
 
             // [2] होमपेज यूआई पर सेटलमेंट बैलेंस अपडेट करना
@@ -362,7 +363,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const n20  = parseInt(currentLoggedInUser.cash_20)  || 0;
             const n10  = parseInt(currentLoggedInUser.cash_10)  || 0;
             const n5   = parseInt(currentLoggedInUser.cash_5)   || 0;
-            const cCoins = parseInt(currentLoggedInUser.cash_coins) || 0; // 🪙 सिक्कों की वैल्यू
+            const cCoins = parseInt(currentLoggedInUser.cash_coins) || 0; 
 
             const finalCashInHand = (n500 * 500) + (n200 * 200) + (n100 * 100) + (n50 * 50) + (n20 * 20) + (n10 * 10) + (n5 * 5) + cCoins;
 
@@ -370,7 +371,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 cashInHandDisplay.textContent = `₹ ${finalCashInHand.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
             }
 
-            // डोम कार्ड्स में नोट और कॉइन्स का काउंट लाइव प्रदर्शित करना
+            // डोम कार्ड्स में डेटा लाइव प्रदर्शित करना
             if(document.getElementById('note-count-500')) document.getElementById('note-count-500').textContent = n500;
             if(document.getElementById('note-count-200')) document.getElementById('note-count-200').textContent = n200;
             if(document.getElementById('note-count-100')) document.getElementById('note-count-100').textContent = n100;
@@ -380,9 +381,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if(document.getElementById('note-count-5')) document.getElementById('note-count-5').textContent = n5;
             if(document.getElementById('coin-total-count')) document.getElementById('coin-total-count').textContent = `₹ ${cCoins}`;
 
-            // 📈 [4] आज का लाइव नेट कमीशन कैलकुलेशन लॉजिक (नया अपडेट)
-            if (commissionDisplay) {
-                const todayStr = new Date().toISOString().split('T')[0]; // आज की तारीख (YYYY-MM-DD)
+            // 📈 [4] आज का लाइव नेट कमीशन कैलकुलेशन लॉजिक (Eye Icon Privacy के साथ)
+            if (commissionDisplay && toggleCommBtn) {
+                const todayStr = new Date().toISOString().split('T')[0]; 
 
                 const { data: txList, error: txErr } = await window.supabaseClient
                     .from('deposit_transactions')
@@ -392,14 +393,35 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (txErr) throw txErr;
 
-                // आज के सभी कमीशन का जोड़ (Sum) निकालना
                 let totalTodayCommission = 0;
                 if (txList && txList.length > 0) {
                     totalTodayCommission = txList.reduce((sum, tx) => sum + (parseFloat(tx.commission) || 0), 0);
                 }
 
-                // यूआई पर पीले बॉक्स में आज का कुल कमीशन दिखाना
-                commissionDisplay.textContent = `₹ ${totalTodayCommission.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+                // असली अमाउंट को एक स्ट्रिंग फॉर्मेट में तैयार करके रख लेते हैं
+                const formattedCommission = `₹ ${totalTodayCommission.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+                const maskedCommission = "₹ ••••••";
+
+                // डिफ़ॉल्ट रूप से हमेशा छुपा हुआ (Masked) ही दिखेगा जब पेज खुलेगा
+                commissionDisplay.textContent = maskedCommission;
+                toggleCommBtn.textContent = "👁️";
+                
+                // पुराना इवेंट लिसनर हटाना ताकि बटन पर बार-बार क्लिक करने से डुप्लीकेट इवेंट न बनें
+                toggleCommBtn.onclick = null;
+
+                // आँख बटन पर क्लिक करने का धासू लॉजिक
+                let isHidden = true;
+                toggleCommBtn.onclick = function() {
+                    if (isHidden) {
+                        commissionDisplay.textContent = formattedCommission; // असली अमाउंट दिखाओ
+                        toggleCommBtn.textContent = "🙈"; // आँख बंद करने का सिंबल
+                        isHidden = false;
+                    } else {
+                        commissionDisplay.textContent = maskedCommission; // अमाउंट छुपाओ
+                        toggleCommBtn.textContent = "👁️"; // खुली आँख का सिंबल
+                        isHidden = true;
+                    }
+                };
             }
 
         } catch (err) {
