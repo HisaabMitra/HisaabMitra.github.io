@@ -323,7 +323,7 @@ document.addEventListener('DOMContentLoaded', () => {
 }
 
    // ==========================================
-    // 7. MULTI-TENANT KO-CODE LIVE BALANCE LOGIC (UPDATED WITH COINS)
+    // 7. MULTI-TENANT KO-CODE LIVE BALANCE LOGIC (UPDATED WITH COINS & LIVE COMMISSION)
     // ==========================================
     async function initHomepageModule() {
         if (!currentLoggedInUser || !currentLoggedInUser.ko_code) return;
@@ -337,7 +337,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (koDisplay) koDisplay.textContent = `KO CODE: ${koCode}`;
 
         try {
-            // लाइव डेटा हमेशा डेटाबेस (user_roles) से सिंक रखें
+            // [1] लाइव डेटा हमेशा डेटाबेस (user_roles) से सिंक रखें
             const { data: userUpdate, error: fetchErr } = await window.supabaseClient
                 .from('user_roles')
                 .select('*')
@@ -348,33 +348,29 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentLoggedInUser = userUpdate; // लोकल ऑब्जेक्ट सिंक रखना
             }
 
-            // होमपेज यूआई पर सेटलमेंट बैलेंस अपडेट करना
+            // [2] होमपेज यूआई पर सेटलमेंट बैलेंस अपडेट करना
             if (balanceDisplay) {
                 const sBal = parseFloat(currentLoggedInUser.settlement_balance) || 0;
-                // Agar aap chahein toh isme round-off laga sakte hain .toFixed(2)
                 balanceDisplay.textContent = `₹ ${sBal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
             }
 
-            // अवेलेबल डिनॉमिनेशन काउंटिंग
+            // [3] अवेलेबल डिनॉमिनेशन काउंटिंग और कुल कैश इन हैंड
             const n500 = parseInt(currentLoggedInUser.cash_500) || 0;
             const n200 = parseInt(currentLoggedInUser.cash_200) || 0;
             const n100 = parseInt(currentLoggedInUser.cash_100) || 0;
-            const n50  = parseInt(currentLoggedInUser.cash_50) || 0;
-            const n20  = parseInt(currentLoggedInUser.cash_20) || 0;
-            const n10  = parseInt(currentLoggedInUser.cash_10) || 0;
-            const n5   = parseInt(currentLoggedInUser.cash_5) || 0;
-            
-            // 🪙 Database se coins ka cash uthana (Naya update)
-            const cCoins = parseInt(currentLoggedInUser.cash_coins) || 0;
+            const n50  = parseInt(currentLoggedInUser.cash_50)  || 0;
+            const n20  = parseInt(currentLoggedInUser.cash_20)  || 0;
+            const n10  = parseInt(currentLoggedInUser.cash_10)  || 0;
+            const n5   = parseInt(currentLoggedInUser.cash_5)   || 0;
+            const cCoins = parseInt(currentLoggedInUser.cash_coins) || 0; // 🪙 सिक्कों की वैल्यू
 
-            // Final Cash calculation mein coins ki total value ko PLUS (+) kiya hai
             const finalCashInHand = (n500 * 500) + (n200 * 200) + (n100 * 100) + (n50 * 50) + (n20 * 20) + (n10 * 10) + (n5 * 5) + cCoins;
 
             if (cashInHandDisplay) {
                 cashInHandDisplay.textContent = `₹ ${finalCashInHand.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
             }
 
-            // डोम कार्ड्स में सिंगल नोट काउंटिंग को प्रदर्शित करना
+            // डोम कार्ड्स में नोट और कॉइन्स का काउंट लाइव प्रदर्शित करना
             if(document.getElementById('note-count-500')) document.getElementById('note-count-500').textContent = n500;
             if(document.getElementById('note-count-200')) document.getElementById('note-count-200').textContent = n200;
             if(document.getElementById('note-count-100')) document.getElementById('note-count-100').textContent = n100;
@@ -382,9 +378,29 @@ document.addEventListener('DOMContentLoaded', () => {
             if(document.getElementById('note-count-20')) document.getElementById('note-count-20').textContent = n20;
             if(document.getElementById('note-count-10')) document.getElementById('note-count-10').textContent = n10;
             if(document.getElementById('note-count-5')) document.getElementById('note-count-5').textContent = n5;
-            
-            // 🪙 Homepage par coins ka total live balance dikhana
             if(document.getElementById('coin-total-count')) document.getElementById('coin-total-count').textContent = `₹ ${cCoins}`;
+
+            // 📈 [4] आज का लाइव नेट कमीशन कैलकुलेशन लॉजिक (नया अपडेट)
+            if (commissionDisplay) {
+                const todayStr = new Date().toISOString().split('T')[0]; // आज की तारीख (YYYY-MM-DD)
+
+                const { data: txList, error: txErr } = await window.supabaseClient
+                    .from('deposit_transactions')
+                    .select('commission')
+                    .eq('ko_code', koCode)
+                    .gte('transaction_date', `${todayStr}T00:00:00`);
+
+                if (txErr) throw txErr;
+
+                // आज के सभी कमीशन का जोड़ (Sum) निकालना
+                let totalTodayCommission = 0;
+                if (txList && txList.length > 0) {
+                    totalTodayCommission = txList.reduce((sum, tx) => sum + (parseFloat(tx.commission) || 0), 0);
+                }
+
+                // यूआई पर पीले बॉक्स में आज का कुल कमीशन दिखाना
+                commissionDisplay.textContent = `₹ ${totalTodayCommission.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+            }
 
         } catch (err) {
             console.error("Homepage Module Sync Error:", err);
