@@ -1,9 +1,15 @@
 // डिनॉमिनेशन प्लगइन मॉड्यूल (Reusable Component)
-window.DenominationComponent = {
+// 1. टेबल का HTML लोड करने के लिए फंक्शन (Updated with Tab Index Logic)
     render: function(containerId) {
         const container = document.getElementById(containerId);
         if (!container) return;
 
+        const notes = [500, 200, 100, 50, 20, 10, 5];
+        
+        // --- 🎯 स्मार्ट टैब इंडेक्स कैलकुलेशन लॉजिक ---
+        // सभी Cash IN के लिए TabIndex: 10 से शुरू होकर 17 तक जाएगा
+        // सभी Cash OUT के लिए TabIndex: 20 से शुरू होकर 27 तक जाएगा
+        
         container.innerHTML = `
             <h4 style="margin-top:0; color:#444; font-size:0.95rem; font-weight:700; border-bottom:2px solid #7d0022; padding-bottom:8px; text-transform: uppercase; letter-spacing:0.5px;">Denomination (IN / OUT)</h4>
             <table style="width: 100%; border-collapse: collapse; text-align: center; margin-top:10px;">
@@ -16,19 +22,24 @@ window.DenominationComponent = {
                     </tr>
                 </thead>
                 <tbody id="denom-table-body">
-                    ${[500, 200, 100, 50, 20, 10, 5].map(note => `
+                    ${notes.map((note, index) => `
                         <tr style="border-bottom: 1px solid #f6f6f6;">
                             <td style="padding:8px; font-size:0.9rem; color:#333;"><strong>₹${note}</strong></td>
-                            <td style="padding:8px;"><input type="number" class="denom-in" data-note="${note}" value="0" min="0" style="width:60px; padding:6px; text-align:center; border:1px solid #dcdcdc; border-radius:4px; font-weight:600;"></td>
-                            <td style="padding:8px;"><input type="number" class="denom-out" data-note="${note}" value="0" min="0" style="width:60px; padding:6px; text-align:center; border:1px solid #dcdcdc; border-radius:4px; font-weight:600;"></td>
+                            <!-- Cash IN Tab Index: 10, 11, 12... -->
+                            <td style="padding:8px;"><input type="number" class="denom-in" data-note="${note}" value="0" min="0" tabindex="${10 + index}" style="width:60px; padding:6px; text-align:center; border:1px solid #dcdcdc; border-radius:4px; font-weight:600;"></td>
+                            <!-- Cash OUT Tab Index: 20, 21, 22... -->
+                            <td style="padding:8px;"><input type="number" class="denom-out" data-note="${note}" value="0" min="0" tabindex="${20 + index}" style="width:60px; padding:6px; text-align:center; border:1px solid #dcdcdc; border-radius:4px; font-weight:600;"></td>
                             <td style="padding:8px; font-size:0.9rem; color:#2c3e50; font-weight:700;" id="total-display-${note}">₹0</td>
                         </tr>
                     `).join('')}
                     
+                    <!-- 🪙 Coins Row (Note: notes.length की वैल्यू 7 है, तो index 7 माना जाएगा) -->
                     <tr style="border-bottom: 1px solid #f6f6f6; background: #fffdfd;">
                         <td style="padding:8px; font-size:0.9rem; color:#333;"><strong>🪙 Coins</strong></td>
-                        <td style="padding:8px;"><input type="number" class="denom-in" data-note="coins" value="0" min="0" style="width:60px; padding:6px; text-align:center; border:1px solid #dcdcdc; border-radius:4px; font-weight:600;" placeholder="Value"></td>
-                        <td style="padding:8px;"><input type="number" class="denom-out" data-note="coins" value="0" min="0" style="width:60px; padding:6px; text-align:center; border:1px solid #dcdcdc; border-radius:4px; font-weight:600;" placeholder="Value"></td>
+                        <!-- Coins Cash IN Tab Index: 17 -->
+                        <td style="padding:8px;"><input type="number" class="denom-in" data-note="coins" value="0" min="0" tabindex="17" style="width:60px; padding:6px; text-align:center; border:1px solid #dcdcdc; border-radius:4px; font-weight:600;" placeholder="Value"></td>
+                        <!-- Coins Cash OUT Tab Index: 27 -->
+                        <td style="padding:8px;"><input type="number" class="denom-out" data-note="coins" value="0" min="0" tabindex="27" style="width:60px; padding:6px; text-align:center; border:1px solid #dcdcdc; border-radius:4px; font-weight:600;" placeholder="Value"></td>
                         <td style="padding:8px; font-size:0.9rem; color:#2c3e50; font-weight:700;" id="total-display-coins">₹0</td>
                     </tr>
                 </tbody>
