@@ -122,3 +122,28 @@ document.addEventListener('click', async (e) => {
         }
     }
 });
+
+
+
+
+// ⌨️ कीबोर्ड शॉर्टकट: Ctrl + S दबाने पर ट्रांज़ैक्शन सेव करें
+document.addEventListener('keydown', function(e) {
+    // Check करें कि क्या 'S' की (Key) और 'Ctrl' (या Mac पर Command की) एक साथ दबाई गई है
+    if ((e.key === 's' || e.key === 'S') && (e.ctrlKey || e.metaKey)) {
+        
+        // 1. ब्राउज़र का डिफ़ॉल्ट सेव पेज डायलॉग (Save Page As) आने से रोकें
+        e.preventDefault(); 
+        
+        // 2. सेव बटन को ढूंढें
+        const saveButton = document.getElementById('btn-dep-save');
+        
+        // 3. अगर सेव बटन स्क्रीन पर मौजूद है, तो उसे ऑटो-क्लिक कर दें
+        if (saveButton) {
+            console.log("Shortcut Triggered: Ctrl + S");
+            saveButton.click();
+        }
+    }
+});
+
+
+
