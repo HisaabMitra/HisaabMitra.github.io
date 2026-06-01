@@ -30,12 +30,12 @@ document.addEventListener('click', async (e) => {
             return;
         }
 
-        // मुख्य सेविंग फ़ंक्शन
+        // [A] पुराना सेव फ़ंक्शन (सिर्फ नए ट्रांजैक्शन के लिए)
         const saveTransactionData = async () => {
             let calcCommission = Math.min(amount * 0.004, 50);
             
             try {
-                // [A] पहले स्टेप: ट्रांजैक्शन लॉग को रिकॉर्ड करें
+                // पहले स्टेप: ट्रांजैक्शन लॉग को रिकॉर्ड करें
                 const { data: txData, error: txError } = await window.supabaseClient
                     .from('deposit_transactions')
                     .insert([{ 
@@ -51,9 +51,9 @@ document.addEventListener('click', async (e) => {
                 
                 if (txError) throw txError;
 
-                // [B] दूसरे स्टेप: नए माइनस बैलेंस और डिनॉमिनेशन की गणना करें
+                // दूसरे स्टेप: नए माइनस बैलेंस और डिनॉमिनेशन की गणना करें
                 const currentSettlementBalance = parseFloat(window.currentUser.settlement_balance) || 0;
-                const updatedSettlementBalance = currentSettlementBalance - amount; // यह अपने आप माइनस (-) में चला जाएगा
+                const updatedSettlementBalance = currentSettlementBalance - amount; 
                 
                 const nextVaultData = {
                     settlement_balance: updatedSettlementBalance,
@@ -67,7 +67,7 @@ document.addEventListener('click', async (e) => {
                     cash_coins: (parseInt(window.currentUser.cash_coins) || 0) + (denomValues.denom_in_coins || 0) - (denomValues.denom_out_coins || 0)
                 };
 
-                // [C] तीसरे स्टेप: user_roles टेबल में लाइव अपडेट भेजें (माइनस वैल्यू के साथ)
+                // तीसरे स्टेप: user_roles टेबल में लाइव अपडेट भेजें
                 const { error: userUpdateError } = await window.supabaseClient
                     .from('user_roles')
                     .update(nextVaultData)
@@ -75,7 +75,7 @@ document.addEventListener('click', async (e) => {
 
                 if (userUpdateError) throw userUpdateError;
 
-                // [D] चौथे स्टेप: लोकल विंडो यूज़र को अपडेट करें
+                // चौथे स्टेप: लोकल विंडो यूज़र को अपडेट करें
                 Object.assign(window.currentUser, nextVaultData);
 
                 window.showSystemAlert("डिपॉजिट सफल और तिजोरी (Vault) अपडेट हो गई!", "Success", "✅");
@@ -92,52 +92,59 @@ document.addEventListener('click', async (e) => {
             }
         };
 
-        // 🌟 3. लो बैलेंस नोटिफिकेशन और 2 सेकंड का ऑटो-प्रोसीड लॉजिक
+        // [B] लो बैलेंस नोटिफिकेशन और 2 सेकंड का ऑटो-प्रोसीड लॉजिक
         const checkBalanceAndProceed = () => {
             const currentSettlementBalance = parseFloat(window.currentUser.settlement_balance) || 0;
             
             if (currentSettlementBalance < amount) {
                 const missingAmount = amount - currentSettlementBalance;
                 
-                // स्क्रीन पर एक छोटा सा नोटिफिकेशन अलर्ट दिखाएं
                 window.showSystemAlert(`⚠️ सेटलमेंट में बैलेंस लो है! ₹${missingAmount.toLocaleString('en-IN')} ऐड कर लेना। ट्रांजैक्शन आगे बढ़ रही है...`, "Low Balance Notice", "ℹ️");
                 
-                // ठीक 2 सेकंड (2000 मिलीसेकंड) के बाद ट्रांजैक्शन अपने आप सेव हो जाएगी
                 setTimeout(() => {
                     saveTransactionData();
                 }, 2000);
             } else {
-                // अगर बैलेंस पर्याप्त है, तो बिना किसी देरी के तुरंत सेव करें
                 saveTransactionData();
+            }
+        };
+
+        // 🌟 [C] SAVE या UPDATE मोड चेक करने का मुख्य ट्रैफिक कंट्रोलर लॉजिक 🌟
+        const handleSaveOrUpdate = () => {
+            const saveBtnElement = document.getElementById('btn-dep-save');
+            const isEditMode = saveBtnElement && saveBtnElement.dataset.mode === "edit";
+            
+            if (isEditMode) {
+                // अगर बटन एडिट मोड में है, तो deposit-update.js वाली फाइल का फंक्शन रन होगा
+                const editingTxId = saveBtnElement.dataset.editingTxId;
+                if (typeof window.processTransactionUpdate === 'function') {
+                    console.log("Redirecting to Update Engine for Tx ID:", editingTxId);
+                    window.processTransactionUpdate(editingTxId, accountNo, custName, amount, remarks, denomValues);
+                } else {
+                    window.showSystemAlert("त्रुटि: deposit-update.js फ़ाइल लोड नहीं है!", "Missing File", "❌");
+                }
+            } else {
+                // अगर नॉर्मल मोड है, तो पुराना लो-बैलेंस चेक करके सेव करने वाला लॉजिक चलेगा
+                checkBalanceAndProceed();
             }
         };
 
         // 4. अमाउंट और नेट कैश की मैचिंग चेक
         if (netCash === 0) {
-            window.showSystemConfirm("बिना कैश आगे बढ़ें?", "Warning", checkBalanceAndProceed);
+            window.showSystemConfirm("बिना कैश आगे बढ़ें?", "Warning", handleSaveOrUpdate);
         } else if (Math.abs(netCash - amount) > 0.01) {
             window.showSystemAlert(`डिनॉमिनेशन टोटल (₹${netCash}) और जमा राशि (₹${amount}) मैच नहीं!`, "Error", "❌");
         } else {
-            checkBalanceAndProceed();
+            handleSaveOrUpdate();
         }
     }
 });
 
-
-
-
-// ⌨️ कीबोर्ड शॉर्टकट: Ctrl + S दबाने पर ट्रांज़ैक्शन सेव करें
+// ⌨️ कीबोर्ड शॉर्टकट: Ctrl + S दबाने पर ट्रांज़ैक्शन सेव या अपडेट करें
 document.addEventListener('keydown', function(e) {
-    // Check करें कि क्या 'S' की (Key) और 'Ctrl' (या Mac पर Command की) एक साथ दबाई गई है
     if ((e.key === 's' || e.key === 'S') && (e.ctrlKey || e.metaKey)) {
-        
-        // 1. ब्राउज़र का डिफ़ॉल्ट सेव पेज डायलॉग (Save Page As) आने से रोकें
         e.preventDefault(); 
-        
-        // 2. सेव बटन को ढूंढें
         const saveButton = document.getElementById('btn-dep-save');
-        
-        // 3. अगर सेव बटन स्क्रीन पर मौजूद है, तो उसे ऑटो-क्लिक कर दें
         if (saveButton) {
             console.log("Shortcut Triggered: Ctrl + S");
             saveButton.click();
@@ -145,21 +152,13 @@ document.addEventListener('keydown', function(e) {
     }
 });
 
-
 // ⌨️ keyboard shortcut: Esc (Escape) dabane par pura form clear karein
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape' || e.key === 'Esc') {
-        
-        // 1. Clear button ko ID se dhoondhein
         const clearButton = document.getElementById('btn-dep-clear');
-        
-        // 2. Agar clear button screen par hai, toh use auto-click karein
         if (clearButton) {
             console.log("Shortcut Triggered: Form Cleared via Esc");
             clearButton.click();
         }
     }
 });
-
-
-
