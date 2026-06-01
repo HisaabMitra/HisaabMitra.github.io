@@ -88,7 +88,7 @@ async function initSuperAdminModule() {
 
     // 2. एक्टिव यूज़र्स मैनेज करना (Renew / Unauthorize / Reset Password)
    async function loadActiveUsers() {
-    console.log("Loading Active Users...");
+    console.log("Loading Active Users with Address data...");
 
     try {
         const { data: users, error } = await window.supabaseClient
@@ -115,7 +115,6 @@ async function initSuperAdminModule() {
         activeTable.innerHTML = '';
 
         filtered.forEach(user => {
-
             let currentStatus = user.status || 'unknown';
             let statusColor = '#137333';
             let expiryString = user.expiry_date
@@ -139,13 +138,14 @@ async function initSuperAdminModule() {
                             data-name="${user.full_name}"
                             data-ko="${user.ko_code || 'N/A'}"
                             data-mobile="${user.mobile_no || 'N/A'}"
+                            data-address="${user.address || 'NOT SPECIFIED'}"
                             style="
                                 background:transparent;
                                 border:none;
                                 cursor:pointer;
                                 font-size:1rem;
                             "
-                            title="View KO Code & Mobile"
+                            title="View Kiosk Profile Details"
                         >
                             👁️
                         </button>
@@ -253,23 +253,25 @@ async function initSuperAdminModule() {
     }
 }
 
+    
+
     // आई-बटन क्लिक का स्वतंत्र फंक्शन (सिंटैक्स सेफ)
   // js/super-admin.js में आई-बटन लिसनर को कस्टमाइज करना
-    function attachEyeButtonListeners() {
+   function attachEyeButtonListeners() {
         document.querySelectorAll('.view-details-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
+            btn.onclick = function(e) {
                 const targetBtn = e.target.closest('.view-details-btn');
                 const name = targetBtn.getAttribute('data-name');
                 const koCode = targetBtn.getAttribute('data-ko');
                 const mobile = targetBtn.getAttribute('data-mobile');
+                const address = targetBtn.getAttribute('data-address');
 
-                // पुराना अलर्ट हटाकर हमारा नया स्क्रीन-सेंटर पॉपअप लगाया
                 window.showSystemAlert(
-                    `🔑 KO Code: ${koCode}\n📱 Mobile No: +91 ${mobile}`, 
+                    `🔑 KO CODE : ${koCode}\n📱 MOBILE  : +91 ${mobile}\n📍 ADDRESS : ${address}`, 
                     `${name} - Operator Profile`, 
                     "👤"
                 );
-            });
+            };
         });
     }
 
