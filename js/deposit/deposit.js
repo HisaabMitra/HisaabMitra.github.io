@@ -16,45 +16,46 @@ window.initDepositPage = async function (currentUser) {
             }, 100); 
         }
 
-        // --- टेबल रिफ्रेश लॉजिक ---
-        async function loadTodayTransactions() {
-            const tbody = document.getElementById('today-tx-body');
-            if (!tbody) return;
+       // --- टेबल रिफ्रेश लॉजिक (सिर्फ लॉगिन यूज़र के लिए) ---
+async function loadTodayTransactions() {
+    const tbody = document.getElementById('today-tx-body');
+    if (!tbody) return;
 
-            const today = new Date().toISOString().split('T')[0];
+    const today = new Date().toISOString().split('T')[0];
 
-            try {
-                const { data, error } = await window.supabaseClient
-                    .from('deposit_transactions')
-                    .select('transaction_id, account_number, customer_name, amount, transaction_date')
-                    .gte('transaction_date', `${today}T00:00:00`)
-                    .order('transaction_date', { ascending: false });
+    try {
+        const { data, error } = await window.supabaseClient
+            .from('deposit_transactions')
+            .select('transaction_id, account_number, customer_name, amount, transaction_date')
+            .eq('ko_code', currentUser.ko_code) // 👈 सिर्फ लॉगिन यूज़र का ट्रांजैक्शन फ़िल्टर
+            .gte('transaction_date', `${today}T00:00:00`)
+            .order('transaction_date', { ascending: false });
 
-                if (error) throw error;
+        if (error) throw error;
 
-                tbody.innerHTML = '';
-                if (!data || data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">आज कोई ट्रांजैक्शन नहीं मिला</td></tr>';
-                    return;
-                }
-
-                data.forEach(tx => {
-                    const time = new Date(tx.transaction_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                    const name = tx.customer_name || "N/A";
-                    
-                    tbody.insertAdjacentHTML('beforeend', `
-                        <tr>
-                            <td>${tx.account_number}</td>
-                            <td>${name}</td>
-                            <td>₹${tx.amount}</td>
-                            <td>${time}</td>
-                        </tr>
-                    `);
-                });
-            } catch (err) { 
-                console.error("Table Load Error:", err); 
-            }
+        tbody.innerHTML = '';
+        if (!data || data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">आज आपका कोई ट्रांजैक्शन नहीं मिला</td></tr>';
+            return;
         }
+
+        data.forEach(tx => {
+            const time = new Date(tx.transaction_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const name = tx.customer_name || "N/A";
+            
+            tbody.insertAdjacentHTML('beforeend', `
+                <tr>
+                    <td>${tx.account_number}</td>
+                    <td>${name}</td>
+                    <td>₹${tx.amount}</td>
+                    <td>${time}</td>
+                </tr>
+            `);
+        });
+    } catch (err) { 
+        console.error("Table Load Error:", err); 
+    }
+}
 
         // इसे ग्लोबल ताकि deposit-save.js इसे कॉल कर सके
         window.loadTodayTransactions = loadTodayTransactions;
