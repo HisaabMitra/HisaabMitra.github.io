@@ -146,4 +146,20 @@ document.addEventListener('keydown', function(e) {
 });
 
 
+// ⌨️ keyboard shortcut: Esc (Escape) dabane par pura form clear karein
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' || e.key === 'Esc') {
+        
+        // 1. Clear button ko ID se dhoondhein
+        const clearButton = document.getElementById('btn-dep-clear');
+        
+        // 2. Agar clear button screen par hai, toh use auto-click karein
+        if (clearButton) {
+            console.log("Shortcut Triggered: Form Cleared via Esc");
+            clearButton.click();
+        }
+    }
+});
+
+
 
