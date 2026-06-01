@@ -61,11 +61,16 @@ window.initDepositPage = async function (currentUser) {
                             <td style="padding:12px; border-bottom:1px solid #eee; text-transform: uppercase;">${name}</td>
                             <td style="padding:12px; border-bottom:1px solid #eee; font-weight:bold; color:#27ae60;">₹${tx.amount}</td>
                             <td style="padding:12px; border-bottom:1px solid #eee;">${time}</td>
-                            <td style="padding:12px; border-bottom:1px solid #eee; text-align:center;">
-                                <button class="btn-edit-tx" data-tx="${txStr}" style="background:#2980b9; color:white; border:none; padding:5px 10px; border-radius:4px; font-weight:bold; cursor:pointer; font-size:0.8rem; display:inline-flex; align-items:center; gap:3px;">
-                                    ✏️ Edit
-                                </button>
-                            </td>
+                            // ... पुराने टेबल रो के अंदर Action वाले <td> को इससे बदलें:
+<td style="padding:12px; border-bottom:1px solid #eee; text-align:center; display:flex; justify-content:center; align-items:center; gap:15px;">
+    <span class="btn-edit-tx" data-tx="${txStr}" style="cursor:pointer; font-size:1.1rem; user-select:none; title='Edit Transaction';" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'" style="transition: transform 0.2s;">
+        ✏️
+    </span>
+
+    <span class="btn-print-receipt" data-tx="${txStr}" style="cursor:pointer; font-size:1.2rem; user-select:none; title='Print Thermal Receipt';" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'" style="transition: transform 0.2s;">
+        🖨️
+    </span>
+</td>
                         </tr>
                     `);
                 });
