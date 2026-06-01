@@ -36,9 +36,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // 2. USER REGISTRATION & RE-SUBMISSION
     // ==========================================
     if (registerForm) {
-        registerForm.addEventListener('submit', async (e) => {
+       registerForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const name = document.getElementById('reg-name').value.trim();
+            const name = document.getElementById('reg-name').value.trim().toUpperCase(); // Auto-Capitalize Name
             const email = document.getElementById('reg-email').value.trim();
             const password = document.getElementById('reg-password').value;
             const role = document.getElementById('reg-role').value;
@@ -46,6 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const mobile = document.getElementById('reg-mobile').value.trim(); 
             const settlementAcc = document.getElementById('reg-settlement-acc').value.trim();
             const solId = document.getElementById('reg-sol-id').value.trim();
+            const address = document.getElementById('reg-address').value.trim().toUpperCase(); // 📍 एड्रेस निकाला गया
             const submitBtn = registerForm.querySelector('button[type="submit"]');
 
             submitBtn.textContent = "Processing Request...";
@@ -67,6 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     mobile_no: mobile,  
                     settlement_account: settlementAcc,
                     sol_id: solId,                     
+                    address: address, // 📍 पेलोड में एड्रेस शामिल किया
                     status: 'pending',
                     objection_remark: null
                 };
@@ -89,7 +91,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 registerForm.reset();
-                document.getElementById('reg-email').readOnly = false;
                 registerPanel.classList.add('hidden');
                 loginPanel.classList.remove('hidden');
 
@@ -166,8 +167,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ==========================================
-    // 4. PROFILE INTEGRITY CHECK (REAL DATABASE SYNC)
+   // ==========================================
+    // 4. PROFILE INTEGRITY CHECK (WITH ADDRESS SYNC)
     // ==========================================
     async function showDashboard(user) {
         if (user.role === 'super_admin') {
@@ -180,8 +181,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const isNameMissing = !user.full_name || user.full_name.trim() === "";
         const isSettlementMissing = !user.settlement_account || user.settlement_account.trim() === "";
         const isSolMissing = !user.sol_id || user.sol_id.trim() === "";
+        const isAddressMissing = !user.address || user.address.trim() === ""; // 📍 एड्रेस मिसिंग चेक
 
-        if (isKoMissing || isMobileMissing || isNameMissing || isSettlementMissing || isSolMissing) {
+        if (isKoMissing || isMobileMissing || isNameMissing || isSettlementMissing || isSolMissing || isAddressMissing) {
             const mdModal = document.getElementById('missing-detail-modal');
             const mdForm = document.getElementById('missing-detail-form');
             
@@ -190,6 +192,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if(document.getElementById('md-name-block')) document.getElementById('md-name-block').style.display = isNameMissing ? 'block' : 'none';
             if(document.getElementById('md-settlement-block')) document.getElementById('md-settlement-block').style.display = isSettlementMissing ? 'block' : 'none';
             if(document.getElementById('md-sol-block')) document.getElementById('md-sol-block').style.display = isSolMissing ? 'block' : 'none';
+            if(document.getElementById('md-address-block')) document.getElementById('md-address-block').style.display = isAddressMissing ? 'block' : 'none'; // 📍
 
             if (mdModal) mdModal.style.setProperty('display', 'flex', 'important');
 
@@ -197,9 +200,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 e.preventDefault();
                 const updatedKo = isKoMissing ? document.getElementById('md-ko-input').value.trim() : user.ko_code;
                 const updatedMobile = isMobileMissing ? document.getElementById('md-mobile-input').value.trim() : user.mobile_no;
-                const updatedName = isNameMissing ? document.getElementById('md-name-input').value.trim() : user.full_name;
+                const updatedName = isNameMissing ? document.getElementById('md-name-input').value.trim().toUpperCase() : user.full_name;
                 const updatedSettlement = isSettlementMissing ? document.getElementById('md-settlement-input').value.trim() : user.settlement_account;
                 const updatedSol = isSolMissing ? document.getElementById('md-sol-input').value.trim() : user.sol_id;
+                const updatedAddress = isAddressMissing ? document.getElementById('md-address-input').value.trim().toUpperCase() : user.address; // 📍
 
                 try {
                     const { error } = await window.supabaseClient
@@ -209,7 +213,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             mobile_no: updatedMobile,
                             full_name: updatedName,
                             settlement_account: updatedSettlement, 
-                            sol_id: updatedSol                      
+                            sol_id: updatedSol,
+                            address: updatedAddress // 📍
                         })
                         .eq('id', user.id);
 
@@ -220,6 +225,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     user.full_name = updatedName;
                     user.settlement_account = updatedSettlement;
                     user.sol_id = updatedSol;
+                    user.address = updatedAddress; // 📍
 
                     mdModal.style.display = 'none';
                     await window.showSystemAlert("Your comprehensive banking logs have been updated in Database. Workspace unlocked!", "Verification Success", "✅");
