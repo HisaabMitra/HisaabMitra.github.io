@@ -269,3 +269,117 @@ window.initDepositPage = async function (currentUser) {
 
     } catch (error) { console.error("Error:", error); }
 };
+
+
+
+// 🖨️ THERMAL RECEIPT PRINT ENGINE (58mm / 2-Inch Standard)
+function attachPrintEventListeners() {
+    document.querySelectorAll('.btn-print-receipt').forEach(btn => {
+        btn.onclick = function() {
+            try {
+                // बटन से ट्रांजैक्शन का डेटा निकालें
+                const txData = JSON.parse(atob(this.getAttribute('data-tx')));
+                
+                const dateObj = new Date(txData.transaction_date);
+                const formattedDate = dateObj.toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                const formattedTime = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+                // 2-Inch (58mm) थर्मल प्रिंटर के लिए एकदम सटीक HTML/CSS डिज़ाइन
+                const receiptHtml = `
+                    <html>
+                    <head>
+                        <title>Print Receipt</title>
+                        <style>
+                            @page { size: 58mm auto; margin: 0; }
+                            body { 
+                                width: 54mm; 
+                                margin: 0 auto; 
+                                padding: 5px 2px; 
+                                font-family: 'Courier New', Courier, monospace; 
+                                font-size: 11px; 
+                                color: #000; 
+                                line-height: 1.2;
+                            }
+                            .text-center { text-align: center; }
+                            .text-right { text-align: right; }
+                            .bold { font-weight: bold; }
+                            .header-title { font-size: 14px; margin: 0; text-transform: uppercase; }
+                            .divider { border-top: 1px dashed #000; margin: 5px 0; }
+                            .flex-justify { display: flex; justify-content: space-between; }
+                            .amount-box { 
+                                font-size: 15px; 
+                                border: 1px dashed #000; 
+                                padding: 5px; 
+                                margin: 8px 0; 
+                                text-align: center; 
+                                font-weight: bold; 
+                            }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="text-center">
+                            <h3 class="header-title bold">FINANCIAL KIOSK</h3>
+                            <div style="font-size: 10px;">CUSTOMER DEPOSIT RECEIPT</div>
+                        </div>
+                        
+                        <div class="divider"></div>
+                        
+                        <div><span class="bold">KO CODE:</span> ${txData.ko_code || window.currentUser?.ko_code || 'N/A'}</div>
+                        <div class="flex-justify">
+                            <span><span class="bold">DATE:</span> ${formattedDate}</span>
+                            <span>${formattedTime}</span>
+                        </div>
+                        
+                        <div class="divider"></div>
+                        
+                        <div style="margin-bottom: 3px;"><span class="bold">A/C NO:</span> ${txData.account_number}</div>
+                        <div style="text-transform: uppercase;"><span class="bold">NAME:</span> ${txData.customer_name}</div>
+                        
+                        <div class="amount-box">
+                            CASH DEP: ₹${parseFloat(txData.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                        </div>
+
+                        ${txData.remarks ? `<div style="font-size: 10px; font-style: italic;"><span class="bold">RMK:</span> ${txData.remarks}</div>` : ''}
+                        
+                        <div class="divider"></div>
+                        
+                        <div class="text-center" style="font-size: 9px; margin-top: 5px;">
+                            *** THANK YOU ***<br>
+                            This is a system generated slip.
+                        </div>
+                        
+                        <div style="height: 30px;"></div>
+                    </body>
+                    </html>
+                `;
+
+                // एक छिपी हुई (Hidden) Iframe बनाकर उसमें प्रिंट कमांड भेजना ताकि बिना पेज भटके प्रिंट हो सके
+                const iframe = document.createElement('iframe');
+                iframe.style.position = 'fixed';
+                iframe.style.right = '0';
+                iframe.style.bottom = '0';
+                iframe.style.width = '0';
+                iframe.style.height = '0';
+                iframe.style.border = '0';
+                document.body.appendChild(iframe);
+
+                const doc = iframe.contentWindow.document;
+                doc.open();
+                doc.write(receiptHtml);
+                doc.close();
+
+                // जैसे ही iframe लोड होगा, प्रिंटर का पॉप-अप आ जाएगा
+                iframe.contentWindow.focus();
+                setTimeout(() => {
+                    iframe.contentWindow.print();
+                    // प्रिंट होने के बाद iframe को डिलीट कर दें ताकि मेमोरी फुल न हो
+                    setTimeout(() => { document.body.removeChild(iframe); }, 1000);
+                }, 500);
+
+            } catch (err) {
+                console.error("Receipt Printing Failed:", err);
+                window.showSystemAlert("रसीद प्रिंट करने में समस्या आई!", "Printing Error", "❌");
+            }
+        };
+    });
+}
