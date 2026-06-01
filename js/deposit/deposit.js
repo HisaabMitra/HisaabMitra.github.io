@@ -16,46 +16,67 @@ window.initDepositPage = async function (currentUser) {
             }, 100); 
         }
 
-       // --- टेबल रिफ्रेश लॉजिक (सिर्फ लॉगिन यूज़र के लिए) ---
-async function loadTodayTransactions() {
-    const tbody = document.getElementById('today-tx-body');
-    if (!tbody) return;
+       // --- टेबल रिफ्रेश लॉजिक (Updated with Edit Button) ---
+        async function loadTodayTransactions() {
+            const tbody = document.getElementById('today-tx-body');
+            if (!tbody) return;
 
-    const today = new Date().toISOString().split('T')[0];
+            const today = new Date().toISOString().split('T')[0];
 
-    try {
-        const { data, error } = await window.supabaseClient
-            .from('deposit_transactions')
-            .select('transaction_id, account_number, customer_name, amount, transaction_date')
-            .eq('ko_code', currentUser.ko_code) // 👈 सिर्फ लॉगिन यूज़र का ट्रांजैक्शन फ़िल्टर
-            .gte('transaction_date', `${today}T00:00:00`)
-            .order('transaction_date', { ascending: false });
+            try {
+                const { data, error } = await window.supabaseClient
+                    .from('deposit_transactions')
+                    .select('*') // 👈 यहाँ '*' कर दिया ताकि डिनॉमिनेशन का सारा डेटा भी टेबल रो में आ सके
+                    .eq('ko_code', currentUser.ko_code)
+                    .gte('transaction_date', `${today}T00:00:00`)
+                    .order('transaction_date', { ascending: false });
 
-        if (error) throw error;
+                if (error) throw error;
 
-        tbody.innerHTML = '';
-        if (!data || data.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">आज आपका कोई ट्रांजैक्शन नहीं मिला</td></tr>';
-            return;
+                // HTML टेबल का हेडर भी अपडेट करना होगा एक्शन कॉलम के लिए
+                const tableElement = tbody.closest('table');
+                if (tableElement && !tableElement.querySelector('.action-header')) {
+                    const theadRow = tableElement.querySelector('thead tr');
+                    if (theadRow) {
+                        theadRow.insertAdjacentHTML('beforeend', '<th class="action-header" style="padding:12px; border-bottom: 1px solid #eee; text-align: center;">Action</th>');
+                    }
+                }
+
+                tbody.innerHTML = '';
+                if (!data || data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">आज आपका कोई ट्रांजैक्शन नहीं मिला</td></tr>';
+                    return;
+                }
+
+                data.forEach(tx => {
+                    const time = new Date(tx.transaction_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    const name = tx.customer_name || "N/A";
+                    
+                    // हर ट्रांजैक्शन का पूरा डेटा हम JSON स्ट्रिंग बनाकर बटन के एट्रिब्यूट में छुपा देंगे
+                    const txStr = btoa(JSON.stringify(tx)); // सुरक्षित रखने के लिए base64 में बदला
+
+                    tbody.insertAdjacentHTML('beforeend', `
+                        <tr>
+                            <td style="padding:12px; border-bottom:1px solid #eee;">${tx.account_number}</td>
+                            <td style="padding:12px; border-bottom:1px solid #eee; text-transform: uppercase;">${name}</td>
+                            <td style="padding:12px; border-bottom:1px solid #eee; font-weight:bold; color:#27ae60;">₹${tx.amount}</td>
+                            <td style="padding:12px; border-bottom:1px solid #eee;">${time}</td>
+                            <td style="padding:12px; border-bottom:1px solid #eee; text-align:center;">
+                                <button class="btn-edit-tx" data-tx="${txStr}" style="background:#2980b9; color:white; border:none; padding:5px 10px; border-radius:4px; font-weight:bold; cursor:pointer; font-size:0.8rem; display:inline-flex; align-items:center; gap:3px;">
+                                    ✏️ Edit
+                                </button>
+                            </td>
+                        </tr>
+                    `);
+                });
+
+                // एडिट बटन पर क्लिक इवेंट अटैच करना
+                attachEditEventListeners();
+
+            } catch (err) { 
+                console.error("Table Load Error:", err); 
+            }
         }
-
-        data.forEach(tx => {
-            const time = new Date(tx.transaction_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            const name = tx.customer_name || "N/A";
-            
-            tbody.insertAdjacentHTML('beforeend', `
-                <tr>
-                    <td>${tx.account_number}</td>
-                    <td>${name}</td>
-                    <td>₹${tx.amount}</td>
-                    <td>${time}</td>
-                </tr>
-            `);
-        });
-    } catch (err) { 
-        console.error("Table Load Error:", err); 
-    }
-}
 
         // इसे ग्लोबल ताकि deposit-save.js इसे कॉल कर सके
         window.loadTodayTransactions = loadTodayTransactions;
