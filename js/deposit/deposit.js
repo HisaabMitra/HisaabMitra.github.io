@@ -78,6 +78,69 @@ window.initDepositPage = async function (currentUser) {
             }
         }
 
+
+
+        // एडिट बटन क्लिक होने पर पुराना डेटा ऊपर फॉर्म में भरने का फंक्शन
+        function attachEditEventListeners() {
+            document.querySelectorAll('.btn-edit-tx').forEach(btn => {
+                btn.onclick = function() {
+                    try {
+                        // बटन से ट्रांजैक्शन का डेटा वापस ऑब्जेक्ट में बदलें
+                        const txData = JSON.parse(atob(this.getAttribute('data-tx')));
+                        
+                        // 1. ऊपर के इनपुट बॉक्स में पुरानी वैल्यूज भरें
+                        document.getElementById('dep-account-no').value = txData.account_number;
+                        document.getElementById('dep-cust-name').value = txData.customer_name;
+                        document.getElementById('dep-amount').value = txData.amount;
+                        document.getElementById('dep-remarks').value = txData.remarks || "";
+                        
+                        // अमाउंट इन वर्ड्स को अपडेट करें
+                        const wordsDisplay = document.getElementById('dep-amount-words');
+                        if (wordsDisplay) {
+                            wordsDisplay.innerText = `${window.numberToHindiWords(parseInt(txData.amount))} रुपए मात्र`;
+                        }
+
+                        // 2. डिनॉ敏नेशन टेबल के अंदर पुराने नोटों की वैल्यूज लोड करें
+                        const notes = [500, 200, 100, 50, 20, 10, 5];
+                        notes.forEach(note => {
+                            const inInput = document.querySelector(`.denom-in[data-note="${note}"]`);
+                            const outInput = document.querySelector(`.denom-out[data-note="${note}"]`);
+                            if (inInput) inInput.value = txData[`denom_in_${note}`] || 0;
+                            if (outInput) outInput.value = txData[`denom_out_${note}`] || 0;
+                        });
+                        
+                        // कॉइन्स भी लोड करें
+                        const coinsIn = document.querySelector('.denom-in[data-note="coins"]');
+                        const coinsOut = document.querySelector('.denom-out[data-note="coins"]');
+                        if (coinsIn) coinsIn.value = txData[`denom_in_coins`] || 0;
+                        if (coinsOut) coinsOut.value = txData[`denom_out_coins`] || 0;
+
+                        // डिनॉमिनेशन का टोटल दोबारा कैलकुलेट करें
+                        if (window.DenominationComponent) {
+                            window.DenominationComponent.calculate();
+                        }
+
+                        // 3. 🌟 सबसे महत्वपूर्ण: सेव बटन को एडिट मोड में बदलें
+                        const saveBtn = document.getElementById('btn-dep-save');
+                        if (saveBtn) {
+                            saveBtn.innerText = "🔄 Update Transaction";
+                            saveBtn.style.background = "#d35400"; // संतरी रंग ताकि ऑपरेटर को पता रहे कि एडिट हो रहा है
+                            saveBtn.dataset.mode = "edit";
+                            saveBtn.dataset.editingTxId = txData.transaction_id; // पुरानी ट्रांजैक्शन आईडी सेव करली
+                        }
+
+                        window.showSystemAlert("पुरानी एंट्री लोड हो गई है! अब आप बदलाव करके अपडेट कर सकते हैं।", "Edit Mode Activated", "ℹ️");
+
+                    } catch (err) {
+                        console.error("Error loading tx for edit:", err);
+                    }
+                };
+            });
+        }
+
+
+        
+
         // इसे ग्लोबल ताकि deposit-save.js इसे कॉल कर सके
         window.loadTodayTransactions = loadTodayTransactions;
         loadTodayTransactions();
@@ -164,11 +227,39 @@ window.initDepositPage = async function (currentUser) {
 
         document.getElementById('btn-nc-cancel').addEventListener('click', () => { ncModal.style.display = 'none'; accInput.value = ""; custNameInput.value = ""; });
 
-        // Clear बटन
+        // --- 🧹 Clear और रीसेट बटन लॉजिक (Updated with Edit Mode Reset) ---
         document.getElementById('btn-dep-clear').addEventListener('click', () => {
-            accInput.value = ""; custNameInput.value = ""; amountInput.value = ""; remarksInput.value = "";
-            wordsDisplay.innerText = "Zero Rupees Only";
-            window.DenominationComponent.clear();
+            // 1. सारे मुख्य इनपुट फील्ड्स को खाली करें
+            if (accInput) accInput.value = ""; 
+            if (custNameInput) custNameInput.value = ""; 
+            if (amountInput) amountInput.value = ""; 
+            if (remarksInput) remarksInput.value = "";
+            
+            // 2. अमाउंट इन वर्ड्स को रीसेट करें
+            if (wordsDisplay) wordsDisplay.innerText = "Zero Rupees Only";
+            
+            // 3. डिनॉमिनेशन कॉम्पोनेन्ट (नोट और कॉइन्स) को 0 करें
+            if (window.DenominationComponent && typeof window.DenominationComponent.clear === 'function') {
+                window.DenominationComponent.clear();
+            }
+
+            // 4. प्रिंट बटन को वापस डिसेबल (बंद) करें
+            const printBtn = document.getElementById('btn-dep-print');
+            if (printBtn) printBtn.disabled = true;
+
+            // 5. 🌟 अगर एडिट मोड एक्टिव था, तो सेव बटन को वापस नॉर्मल (💾 Save) करें
+            const saveBtn = document.getElementById('btn-dep-save');
+            if (saveBtn) {
+                saveBtn.innerText = "💾 Save";
+                saveBtn.style.background = "#7d0022"; // वापस पुराना मैरून थीम कलर
+                saveBtn.style.boxShadow = "0 2px 6px rgba(125,0,34,0.2)";
+                
+                // डेटासेट से एडिट मोड के फ्लैग्स डिलीट करें
+                delete saveBtn.dataset.mode;
+                delete saveBtn.dataset.editingTxId;
+            }
+            
+            console.log("Workspace & Edit Mode completely reset.");
         });
 
     } catch (error) { console.error("Error:", error); }
