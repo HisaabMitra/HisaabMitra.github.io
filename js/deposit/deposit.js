@@ -17,73 +17,74 @@ window.initDepositPage = async function (currentUser) {
         }
 
        // --- टेबल रिफ्रेश लॉजिक (Updated with Edit Button) ---
-        async function loadTodayTransactions() {
-            const tbody = document.getElementById('today-tx-body');
-            if (!tbody) return;
+      async function loadTodayTransactions() {
+    const tbody = document.getElementById('today-tx-body');
+    if (!tbody) return;
 
-            const today = new Date().toISOString().split('T')[0];
+    const today = new Date().toISOString().split('T')[0];
 
-            try {
-                const { data, error } = await window.supabaseClient
-                    .from('deposit_transactions')
-                    .select('*') // 👈 यहाँ '*' कर दिया ताकि डिनॉमिनेशन का सारा डेटा भी टेबल रो में आ सके
-                    .eq('ko_code', currentUser.ko_code)
-                    .gte('transaction_date', `${today}T00:00:00`)
-                    .order('transaction_date', { ascending: false });
+    try {
+        const { data, error } = await window.supabaseClient
+            .from('deposit_transactions')
+            .select('*') // यहाँ '*' कर दिया ताकि डिनॉमिनेशन का सारा डेटा भी टेबल रो में आ सके
+            .eq('ko_code', currentUser.ko_code)
+            .gte('transaction_date', `${today}T00:00:00`)
+            .order('transaction_date', { ascending: false });
 
-                if (error) throw error;
+        if (error) throw error;
 
-                // HTML टेबल का हेडर भी अपडेट करना होगा एक्शन कॉलम के लिए
-                const tableElement = tbody.closest('table');
-                if (tableElement && !tableElement.querySelector('.action-header')) {
-                    const theadRow = tableElement.querySelector('thead tr');
-                    if (theadRow) {
-                        theadRow.insertAdjacentHTML('beforeend', '<th class="action-header" style="padding:12px; border-bottom: 1px solid #eee; text-align: center;">Action</th>');
-                    }
-                }
-
-                tbody.innerHTML = '';
-                if (!data || data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">आज आपका कोई ट्रांजैक्शन नहीं मिला</td></tr>';
-                    return;
-                }
-
-                data.forEach(tx => {
-                    const time = new Date(tx.transaction_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                    const name = tx.customer_name || "N/A";
-                    
-                    // हर ट्रांजैक्शन का पूरा डेटा हम JSON स्ट्रिंग बनाकर बटन के एट्रिब्यूट में छुपा देंगे
-                    const txStr = btoa(JSON.stringify(tx)); // सुरक्षित रखने के लिए base64 में बदला
-
-                    tbody.insertAdjacentHTML('beforeend', `
-                        <tr>
-                            <td style="padding:12px; border-bottom:1px solid #eee;">${tx.account_number}</td>
-                            <td style="padding:12px; border-bottom:1px solid #eee; text-transform: uppercase;">${name}</td>
-                            <td style="padding:12px; border-bottom:1px solid #eee; font-weight:bold; color:#27ae60;">₹${tx.amount}</td>
-                            <td style="padding:12px; border-bottom:1px solid #eee;">${time}</td>
-                            // ... पुराने टेबल रो के अंदर Action वाले <td> को इससे बदलें:
-<td style="padding:12px; border-bottom:1px solid #eee; text-align:center; display:flex; justify-content:center; align-items:center; gap:15px;">
-    <span class="btn-edit-tx" data-tx="${txStr}" style="cursor:pointer; font-size:1.1rem; user-select:none; title='Edit Transaction';" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'" style="transition: transform 0.2s;">
-        ✏️
-    </span>
-
-    <span class="btn-print-receipt" data-tx="${txStr}" style="cursor:pointer; font-size:1.2rem; user-select:none; title='Print Thermal Receipt';" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'" style="transition: transform 0.2s;">
-        🖨️
-    </span>
-</td>
-                        </tr>
-                    `);
-                });
-
-                // एडिट बटन पर क्लिक इवेंट अटैच करना
-                attachEditEventListeners();
-
-            } catch (err) { 
-                console.error("Table Load Error:", err); 
+        // HTML टेबल का हेडर भी अपडेट करना होगा एक्शन कॉलम के लिए
+        const tableElement = tbody.closest('table');
+        if (tableElement && !tableElement.querySelector('.action-header')) {
+            const theadRow = tableElement.querySelector('thead tr');
+            if (theadRow) {
+                theadRow.insertAdjacentHTML('beforeend', '<th class="action-header" style="padding:12px; border-bottom: 1px solid #eee; text-align: center;">Action</th>');
             }
         }
 
+        tbody.innerHTML = '';
+        if (!data || data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:15px;">आज आपका कोई ट्रांजैक्शन नहीं मिला</td></tr>';
+            return;
+        }
 
+        data.forEach(tx => {
+            const time = new Date(tx.transaction_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const name = tx.customer_name || "N/A";
+            
+            // हर ट्रांजैक्शन का पूरा डेटा हम JSON स्ट्रिंग बनाकर बटन के एट्रिब्यूट में छुपा देंगे
+            const txStr = btoa(JSON.stringify(tx)); // सुरक्षित रखने के लिए base64 में बदला
+
+            // 100% क्लीन और फिक्स्ड HTML स्ट्रक्चर
+            tbody.insertAdjacentHTML('beforeend', `
+                <tr style="border-bottom: 1px solid #eee;">
+                    <td style="padding:12px; border-bottom:1px solid #eee;">${tx.account_number}</td>
+                    <td style="padding:12px; border-bottom:1px solid #eee; text-transform: uppercase;">${name}</td>
+                    <td style="padding:12px; border-bottom:1px solid #eee; font-weight:bold; color:#27ae60;">₹${tx.amount}</td>
+                    <td style="padding:12px; border-bottom:1px solid #eee;">${time}</td>
+                    <td style="padding:12px; border-bottom:1px solid #eee; text-align:center;">
+                        <div style="display:inline-flex; align-items:center; gap:15px; justify-content:center;">
+                            <span class="btn-edit-tx" data-tx="${txStr}" style="cursor:pointer; font-size:1.1rem; user-select:none; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'" title="Edit Transaction">
+                                ✏️
+                            </span>
+
+                            <span class="btn-print-receipt" data-tx="${txStr}" style="cursor:pointer; font-size:1.2rem; user-select:none; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'" title="Print Thermal Receipt">
+                                🖨️
+                            </span>
+                        </div>
+                    </td>
+                </tr>
+            `);
+        });
+
+        // 🌟 दोनों इवेंट लिसनर्स को एक्टिवेट किया ताकि क्लिक काम करे
+        if (typeof attachEditEventListeners === 'function') attachEditEventListeners();
+        if (typeof attachPrintEventListeners === 'function') attachPrintEventListeners();
+
+    } catch (err) { 
+        console.error("Table Load Error:", err); 
+    }
+}
 
         // एडिट बटन क्लिक होने पर पुराना डेटा ऊपर फॉर्म में भरने का फंक्शन
         function attachEditEventListeners() {
