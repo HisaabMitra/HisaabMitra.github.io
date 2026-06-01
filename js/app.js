@@ -322,8 +322,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 }
 
-    // ==========================================
-    // 7. MULTI-TENANT KO-CODE LIVE BALANCE LOGIC
+   // ==========================================
+    // 7. MULTI-TENANT KO-CODE LIVE BALANCE LOGIC (UPDATED WITH COINS)
     // ==========================================
     async function initHomepageModule() {
         if (!currentLoggedInUser || !currentLoggedInUser.ko_code) return;
@@ -351,6 +351,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // होमपेज यूआई पर सेटलमेंट बैलेंस अपडेट करना
             if (balanceDisplay) {
                 const sBal = parseFloat(currentLoggedInUser.settlement_balance) || 0;
+                // Agar aap chahein toh isme round-off laga sakte hain .toFixed(2)
                 balanceDisplay.textContent = `₹ ${sBal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
             }
 
@@ -362,8 +363,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const n20  = parseInt(currentLoggedInUser.cash_20) || 0;
             const n10  = parseInt(currentLoggedInUser.cash_10) || 0;
             const n5   = parseInt(currentLoggedInUser.cash_5) || 0;
+            
+            // 🪙 Database se coins ka cash uthana (Naya update)
+            const cCoins = parseInt(currentLoggedInUser.cash_coins) || 0;
 
-            const finalCashInHand = (n500 * 500) + (n200 * 200) + (n100 * 100) + (n50 * 50) + (n20 * 20) + (n10 * 10) + (n5 * 5);
+            // Final Cash calculation mein coins ki total value ko PLUS (+) kiya hai
+            const finalCashInHand = (n500 * 500) + (n200 * 200) + (n100 * 100) + (n50 * 50) + (n20 * 20) + (n10 * 10) + (n5 * 5) + cCoins;
 
             if (cashInHandDisplay) {
                 cashInHandDisplay.textContent = `₹ ${finalCashInHand.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
@@ -377,6 +382,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if(document.getElementById('note-count-20')) document.getElementById('note-count-20').textContent = n20;
             if(document.getElementById('note-count-10')) document.getElementById('note-count-10').textContent = n10;
             if(document.getElementById('note-count-5')) document.getElementById('note-count-5').textContent = n5;
+            
+            // 🪙 Homepage par coins ka total live balance dikhana
+            if(document.getElementById('coin-total-count')) document.getElementById('coin-total-count').textContent = `₹ ${cCoins}`;
 
         } catch (err) {
             console.error("Homepage Module Sync Error:", err);
