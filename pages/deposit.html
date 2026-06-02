@@ -1,90 +1,95 @@
 <style>
-    /* इनपुट बॉक्स से ऐरो हटाने के लिए */
     input[type=number]::-webkit-inner-spin-button, 
     input[type=number]::-webkit-outer-spin-button { 
         -webkit-appearance: none; 
         margin: 0; 
     }
-    input[type=number] {
-        -moz-appearance: textfield;
-    }
-    /* टेबल के लिए स्टाइल */
+    input[type=number] { -moz-appearance: textfield; }
     .styled-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
     .styled-table th, .styled-table td { padding: 12px; border-bottom: 1px solid #eee; text-align: left; }
+    .hidden-block { display: none !important; }
 </style>
 
-<div class="deposit-wrapper" id="single-deposit-form-block" style="padding: 24px; background: #fff; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-        <h2 style="color: #7d0022; margin: 0; font-size: 1.6rem; font-weight: 700; letter-spacing: 0.5px;">💰 SINGLE CASH DEPOSIT</h2>
-        <span style="background: #fdf2f4; color: #7d0022; padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; border: 1px solid #f9d5dc;">
-            Counter KO Code: <strong id="lbl-ko-code">--</strong>
-        </span>
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: #fafafa; padding: 10px 15px; border-radius: 8px; border: 1px solid #eaeaea;">
+    <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="font-size: 1.3rem;">💰</span>
+        <h3 id="deposit-module-title" style="margin: 0; color: #7d0022; font-weight: 700;">SINGLE CASH COUNTER</h3>
     </div>
-    <hr style="border: 0; border-top: 1px solid #eee; margin-bottom: 25px;">
+    <button type="button" id="btn-switch-deposit-mode" data-current-mode="single" style="background: #f2994a; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 6px rgba(242,153,74,0.3); transition: all 0.2s;">
+        📦 Switch to Bulk Deposit
+    </button>
+</div>
 
-    <div style="display: flex; gap: 30px; flex-wrap: wrap; align-items: flex-start;">
-        <div style="flex: 1.1; min-width: 340px; display: flex; flex-direction: column; gap: 18px;">
-            <form id="deposit-core-form" onsubmit="return false;">
-                <div class="form-group" style="margin-bottom: 15px;">
-                    <label style="font-weight:600; color: #444; display:block; margin-bottom:6px; font-size:0.9rem;">Customer Account Number *</label>
-                    <input type="text" id="dep-account-no" placeholder="Enter Account Number" style="width:100%; padding: 11px 14px; font-size:1.1rem; font-weight:bold; border: 1px solid #dcdcdc; border-radius:6px; box-sizing: border-box;" autocomplete="off" required>
-                </div>
-                
-                <div class="form-group" style="margin-bottom: 15px;">
-                    <label style="font-weight:600; color: #444; display:block; margin-bottom:6px; font-size:0.9rem;">Customer Name</label>
-                    <input type="text" id="dep-cust-name" placeholder="Name will auto-appear" readonly tabindex="-1" style="width:100%; padding: 11px 14px; background: #f8f9fa; border: 1px solid #e9ecef; border-radius:6px; font-weight: bold; color: #7d0022; box-sizing: border-box; cursor: not-allowed;">
-                </div>
-                
-                <div class="form-group" style="margin-bottom: 15px;">
-                    <label style="font-weight:600; color: #444; display:block; margin-bottom:6px; font-size:0.9rem;">Amount to Deposit (₹) *</label>
-                    <input type="number" id="dep-amount" placeholder="0.00" min="1" max="25000" style="width:100%; padding: 11px 14px; font-size:1.2rem; font-weight:bold; color: #27ae60; border: 1px solid #dcdcdc; border-radius:6px; box-sizing: border-box;" required>
-                </div>
-                
-                <div style="background: #fafafa; padding: 12px 15px; border: 1px solid #eaeaea; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                    <div style="flex: 1; padding-right: 10px;">
-                        <span style="font-size: 0.75rem; color:#888; display:block; text-transform: uppercase; font-weight:700;">Amount in Words</span>
-                        <strong id="dep-amount-words" style="color: #2c3e50; font-size: 0.9rem; word-break: break-word;">Zero Rupees Only</strong>
+<div id="single-deposit-view-wrapper">
+    <div class="deposit-wrapper" style="padding: 24px; background: #fff; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h2 style="color: #7d0022; margin: 0; font-size: 1.5rem; font-weight: 700;">SINGLE CASH DEPOSIT</h2>
+            <span style="background: #fdf2f4; color: #7d0022; padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; border: 1px solid #f9d5dc;">
+                Counter KO Code: <strong id="lbl-ko-code">--</strong>
+            </span>
+        </div>
+        <hr style="border: 0; border-top: 1px solid #eee; margin-bottom: 25px;">
+
+        <div style="display: flex; gap: 30px; flex-wrap: wrap; align-items: flex-start;">
+            <div style="flex: 1.1; min-width: 340px; display: flex; flex-direction: column; gap: 18px;">
+                <form id="deposit-core-form" onsubmit="return false;">
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label style="font-weight:600; color: #444; display:block; margin-bottom:6px; font-size:0.9rem;">Customer Account Number *</label>
+                        <input type="text" id="dep-account-no" placeholder="Enter Account Number" style="width:100%; padding: 11px 14px; font-size:1.1rem; font-weight:bold; border: 1px solid #dcdcdc; border-radius:6px; box-sizing: border-box;" autocomplete="off" required>
                     </div>
-                    <button id="btn-speak-hindi" type="button" style="background: #7d0022; border:none; color:white; cursor:pointer; font-size:0.8rem; padding: 8px 12px; border-radius:6px; font-weight:600; display:flex; align-items:center; gap:5px; transition: background 0.2s;">
-                        🔊 सुने
-                    </button>
-                </div>
-                
-                <div class="form-group" style="margin-bottom: 15px;">
-                    <label style="font-weight:600; color: #444; display:block; margin-bottom:6px; font-size:0.9rem;">Remarks</label>
-                    <input type="text" id="dep-remarks" placeholder="Optional notes" style="width:100%; padding: 11px 14px; border: 1px solid #dcdcdc; border-radius:6px; box-sizing: border-box;">
-                </div>
-                
-                <div style="display: flex; gap: 10px; margin-top: 10px; box-sizing: border-box;">
-                    <button id="btn-dep-save" type="button" class="btn" style="flex: 1; background: #7d0022; color:white; padding: 12px 5px; font-weight:bold; font-size:0.85rem; cursor:pointer; border-radius:6px; border:none; text-transform: uppercase; letter-spacing: 0.3px; transition: background 0.2s; box-shadow: 0 2px 6px rgba(125,0,34,0.2);" data-mode="save">
-                        💾 Save
-                    </button>
-                    <button id="btn-dep-clear" type="button" class="btn" style="flex: 0.9; background: #7f8c8d; color:white; padding: 12px 5px; font-weight:bold; font-size:0.85rem; cursor:pointer; border-radius:6px; border:none; text-transform: uppercase; letter-spacing: 0.3px; transition: background 0.2s;">
-                        🧹 Clear
-                    </button>
-                </div>
-            </form>
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label style="font-weight:600; color: #444; display:block; margin-bottom:6px; font-size:0.9rem;">Customer Name</label>
+                        <input type="text" id="dep-cust-name" placeholder="Name will auto-appear" readonly tabindex="-1" style="width:100%; padding: 11px 14px; background: #f8f9fa; border: 1px solid #e9ecef; border-radius:6px; font-weight: bold; color: #7d0022; box-sizing: border-box; cursor: not-allowed;">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label style="font-weight:600; color: #444; display:block; margin-bottom:6px; font-size:0.9rem;">Amount to Deposit (₹) *</label>
+                        <input type="number" id="dep-amount" placeholder="0.00" min="1" max="25000" style="width:100%; padding: 11px 14px; font-size:1.2rem; font-weight:bold; color: #27ae60; border: 1px solid #dcdcdc; border-radius:6px; box-sizing: border-box;" required>
+                    </div>
+                    <div style="background: #fafafa; padding: 12px 15px; border: 1px solid #eaeaea; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <div style="flex: 1; padding-right: 10px;">
+                            <span style="font-size: 0.75rem; color:#888; display:block; text-transform: uppercase; font-weight:700;">Amount in Words</span>
+                            <strong id="dep-amount-words" style="color: #2c3e50; font-size: 0.9rem; word-break: break-word;">Zero Rupees Only</strong>
+                        </div>
+                        <button id="btn-speak-hindi" type="button" style="background: #7d0022; border:none; color:white; cursor:pointer; font-size:0.8rem; padding: 8px 12px; border-radius:6px; font-weight:600; display:flex; align-items:center; gap:5px;">
+                            🔊 सुने
+                        </button>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label style="font-weight:600; color: #444; display:block; margin-bottom:6px; font-size:0.9rem;">Remarks</label>
+                        <input type="text" id="dep-remarks" placeholder="Optional notes" style="width:100%; padding: 11px 14px; border: 1px solid #dcdcdc; border-radius:6px; box-sizing: border-box;">
+                    </div>
+                    <div style="display: flex; gap: 10px; margin-top: 10px; box-sizing: border-box;">
+                        <button id="btn-dep-save" type="button" class="btn" style="flex: 1; background: #7d0022; color:white; padding: 12px 5px; font-weight:bold; font-size:0.85rem; cursor:pointer; border-radius:6px; border:none; text-transform: uppercase; letter-spacing: 0.3px;">
+                            💾 Save
+                        </button>
+                        <button id="btn-dep-clear" type="button" class="btn" style="flex: 0.9; background: #7f8c8d; color:white; padding: 12px 5px; font-weight:bold; font-size:0.85rem; cursor:pointer; border-radius:6px; border:none; text-transform: uppercase; letter-spacing: 0.3px;">
+                            🧹 Clear
+                        </button>
+                    </div>
+                </form>
+            </div>
+            <div id="denomination-widget-container" style="flex: 0.9; min-width: 320px; background: #fdfdfd; padding: 20px; border: 1px solid #eef0f2; border-radius: 8px;">
+            </div>
         </div>
-        
-        <div id="denomination-widget-container" style="flex: 0.9; min-width: 320px; background: #fdfdfd; padding: 20px; border: 1px solid #eef0f2; border-radius: 8px; box-shadow: inset 0 1px 3px rgba(0,0,0,0.02);">
-        </div>
+    </div>
+
+    <div class="transaction-container" style="margin-top: 25px; padding: 24px; background: #fff; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
+        <h3 style="color: #7d0022; margin-bottom: 15px; border-bottom: 2px solid #f4f6f8; padding-bottom: 8px;">📊 Today's Transactions Ledger</h3>
+        <table class="styled-table">
+            <thead>
+                <tr style="background-color: #7d0022; color: white;">
+                    <th style="padding: 12px;">Account</th>
+                    <th style="padding: 12px;">Name</th>
+                    <th style="padding: 12px;">Amount</th>
+                    <th style="padding: 12px;">Time</th>
+                </tr>
+            </thead>
+            <tbody id="today-tx-body">
+                <tr><td colspan="5" style="text-align:center; padding:15px; color:#777;">Connecting to ledger...</td></tr>
+            </tbody>
+        </table>
     </div>
 </div>
 
-<div class="transaction-container" style="margin-top: 25px; padding: 24px; background: #fff; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
-    <h3 style="color: #7d0022; margin-bottom: 15px; border-bottom: 2px solid #f4f6f8; padding-bottom: 8px;">📊 Today's Transactions Ledger</h3>
-    <table class="styled-table">
-        <thead>
-            <tr style="background-color: #7d0022; color: white;">
-                <th style="padding: 12px;">Account</th>
-                <th style="padding: 12px;">Name</th>
-                <th style="padding: 12px;">Amount</th>
-                <th style="padding: 12px;">Time</th>
-                <th style="padding: 12px; text-align: center;">Action</th>
-            </tr>
-        </thead>
-        <tbody id="today-tx-body">
-            <tr><td colspan="5" style="text-align:center; padding:15px; color:#777;">Connecting to ledger...</td></tr>
-        </tbody>
-    </table>
-</div>
+<div id="bulk-deposit-view-wrapper" class="hidden-block">
+    </div>
