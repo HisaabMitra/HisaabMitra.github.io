@@ -1,4 +1,4 @@
-// 🔄 TRANSACTION UPDATE & REVERSAL ENGINE
+// 🔄 TRANSACTION UPDATE & REVERSAL ENGINE (With Deep Limit Check)
 window.processTransactionUpdate = async function(txId, accountNo, custName, newAmount, remarks, newDenom) {
     if (!txId || !window.currentUser || !window.currentUser.id) {
         window.showSystemAlert("एडिटिंग सेशन अमान्य है!", "Error", "❌");
@@ -14,6 +14,37 @@ window.processTransactionUpdate = async function(txId, accountNo, custName, newA
             .single();
 
         if (fetchTxErr || !oldTx) throw new Error("पुरानी ट्रांजैक्शन का डेटा नहीं मिला: " + fetchTxErr?.message);
+
+        // 🛑 [FINAL GUARD] अपडेट होने से ठीक पहले एक बार फिर डेटाबेस से आज का टोटल चेक करें 🛑
+        const today = new Date().toISOString().split('T')[0];
+        const { data: txList, error: limitQueryErr } = await window.supabaseClient
+            .from('deposit_transactions')
+            .select('amount, transaction_id')
+            .eq('account_number', accountNo)
+            .gte('transaction_date', `${today}T00:00:00`);
+
+        if (limitQueryErr) throw limitQueryErr;
+
+        let otherDepositsSum = 0;
+        if (txList && txList.length > 0) {
+            txList.forEach(tx => {
+                // इस सेम ट्रांजैक्शन आईडी को छोड़कर बाकी सबका टोटल जोड़ें
+                if (tx.transaction_id !== txId) {
+                    otherDepositsSum += parseFloat(tx.amount) || 0;
+                }
+            });
+        }
+
+        // फाइनल लिमिट चेक
+        if (otherDepositsSum + newAmount > 25000) {
+            const allowedMax = 25000 - otherDepositsSum;
+            window.showSystemAlert(
+                `🛑 दैनिक सीमा उल्लंघन (अपडेट ब्लॉकed)!\n\nइस अकाउंट में अन्य ट्रांजैक्शन्स से आज ₹${otherDepositsSum.toLocaleString('en-IN')} जमा हो चुके हैं।\n\nसंशोधन के बाद यह राशि ₹25,000 की लिमिट को पार कर रही है। आप अधिकतम ₹${allowedMax > 0 ? allowedMax.toLocaleString('en-IN') : 0} तक ही अपडेट कर सकते हैं।`,
+                "Daily Limit Exceeded",
+                "❌"
+            );
+            return; // यहीं से बाहर निकल जाएं, डेटाबेस सुरक्षित रहेगा
+        }
 
         // [2] 🌟 रिवर्सल + न्यू एडजस्टमेंट कैलकुलेशन (एक साथ) 🌟
         const currentSettlementBalance = parseFloat(window.currentUser.settlement_balance) || 0;
@@ -39,7 +70,7 @@ window.processTransactionUpdate = async function(txId, accountNo, custName, newA
             nextVaultData[`cash_${note}`] = currentCount - oldIn + oldOut + newIn - newOut;
         });
 
-        // 🪙 कॉइन्स (Coins) का भी सेम रिवर्सल और न्यू एडजस्टमेंट (वैल्यू बेस)
+        // 🪙 कॉइन्स (Coins) का भी सेम रिवर्सल और न्यू एडजस्टमेंट
         const currentCoins = parseInt(window.currentUser.cash_coins) || 0;
         const oldCoinsIn = parseInt(oldTx.denom_in_coins) || 0;
         const oldCoinsOut = parseInt(oldTx.denom_out_coins) || 0;
@@ -78,7 +109,7 @@ window.processTransactionUpdate = async function(txId, accountNo, custName, newA
 
         if (userUpdateErr) throw userUpdateErr;
 
-        // [5] लोकल विंडो ऑब्जेक्ट को तुरंत सिंक करें ताकि होमपेज पर भी तुरंत सही दिखे
+        // [5] लोकल窗口 ऑब्जेक्ट को तुरंत सिंक करें ताकि होमपेज पर भी तुरंत सही दिखे
         Object.assign(window.currentUser, nextVaultData);
 
         window.showSystemAlert("🔄 ट्रांजैक्शन सफलतापूर्वक अपडेट और तिजोरी सिंक हो गई!", "Update Success", "✅");
