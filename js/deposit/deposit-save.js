@@ -30,12 +30,58 @@ document.addEventListener('click', async (e) => {
             return;
         }
 
+        // 🛑 [NEW ENGINE] 25,000/- प्रति अकाउंट प्रति दिन लिमिट चेक करने का फंक्शन
+        const checkDailyDepositLimit = async (accNo, newAmt, currentTxId = null) => {
+            const today = new Date().toISOString().split('T')[0]; // आज की तारीख (YYYY-MM-DD)
+            
+            try {
+                // आज इस अकाउंट नंबर पर हुई सभी सफल ट्रांजैक्शन्स डेटाबेस से उठाएं
+                const { data: txList, error: queryErr } = await window.supabaseClient
+                    .from('deposit_transactions')
+                    .select('amount, transaction_id')
+                    .eq('account_number', accNo)
+                    .gte('transaction_date', `${today}T00:00:00`);
+
+                if (queryErr) throw queryErr;
+
+                let alreadyDeposited = 0;
+                if (txList && txList.length > 0) {
+                    txList.forEach(tx => {
+                        // अगर हम एडिट (Update) कर रहे हैं, तो पुरानी वाली सेम ट्रांजैक्शन का अमाउंट काउंट नहीं करेंगे
+                        if (currentTxId && tx.transaction_id === currentTxId) {
+                            return;
+                        }
+                        alreadyDeposited += parseFloat(tx.amount) || 0;
+                    });
+                }
+
+                const totalPostCurrentTx = alreadyDeposited + newAmt;
+                const maxLimit = 25000;
+
+                if (totalPostCurrentTx > maxLimit) {
+                    const remainingLimit = maxLimit - alreadyDeposited;
+                    window.showSystemAlert(
+                        `🛑 दैनिक सीमा उल्लंघन!\n\nइस अकाउंट में आज पहले ही ₹${alreadyDeposited.toLocaleString('en-IN')} जमा हो चुके हैं।\nअब आज सिर्फ ₹${remainingLimit > 0 ? remainingLimit.toLocaleString('en-IN') : 0} ही जमा किए जा सकते हैं।\n\nकुल दैनिक सीमा: ₹25,000`,
+                        "Daily Limit Exceeded",
+                        "❌"
+                    );
+                    return false; // लिमिट पार हो गई, आगे मत बढ़ो
+                }
+                
+                return true; // लिमिट के अंदर है, हरी झंडी!
+            } catch (err) {
+                console.error("Limit Check Error:", err);
+                window.showSystemAlert("दैनिक सीमा जांचने में विफलता: " + err.message, "System Error", "❌");
+                return false;
+            }
+        };
+
         // [A] पुराना सेव फ़ंक्शन (सिर्फ नए ट्रांजैक्शन के लिए)
         const saveTransactionData = async () => {
             let calcCommission = Math.min(amount * 0.004, 50);
             
             try {
-                // पहले स्टेप: ट्रांजैक्शन लॉग को रिकॉर्ड करें
+                // पहले स्टेप: ट्रांजैक्शन लॉग को记录 करें
                 const { data: txData, error: txError } = await window.supabaseClient
                     .from('deposit_transactions')
                     .insert([{ 
@@ -60,7 +106,7 @@ document.addEventListener('click', async (e) => {
                     cash_500: (parseInt(window.currentUser.cash_500) || 0) + (denomValues.denom_in_500 || 0) - (denomValues.denom_out_500 || 0),
                     cash_200: (parseInt(window.currentUser.cash_200) || 0) + (denomValues.denom_in_200 || 0) - (denomValues.denom_out_200 || 0),
                     cash_100: (parseInt(window.currentUser.cash_100) || 0) + (denomValues.denom_in_100 || 0) - (denomValues.denom_out_100 || 0),
-                    cash_50:  (parseInt(window.currentUser.cash_50)  || 0) + (denomValues.denom_in_50  || 0) - (denomValues.denom_out_50  || 0),
+                    cash_50:  (parseInt(window.currentUser.cash_50)  || 0) + (denomValues.denom_in_5  || 0) - (denomValues.denom_out_50  || 0),
                     cash_20:  (parseInt(window.currentUser.cash_20)  || 0) + (denomValues.denom_in_20  || 0) - (denomValues.denom_out_20  || 0),
                     cash_10:  (parseInt(window.currentUser.cash_10)  || 0) + (denomValues.denom_in_10  || 0) - (denomValues.denom_out_10  || 0),
                     cash_5:   (parseInt(window.currentUser.cash_5)   || 0) + (denomValues.denom_in_5   || 0) - (denomValues.denom_out_5   || 0),
@@ -109,14 +155,18 @@ document.addEventListener('click', async (e) => {
             }
         };
 
-        // 🌟 [C] SAVE या UPDATE मोड चेक करने का मुख्य ट्रैफिक कंट्रोलर लॉजिक 🌟
-        const handleSaveOrUpdate = () => {
+        // 🌟 [C] SAVE या UPDATE मोड चेक करने का मुख्य ट्रैफिक कंट्रोलर लॉजिक (With Daily Limit Filter)
+        const handleSaveOrUpdate = async () => {
             const saveBtnElement = document.getElementById('btn-dep-save');
             const isEditMode = saveBtnElement && saveBtnElement.dataset.mode === "edit";
-            
+            const editingTxId = isEditMode ? saveBtnElement.dataset.editingTxId : null;
+
+            // 🛑 प्रोसेस करने से पहले दैनिक सीमा चेक करें
+            const isWithinLimit = await checkDailyDepositLimit(accountNo, amount, editingTxId);
+            if (!isWithinLimit) return; // सीमा पार होने पर यहीं रोक दें
+
             if (isEditMode) {
                 // अगर बटन एडिट मोड में है, तो deposit-update.js वाली फाइल का फंक्शन रन होगा
-                const editingTxId = saveBtnElement.dataset.editingTxId;
                 if (typeof window.processTransactionUpdate === 'function') {
                     console.log("Redirecting to Update Engine for Tx ID:", editingTxId);
                     window.processTransactionUpdate(editingTxId, accountNo, custName, amount, remarks, denomValues);
