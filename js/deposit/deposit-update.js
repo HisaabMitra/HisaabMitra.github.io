@@ -1,4 +1,6 @@
-// 🔄 TRANSACTION UPDATE & REVERSAL ENGINE (With Deep Limit Check)
+// ========================================================
+// 🔄 TRANSACTION UPDATE & REVERSAL ENGINE (WITH DEEP LIMIT CHECK)
+// ========================================================
 window.processTransactionUpdate = async function(txId, accountNo, custName, newAmount, remarks, newDenom) {
     if (!txId || !window.currentUser || !window.currentUser.id) {
         window.showSystemAlert("एडिटिंग सेशन अमान्य है!", "Error", "❌");
@@ -39,7 +41,7 @@ window.processTransactionUpdate = async function(txId, accountNo, custName, newA
         if (otherDepositsSum + newAmount > 25000) {
             const allowedMax = 25000 - otherDepositsSum;
             window.showSystemAlert(
-                `🛑 दैनिक सीमा उल्लंघन (अपडेट ब्लॉकed)!\n\nइस अकाउंट में अन्य ट्रांजैक्शन्स से आज ₹${otherDepositsSum.toLocaleString('en-IN')} जमा हो चुके हैं।\n\nसंशोधन के बाद यह राशि ₹25,000 की लिमिट को पार कर रही है। आप अधिकतम ₹${allowedMax > 0 ? allowedMax.toLocaleString('en-IN') : 0} तक ही अपडेट कर सकते हैं।`,
+                `🛑 दैनिक सीमा उल्लंघन (अपडेट ब्लॉक्ड)!\n\nइस अकाउंट में अन्य ट्रांजैक्शन्स से आज ₹${otherDepositsSum.toLocaleString('en-IN')} जमा हो चुके हैं।\n\nसंशोधन के बाद यह राशि ₹25,000 की लिमिट को पार कर रही. आप अधिकतम ₹${allowedMax > 0 ? allowedMax.toLocaleString('en-IN') : 0} तक ही अपडेट कर सकते हैं।`,
                 "Daily Limit Exceeded",
                 "❌"
             );
@@ -109,7 +111,7 @@ window.processTransactionUpdate = async function(txId, accountNo, custName, newA
 
         if (userUpdateErr) throw userUpdateErr;
 
-        // [5] लोकल窗口 ऑब्जेक्ट को तुरंत सिंक करें ताकि होमपेज पर भी तुरंत सही दिखे
+        // [5] लोकल विंडो ऑब्जेक्ट को तुरंत सिंक करें ताकि होमपेज पर भी तुरंत सही दिखे
         Object.assign(window.currentUser, nextVaultData);
 
         window.showSystemAlert("🔄 ट्रांजैक्शन सफलतापूर्वक अपडेट और तिजोरी सिंक हो गई!", "Update Success", "✅");
@@ -119,8 +121,11 @@ window.processTransactionUpdate = async function(txId, accountNo, custName, newA
             window.loadTodayTransactions();
         }
 
-        // फॉर्म को वापस खाली करें और बटन को नॉर्मल 'Save' मोड में लाएं
-        document.getElementById('btn-dep-clear').click();
+        // 🧹 फॉर्म को वापस पूरी तरह खाली करने के लिए क्लियर बटन को सीधे फायर करें
+        const clearBtn = document.getElementById('btn-dep-clear');
+        if (clearBtn) {
+            clearBtn.click();
+        }
 
     } catch (err) {
         console.error("Critical Update Error:", err);
