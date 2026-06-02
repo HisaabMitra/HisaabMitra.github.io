@@ -3,30 +3,28 @@
 // ========================================================
 
 let bulkRowCounter = 0;
-let globalCurrentUser = null; // SOL ID एक्सेस करने के लिए लोकल कॉपी
+let globalCurrentUser = null; 
 
-// 🌟 [MASTER INITIALIZER]: इसे सीधे window ऑब्जेक्ट पर बाइंड किया ताकि deposit.js इसे ढूंढ सके
 window.initBulkDepositPage = async function (currentUser) {
     console.log("Bulk Deposit Engine Initializing...");
     try {
-        globalCurrentUser = currentUser; // यूज़र डेटा सेव करें
+        globalCurrentUser = currentUser; 
 
-        // [1] काउंटर KO Code स्क्रीन पर सेट करें
         const koCodeLabel = document.getElementById('lbl-bulk-ko-code');
         if (koCodeLabel) koCodeLabel.innerText = currentUser.ko_code;
 
-        // [2] डिनॉमिनेशन विजेट को बल्क कंटेनर में रेंडर करें और फ्रेश बाइंड करें
+        // 💥 [MASTER DENOMINATION FIX FOR BULK]
         if (window.DenominationComponent) {
             setTimeout(() => {
-                // पहले पुराने किसी भी विजेट का डेटा साफ करके फ्रेंडर करें
                 window.DenominationComponent.clear();
                 window.DenominationComponent.render('bulk-denomination-container');
                 
-                // 💥 [CRITICAL FIX]: बल्क स्क्रीन पर डिनॉमिनेशन इनपुट के बदलावों को ट्रैक करने के लिए इवेंट दोबारा अटैच करें
+                // बल्क कंटेनर के अंदर नोटों के बदलाव को ट्रैक करें
                 const bulkDenomContainer = document.getElementById('bulk-denomination-container');
                 if (bulkDenomContainer) {
                     bulkDenomContainer.querySelectorAll('.denom-in, .denom-out').forEach(input => {
                         input.addEventListener('input', () => {
+                            // ओवरराइड कैलकुलेशन जो सिर्फ बल्क ग्रिड को ट्रिगर करेगी
                             if (typeof window.DenominationComponent.calculate === 'function') {
                                 window.DenominationComponent.calculate();
                             }
@@ -36,14 +34,12 @@ window.initBulkDepositPage = async function (currentUser) {
             }, 150);
         }
 
-        // [3] डिफ़ॉल्ट रूप से पहली खाली खाता रो (Row) जोड़ें
         const tbody = document.getElementById('bulk-accounts-tbody');
         if (tbody) {
-            tbody.innerHTML = ''; // पुराना कोई भी कचरा साफ़ करें
+            tbody.innerHTML = ''; 
             window.addNewBulkRow();
         }
 
-        // [4] 🧹 Clear / रीसेट ऑल बटन लॉजिक (आईडी 'btn-bulk-dep-clear' के साथ सिंक)
         const clearBtn = document.getElementById('btn-bulk-dep-clear');
         if (clearBtn) {
             clearBtn.onclick = function() {
@@ -57,7 +53,6 @@ window.initBulkDepositPage = async function (currentUser) {
                 if (accountsTbody) accountsTbody.innerHTML = "";
                 if (grandTotalField) grandTotalField.innerText = "₹0.00";
                 
-                // डिनॉमिनेशन कॉम्पोनेन्ट को रीसेट करें
                 if (window.DenominationComponent && typeof window.DenominationComponent.clear === 'function') {
                     window.DenominationComponent.clear();
                 }
@@ -67,7 +62,6 @@ window.initBulkDepositPage = async function (currentUser) {
             };
         }
 
-        // [5] ➕ '+ Add Row' बटन को इवेंट असाइन करें
         const addRowBtn = document.getElementById('btn-bulk-add-row');
         if (addRowBtn) {
             addRowBtn.onclick = window.addNewBulkRow;
@@ -78,11 +72,6 @@ window.initBulkDepositPage = async function (currentUser) {
     }
 };
 
-// ========================================================
-// 🛠️ ग्रिड रो-मैनेजमेंट और लाइव वेरिफिकेशन फंक्शन्स (Global)
-// ========================================================
-
-// [A] नई डायनेमिक रो जोड़ने का फंक्शन
 window.addNewBulkRow = function() {
     const tbody = document.getElementById('bulk-accounts-tbody');
     if (!tbody) return;
@@ -102,7 +91,6 @@ window.addNewBulkRow = function() {
     attachBulkRowEvents(rowId);
 };
 
-// [B] रो हटाने का फंक्शन
 window.removeBulkRow = function(rowId) {
     const tbody = document.getElementById('bulk-accounts-tbody');
     if (!tbody || tbody.children.length <= 1) {
@@ -114,7 +102,6 @@ window.removeBulkRow = function(rowId) {
     window.calculateBulkGrandTotal();
 };
 
-// PNB स्टाइल अकाउंट कनवर्टर फंक्शन
 function formatBulkAccountNumber(inputAcc, solId) {
     let acc = inputAcc.trim();
     if (acc.length > 10 || !acc.includes('-')) return acc;
@@ -122,7 +109,6 @@ function formatBulkAccountNumber(inputAcc, solId) {
     return `${solId}${parts[0].padStart(2, '0')}${parts[1].padStart(8, '0')}`;
 }
 
-// [C] लाइव खाता वेरिफिकेशन और ऑटो-रजिस्ट्रेशन पॉपअप इंटरफेस
 function attachBulkRowEvents(rowId) {
     const row = document.getElementById(rowId);
     if (!row) return;
@@ -133,12 +119,10 @@ function attachBulkRowEvents(rowId) {
 
     if (!accInput) return;
 
-    // अकाउंट नंबर बॉक्स से बाहर आते ही (Blur Event) लाइव सर्च
     accInput.addEventListener('blur', async () => {
         let accountNo = accInput.value.trim();
         if (!accountNo) return;
 
-        // १. PNB फॉर्मेट में कनवर्ट करें
         const userSolId = (globalCurrentUser && globalCurrentUser.sol_id) || '193000';
         const formattedAccountNo = formatBulkAccountNumber(accountNo, userSolId);
         
@@ -160,17 +144,14 @@ function attachBulkRowEvents(rowId) {
 
             if (customer) {
                 nameInput.value = customer.customer_name.toUpperCase();
-                // ⚡ [TAB FOCUS FIX]: पुराना ग्राहक मिलने पर सीधा कर्सर अमाउंट बॉक्स पर जाएगा!
                 amtInput.focus();
             } else {
                 nameInput.value = "NOT REGISTERED";
                 
-                // नया कस्टमर मिलने पर सुंदर पॉपअप ट्रिगर करें
                 if (typeof openRegistrationPrompt === 'function') {
                     openRegistrationPrompt(accountNo, (registeredName) => {
                         if (registeredName) {
                             nameInput.value = registeredName.toUpperCase();
-                            // पंजीकरण पूरा होने के बाद सीधा फोकस अमाउंट पर लॉक करें
                             setTimeout(() => { amtInput.focus(); }, 50);
                         } else {
                             nameInput.value = "";
@@ -186,11 +167,9 @@ function attachBulkRowEvents(rowId) {
         }
     });
 
-    // अमाउंट बॉक्स में टाइप करते ही ग्रैंड टोटल लाइव अपडेट करें
     amtInput.addEventListener('input', () => window.calculateBulkGrandTotal());
 }
 
-// [D] ग्रिड का कुल योग (Grand Total) कैलकुलेटर
 window.calculateBulkGrandTotal = function() {
     let grandTotal = 0;
     document.querySelectorAll('.bulk-amount-input').forEach(input => {
@@ -203,7 +182,6 @@ window.calculateBulkGrandTotal = function() {
     }
 };
 
-// [E] नया ग्राहक पंजीकरण मॉडल ऑपरेशंस (प्रॉम्ट मैकेनिज्म)
 function openRegistrationPrompt(accountNo, callback) {
     const modal = document.getElementById('new-cust-modal');
     if (!modal) return callback(null);
