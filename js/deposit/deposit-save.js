@@ -5,13 +5,11 @@
 document.addEventListener('click', async (e) => {
     if (e.target && e.target.id === 'btn-dep-save') {
         
-        // सिंगल डिपॉजिट के DOM एलिमेंट्स फ़ेच करें
         const accInput = document.getElementById('dep-account-no');
         const custNameInput = document.getElementById('dep-cust-name');
         const amountInput = document.getElementById('dep-amount');
         const remarksInput = document.getElementById('dep-remarks');
         
-        // सुरक्षा गार्ड: अगर सिंगल काउंटर के इनपुट स्क्रीन पर नहीं हैं, तो आगे मत बढ़ो
         if (!accInput || !amountInput) return; 
 
         const accountNo = accInput.value.trim();
@@ -19,7 +17,6 @@ document.addEventListener('click', async (e) => {
         const amount = parseFloat(amountInput.value) || 0;
         const remarks = remarksInput.value.trim();
         
-        // डिनॉमिनेशन कॉम्पोनेंट से लाइव वैल्यूज निकालें
         let netCash = 0;
         let denomValues = {};
         if (window.DenominationComponent) {
@@ -27,7 +24,6 @@ document.addEventListener('click', async (e) => {
             denomValues = window.DenominationComponent.getValues() || {};
         }
 
-        // 1. बुनियादी वैलिडेशन चेक
         if (!accountNo || !custName) {
             window.showSystemAlert("कृपया पहले वैध खाता संख्या दर्ज करके नाम वेरिफाई करें!", "Validation Error", "❌");
             return;
@@ -38,13 +34,11 @@ document.addEventListener('click', async (e) => {
             return;
         }
 
-        // 2. ग्लोबल यूज़र सेशन वेरिफिकेशन
         if (!window.currentUser || !window.currentUser.id) {
             window.showSystemAlert("यूज़र सेशन नहीं मिला! कृपया फिर से लॉगिन करें।", "Authentication Error", "❌");
             return;
         }
 
-        // 3. दैनिक सीमा (₹25,000) जांचने का फ़ंक्शन
         const checkDailyDepositLimit = async (accNo, newAmt, currentTxId = null) => {
             const today = new Date().toISOString().split('T')[0];
             try {
@@ -80,11 +74,9 @@ document.addEventListener('click', async (e) => {
             }
         };
 
-        // 4. कोर डेटाबेस इंसर्ट फ़ंक्शन
         const saveTransactionData = async () => {
             let calcCommission = Math.min(amount * 0.004, 50);
             try {
-                // स्टेप A: ट्रांजैक्शन लॉग रिकॉर्ड करें
                 const { data: txData, error: txError } = await window.supabaseClient
                     .from('deposit_transactions')
                     .insert([{ 
@@ -95,12 +87,10 @@ document.addEventListener('click', async (e) => {
                         commission: calcCommission, 
                         remarks: remarks, 
                         ...denomValues 
-                    }])
-                    .select().single();
+                    }]);
                 
                 if (txError) throw txError;
 
-                // स्टेप B: नया माइनस सेटलमेंट और वॉल्ट कैलकुलेट करें
                 const currentSettlementBalance = parseFloat(window.currentUser.settlement_balance) || 0;
                 const updatedSettlementBalance = currentSettlementBalance - amount; 
                 
@@ -116,7 +106,6 @@ document.addEventListener('click', async (e) => {
                     cash_coins: (parseInt(window.currentUser.cash_coins) || 0) + (denomValues.denom_in_coins || 0) - (denomValues.denom_out_coins || 0)
                 };
 
-                // स्टेप C: डेटाबेस में लाइव अपडेट भेजें
                 const { error: userUpdateError } = await window.supabaseClient
                     .from('user_roles')
                     .update(nextVaultData)
@@ -124,31 +113,30 @@ document.addEventListener('click', async (e) => {
 
                 if (userUpdateError) throw userUpdateError;
 
-                // लोकल ऑब्जेक्ट सिंक और स्क्रीन रिफ्रेश
                 Object.assign(window.currentUser, nextVaultData);
                 window.showSystemAlert("डिपॉजिट सफल और तिजोरी (Vault) अपडेट हो गई!", "Success", "✅");
                 
                 if (typeof window.loadTodayTransactions === 'function') window.loadTodayTransactions();
-                document.getElementById('btn-dep-clear').click();
+                
+                // 🧹 मास्टर रीसेट ट्रिगर करें जो deposit.js में है
+                document.getElementById('btn-dep-clear')?.click();
 
             } catch (err) { 
                 window.showSystemAlert("ट्रांजैक्शन फेल हो गया: " + err.message, "Error", "❌"); 
             }
         };
 
-        // 5. लो सेटलमेंट बैलेंस गार्ड
         const checkBalanceAndProceed = () => {
             const currentSettlementBalance = parseFloat(window.currentUser.settlement_balance) || 0;
             if (currentSettlementBalance < amount) {
                 const missingAmount = amount - currentSettlementBalance;
-                window.showSystemAlert(`⚠️ सेटलमेंट में बैलेंस लो है! ₹${missingAmount.toLocaleString('en-IN')} ऐड कर लेना। ट्रांजैक्शन आगे बढ़ रही है...`, "Low Balance Notice", "ℹ️");
+                window.showSystemAlert(`⚠️ सेटलमेंट में बैलेंस लो है! ट्रांजैक्शन आगे बढ़ रही है...`, "Low Balance Notice", "ℹ️");
                 setTimeout(() => { saveTransactionData(); }, 2000);
             } else {
                 saveTransactionData();
             }
         };
 
-        // 6. सेव मोड या एडिट (Update) मोड चेकर
         const handleSaveOrUpdate = async () => {
             const saveBtnElement = document.getElementById('btn-dep-save');
             const isEditMode = saveBtnElement && saveBtnElement.dataset.mode === "edit";
@@ -168,7 +156,6 @@ document.addEventListener('click', async (e) => {
             }
         };
 
-        // 7. फाइनल अमाउंट और कैश काउंटर टोटल की मैचिंग
         if (netCash === 0) {
             window.showSystemConfirm("बिना कैश आगे बढ़ें?", "Warning", handleSaveOrUpdate);
         } else if (Math.abs(netCash - amount) > 0.01) {
@@ -176,16 +163,5 @@ document.addEventListener('click', async (e) => {
         } else {
             handleSaveOrUpdate();
         }
-    }
-});
-
-// ⌨️ कीबोर्ड शॉर्टकट्स (Ctrl+S, Esc)
-document.addEventListener('keydown', function(e) {
-    if ((e.key === 's' || e.key === 'S') && (e.ctrlKey || e.metaKey)) {
-        e.preventDefault(); 
-        document.getElementById('btn-dep-save')?.click();
-    }
-    if (e.key === 'Escape' || e.key === 'Esc') {
-        document.getElementById('btn-dep-clear')?.click();
     }
 });
