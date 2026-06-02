@@ -259,7 +259,7 @@ window.initDepositPage = async function (currentUser) {
 
 
 // ========================================================
-        // 🔄 IN-PAGE DYNAMIC LIVE SWITCHER MECHANISM (CORNER BUTTON)
+        // 🔄 IN-PAGE DYNAMIC LIVE SWITCHER MECHANISM (FITTED)
         // ========================================================
         const switchBtn = document.getElementById('btn-switch-deposit-mode');
         if (switchBtn) {
@@ -270,30 +270,45 @@ window.initDepositPage = async function (currentUser) {
                 const titleLabel = document.getElementById('deposit-module-title');
 
                 if (currentMode === 'single') {
-                    // स्थिति ए: सिंगल से बल्क में जाना है
+                    // स्थिति A: सिंगल से बल्क मोड में स्विच करना है
                     switchBtn.textContent = "⌛ Loading Bulk Engine...";
                     switchBtn.disabled = true;
 
                     try {
-                        // १. बल्क का HTML अलग फ़ाइल से लाइव लेकर आएं
+                        // 1. बल्क का HTML लाइव लेकर आएं
                         const res = await fetch('./pages/deposit-bulk.html');
                         if (!res.ok) throw new Error("Bulk template file missing");
                         const bulkHtml = await res.text();
                         
-                        // २. उसे इंजेक्ट करें और स्क्रीन विज़िबल करें
+                        // 2. कंटेनर में इंजेक्ट करें और स्क्रीन विज़िबल करें
                         bulkWrapper.innerHTML = bulkHtml;
                         singleWrapper.classList.add('hidden-block');
                         bulkWrapper.classList.remove('hidden-block');
 
-                        // ३. बटन और टाइटल्स को बदलें
+                        // 3. टॉप हेडर और बटन का रूप बदलें
                         titleLabel.innerHTML = "📦 BULK DEPOSIT MANAGEMENT";
                         switchBtn.textContent = "👤 Switch to Single Counter";
-                        switchBtn.style.background = "#27ae60"; // ग्रीन कलर ताकि पता चले अलग मोड है
+                        switchBtn.style.background = "#27ae60"; // ग्रीन थीम
                         switchBtn.setAttribute('data-current-mode', 'bulk');
 
-                        // ४. बल्क का दिमाग (Engine) शुरू कर दें
+                        // 4. 🚀 बल्क का मुख्य इंजन चालू करें
                         if (typeof window.initBulkDepositPage === 'function') {
                             window.initBulkDepositPage(currentUser);
+                        }
+
+                        // 💥 5. [CRITICAL FIX] डायनेमिक बटनों पर सेव और क्लियर इवेंट्स दोबारा बाइंड करें
+                        // क्योंकि ये बटन रन-टाइम पर आए हैं, इन्हें मैन्युअल ट्रिगर देना पड़ेगा
+                        const bulkSaveBtn = document.getElementById('btn-bulk-dep-save');
+                        const bulkClearBtn = document.getElementById('btn-bulk-dep-clear');
+
+                        if (bulkSaveBtn) {
+                            // जब कोई नया बल्क सेव दबाएगा, तो हम सीधे bulk-save इंजन को मैन्युअल ट्रिगर पास कर देंगे
+                            bulkSaveBtn.onclick = function() {
+                                console.log("Dynamic Bulk Save Triggered Manually");
+                                // एक नकली क्लिक इवेंट बनाकर भेजेंगे ताकि deposit-bulk-save.js एक्टिव हो जाए
+                                const fakeEvent = { target: bulkSaveBtn };
+                                window.dispatchEvent(new CustomEvent('bulk-save-trigger', { detail: fakeEvent }));
+                            };
                         }
 
                     } catch (err) {
@@ -305,14 +320,14 @@ window.initDepositPage = async function (currentUser) {
                     }
 
                 } else {
-                    // स्थिति बी: बल्क से वापस सिंगल काउंटर में आना है
+                    // स्थिति B: बल्क से वापस सिंगल काउंटर में आना है
                     bulkWrapper.classList.add('hidden-block');
                     singleWrapper.classList.remove('hidden-block');
                     bulkWrapper.innerHTML = ""; // मेमोरी साफ़ करें
 
-                    titleLabel.innerHTML = "IN-PAGE COUNTER SWITCHER";
+                    titleLabel.innerHTML = "SINGLE CASH COUNTER";
                     switchBtn.textContent = "📦 Switch to Bulk Deposit";
-                    switchBtn.style.background = "#f2994a"; 
+                    switchBtn.style.background = "#f2994a"; // संतरी थीम
                     switchBtn.setAttribute('data-current-mode', 'single');
 
                     // सिंगल का लेज़र दोबारा रिफ्रेश करें
