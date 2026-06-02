@@ -30,6 +30,7 @@ window.initDepositPage = async function (currentUser) {
             }, 100); 
         }
 
+       // [3] आज की कंबाइन ट्रांजैक्शन्स (Single + Bulk) लोड करने का फ़ंक्शन
         async function loadTodayTransactions() {
             const tbody = document.getElementById('today-tx-body');
             if (!tbody) return;
@@ -37,11 +38,11 @@ window.initDepositPage = async function (currentUser) {
             const today = new Date().toISOString().split('T')[0];
 
             try {
+                // 🚀 फिक्स: यहाँ से .is('bulk_id', null) हटा दिया गया है ताकि बल्क की एंट्रियां भी लाइव दिखें!
                 const { data, error } = await window.supabaseClient
                     .from('deposit_transactions')
                     .select('*')
                     .eq('ko_code', currentUser.ko_code)
-                    .is('bulk_id', null) 
                     .gte('transaction_date', `${today}T00:00:00`)
                     .order('transaction_date', { ascending: false });
 
@@ -49,24 +50,33 @@ window.initDepositPage = async function (currentUser) {
 
                 tbody.innerHTML = '';
                 if (!data || data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:15px; color:#777;">आज आपका कोई SINGLE TRANSACTION नहीं मिला</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:15px; color:#777;">आज काउंटर पर कोई ट्रांजैक्शन नहीं मिला</td></tr>';
                     return;
                 }
 
                 data.forEach(tx => {
                     const time = new Date(tx.transaction_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                    const name = tx.customer_name || "N/A";
+                    
+                    // 📦 अगर बल्क आईडी है तो '📦 BLK-XXXX' दिखाएं, नहीं तो नॉर्मल अकाउंट नंबर
+                    const identifier = tx.bulk_id ? `📦 ${tx.bulk_id}` : tx.account_number;
+                    
+                    // अगर बल्क आईडी है तो Depositor का नाम दिखाएं, नहीं तो कस्टमर का नाम
+                    const displayName = tx.bulk_id ? `Depositor: ${tx.depositor_name || 'N/A'}` : tx.customer_name;
+                    
+                    // बल्क एंट्री के नीचे छोटा सा हिंट देने के लिए कि पैसा किस खाते में गया है
+                    const txTypeHint = tx.bulk_id ? `<br><small style="color:#777;">To: ${tx.customer_name}</small>` : '';
+                    
                     const txStr = btoa(JSON.stringify(tx)); 
 
                     tbody.insertAdjacentHTML('beforeend', `
                         <tr style="border-bottom: 1px solid #eee;">
-                            <td style="padding:12px;">${tx.account_number}</td>
-                            <td style="padding:12px; text-transform: uppercase;">${name}</td>
+                            <td style="padding:12px; font-weight: 500;">${identifier}</td>
+                            <td style="padding:12px; text-transform: uppercase;">${displayName}${txTypeHint}</td>
                             <td style="padding:12px; font-weight:bold; color:#27ae60;">₹${tx.amount}</td>
                             <td style="padding:12px;">${time}</td>
                             <td style="padding:12px; text-align:center;">
                                 <div style="display:inline-flex; align-items:center; gap:15px; justify-content:center;">
-                                    <span class="btn-edit-tx" data-tx="${txStr}" style="cursor:pointer; font-size:1.1rem; user-select:none;" title="Edit Transaction">✏️</span>
+                                    ${!tx.bulk_id ? `<span class="btn-edit-tx" data-tx="${txStr}" style="cursor:pointer; font-size:1.1rem; user-select:none;" title="Edit Transaction">✏️</span>` : ''}
                                     <span class="btn-print-receipt" data-tx="${txStr}" style="cursor:pointer; font-size:1.2rem; user-select:none;" title="Print Slip">🖨️</span>
                                 </div>
                             </td>
