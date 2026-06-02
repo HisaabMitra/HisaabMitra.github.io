@@ -481,9 +481,9 @@ function attachBulkRowEvents(rowId) {
         nameInput.value = "डेटाबेस में खोज जारी है...";
 
         try {
-            // 'customers' टेबल से लाइव वेरिफिकेशन
+            // 🏦 'banking_customers' टेबल से लाइव वेरिफिकेशन
             const { data: customer, error } = await window.supabaseClient
-                .from('customers') 
+                .from('banking_customers') 
                 .select('customer_name')
                 .eq('account_number', accountNo)
                 .maybeSingle();
@@ -539,7 +539,7 @@ function openRegistrationModalForBulk(accountNo, callback) {
     document.getElementById('nc-mobile').value = "";
     document.getElementById('nc-address').value = "";
 
-    // मॉडल को विज़िबल करें
+    // MODEL को विज़िबल करें
     modal.style.setProperty('display', 'flex', 'important');
     document.getElementById('nc-name').focus();
 
@@ -574,9 +574,9 @@ function openRegistrationModalForBulk(accountNo, callback) {
         newBtnContinue.disabled = true;
 
         try {
-            // 'customers' मास्टर टेबल में नया डेटा इन्सर्ट करें
+            // 🏦 'banking_customers' मास्टर टेबल में नया डेटा इन्सर्ट करें
             const { error: insertErr } = await window.supabaseClient
-                .from('customers')
+                .from('banking_customers')
                 .insert([{
                     account_number: accountNo,
                     customer_name: fullName,
@@ -617,5 +617,4 @@ document.addEventListener('DOMContentLoaded', () => {
         addRowBtn.onclick = addNewBulkRow;
     }
 });
-
 
