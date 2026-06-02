@@ -4,9 +4,9 @@
 
 let bulkRowCounter = 0;
 
+// 🌟 [CRITICAL FIX]: इसे सीधे window ऑब्जेक्ट पर बाइंड किया ताकि deposit.js इसे ढूंढ सके
 window.initBulkDepositPage = async function (currentUser) {
-    const workspace = document.getElementById('workspace');
-    if (!workspace) return;
+    console.log("Bulk Deposit Engine Initializing...");
 
     try {
         // [1] काउंटर KO Code स्क्रीन पर सेट करें
@@ -27,73 +27,7 @@ window.initBulkDepositPage = async function (currentUser) {
             window.addNewBulkRow();
         }
 
-        // [4] आज की लाइव कंबाइन ट्रांजैक्शन्स लेज़र लोड करें
-        async function loadTodayBulkLedger() {
-            const txTbody = document.getElementById('today-tx-body');
-            if (!txTbody) return;
-
-            const today = new Date().toISOString().split('T')[0];
-
-            try {
-                const { data, error } = await window.supabaseClient
-                    .from('deposit_transactions')
-                    .select('*')
-                    .eq('ko_code', currentUser.ko_code)
-                    .gte('transaction_date', `${today}T00:00:00`)
-                    .order('transaction_date', { ascending: false });
-
-                if (error) throw error;
-
-                txTbody.innerHTML = '';
-                if (!data || data.length === 0) {
-                    txTbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:15px; color:#777;">आज कोई ट्रांजैक्शन रिकॉर्ड नहीं मिला</td></tr>';
-                    return;
-                }
-
-                data.forEach(tx => {
-                    const time = new Date(tx.transaction_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                    
-                    const identifier = tx.bulk_id ? `📦 ${tx.bulk_id}` : tx.account_number;
-                    const displayName = tx.bulk_id ? `Depositor: ${tx.depositor_name || 'N/A'}` : tx.customer_name;
-                    const txTypeHint = tx.bulk_id ? `<br><small style="color:#777;">To: ${tx.customer_name}</small>` : '';
-
-                    const txStr = btoa(JSON.stringify(tx));
-
-                    txTbody.insertAdjacentHTML('beforeend', `
-                        <tr style="border-bottom: 1px solid #eee;">
-                            <td style="padding:12px; font-weight: 500;">${identifier}</td>
-                            <td style="padding:12px; text-transform: uppercase;">${displayName}${txTypeHint}</td>
-                            <td style="padding:12px; font-weight:bold; color:#27ae60;">₹${tx.amount}</td>
-                            <td style="padding:12px;">${time}</td>
-                            <td style="padding:12px; text-align:center;">
-                                <div style="display:inline-flex; align-items:center; gap:15px; justify-content:center;">
-                                    <span class="btn-print-receipt" data-tx="${txStr}" style="cursor:pointer; font-size:1.2rem; user-select:none; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'" title="Print Slip">🖨️</span>
-                                </div>
-                            </td>
-                        </tr>
-                    `);
-                });
-
-                if (typeof attachPrintEventListeners === 'function') attachPrintEventListeners();
-
-            } catch (err) {
-                console.error("Ledger Load Error:", err);
-            }
-        }
-
-        window.loadTodayTransactions = loadTodayBulkLedger; // ग्लोबल बाइंडिंग साझा रिफ्रेश के लिए
-        loadTodayBulkLedger();
-
-        // [5] नया कस्टमर रजिस्ट्रेशन मॉडल फ़ील्ड्स को केस सेंसिटिव करना
-        const ncNameInput = document.getElementById('nc-name');
-        const ncAddressInput = document.getElementById('nc-address');
-        [ncNameInput, ncAddressInput].forEach(el => {
-            if (el) {
-                el.addEventListener('input', function() { this.value = this.value.toUpperCase(); });
-            }
-        });
-
-        // [6] Clear / रीसेट ऑल बटन लॉजिक (आईडी 'btn-bulk-dep-clear' के साथ सिंक किया गया)
+        // [4] 🧹 Clear / रीसेट ऑल बटन लॉजिक (आईडी 'btn-bulk-dep-clear' के साथ सिंक)
         const clearBtn = document.getElementById('btn-bulk-dep-clear');
         if (clearBtn) {
             clearBtn.onclick = function() {
@@ -103,7 +37,7 @@ window.initBulkDepositPage = async function (currentUser) {
                 if (accountsTbody) accountsTbody.innerHTML = "";
                 document.getElementById('lbl-bulk-grand-total').innerText = "₹0.00";
                 
-                // 🪙 फ़िक्स: डिनॉमिनेशन कॉम्पोनेन्ट को रीसेट करने का सही फंक्शन बाइंड किया
+                // डिनॉमिनेशन कॉम्पोनेन्ट को रीसेट करें
                 if (window.DenominationComponent && typeof window.DenominationComponent.clear === 'function') {
                     window.DenominationComponent.clear();
                 }
@@ -113,14 +47,14 @@ window.initBulkDepositPage = async function (currentUser) {
             };
         }
 
-        // 🛑 फ़िक्स: HTML लोड होने के बाद '+ Add Row' बटन को इन-लाइन बाइंड किया (DOMContentLoaded का लफड़ा ख़त्म)
+        // [5] ➕ '+ Add Row' बटन को इवेंट असाइन करें (बिना DOMContentLoaded के झंझट के)
         const addRowBtn = document.getElementById('btn-bulk-add-row');
         if (addRowBtn) {
             addRowBtn.onclick = window.addNewBulkRow;
         }
 
     } catch (err) {
-        console.error("Bulk Initializer Error:", err);
+        console.error("Bulk Initializer Core Error:", err);
     }
 };
 
@@ -179,7 +113,6 @@ function attachBulkRowEvents(rowId) {
 
     if (!accInput) return;
 
-    // अकाउंट नंबर बॉक्स से बाहर आते ही (Blur Event) लाइव सर्च
     accInput.addEventListener('blur', async () => {
         const accountNo = accInput.value.trim();
         if (!accountNo) return;
@@ -196,11 +129,9 @@ function attachBulkRowEvents(rowId) {
             if (error) throw error;
 
             if (customer) {
-                // स्थिति 1: ग्राहक मास्टर रिकॉर्ड में मिल गया!
                 nameInput.value = customer.customer_name.toUpperCase();
-                amtInput.focus(); // सीधा कर्सर अमाउंट बॉक्स में!
+                amtInput.focus(); 
             } else {
-                // स्थिति 2: नया ग्राहक मिला! रजिस्ट्रेशन मॉडल खोलें
                 nameInput.value = "NOT REGISTERED";
                 
                 openRegistrationPrompt(accountNo, (registeredName) => {
@@ -220,7 +151,6 @@ function attachBulkRowEvents(rowId) {
         }
     });
 
-    // अमाउंट बॉक्स में टाइप करते ही ग्रैंड टोटल लाइव अपडेट करें
     amtInput.addEventListener('input', () => {
         window.calculateBulkGrandTotal();
     });
@@ -231,7 +161,6 @@ function openRegistrationPrompt(accountNo, callback) {
     const modal = document.getElementById('new-cust-modal');
     if (!modal) return callback(null);
 
-    // फ़ील्ड्स को साफ और लॉक करें
     document.getElementById('nc-account-no').value = accountNo;
     document.getElementById('nc-name').value = "";
     document.getElementById('nc-mobile').value = "";
@@ -243,7 +172,6 @@ function openRegistrationPrompt(accountNo, callback) {
     const btnContinue = document.getElementById('btn-nc-continue');
     const btnCancel = document.getElementById('btn-nc-cancel');
     
-    // पुराने क्लिक इवेंट्स साफ़ करने के लिए नोड रिप्लेसमेंट (Cloning)
     const newContinue = btnContinue.cloneNode(true);
     const newCancel = btnCancel.cloneNode(true);
     btnContinue.parentNode.replaceChild(newContinue, btnContinue);
