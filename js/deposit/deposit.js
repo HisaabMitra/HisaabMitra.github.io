@@ -160,7 +160,7 @@ window.initDepositPage = async function (currentUser) {
             return `${solId}${parts[0].padStart(2, '0')}${parts[1].padStart(8, '0')}`;
         }
 
-        // 🏦 [DYN-POPUP INTERFACE]: सुपरफास्ट सिंगल कस्टमर सर्च + ऑटो पॉपअप इंटीग्रेशन
+        // 🏦 [NEW-MODAL INTEGRATION] सुपरफास्ट सिंगल कस्टमर सर्च + नए कस्टमर मॉडल का हुक
         async function searchCustomer() {
             let accountNo = accInput.value.trim();
             if (!accountNo) return;
@@ -188,60 +188,68 @@ window.initDepositPage = async function (currentUser) {
                     custNameInput.value = data.customer_name.toUpperCase();
                     amountInput.focus(); 
                 } else {
-                    // 🌟 स्थिति 2: नया ग्राहक मिला! अलर्ट रोकने के बजाय सीधे 'new-cust-modal' ट्रिगर करो
+                    // 🌟 स्थिति 2: नया ग्राहक मिला! आपके नए सुंदर लेआउट मॉडल को यहाँ ट्रिगर करें
                     custNameInput.value = "NOT REGISTERED";
                     
-                    // आपके साझा रजिस्ट्रेशन प्रॉम्ट को कॉल करें जो बल्क फाइल में भी काम करता था
-                    if (typeof openRegistrationPrompt === 'function') {
-                        openRegistrationPrompt(accountNo, (registeredName) => {
-                            if (registeredName) {
-                                custNameInput.value = registeredName.toUpperCase();
-                                amountInput.focus();
-                            } else {
-                                custNameInput.value = "";
-                                accInput.value = "";
-                                accInput.focus();
+                    const modal = document.getElementById('new-cust-modal');
+                    if (modal) {
+                        document.getElementById('nc-account-no').value = accountNo;
+                        document.getElementById('nc-name').value = "";
+                        document.getElementById('nc-mobile').value = "";
+                        document.getElementById('nc-address').value = "";
+                        
+                        // न्यू मॉडल को लाइव ओपन करें
+                        modal.style.setProperty('display', 'flex', 'important');
+                        document.getElementById('nc-name').focus();
+
+                        const btnContinue = document.getElementById('btn-nc-continue');
+                        const btnCancel = document.getElementById('btn-nc-cancel');
+
+                        btnCancel.onclick = function() {
+                            modal.style.display = 'none';
+                            custNameInput.value = ""; 
+                            accInput.value = ""; 
+                            accInput.focus();
+                        };
+
+                        btnContinue.onclick = async function() {
+                            const fullName = document.getElementById('nc-name').value.trim().toUpperCase();
+                            const mobile = document.getElementById('nc-mobile').value.trim();
+                            const address = document.getElementById('nc-address').value.trim().toUpperCase();
+
+                            if (!fullName || !mobile) {
+                                window.showSystemAlert("नाम और मोबाइल नंबर आवश्यक है!", "Error", "❌");
+                                return;
                             }
-                        });
-                    } else {
-                        // बैकअप सुरक्षा: अगर किसी वजह से फंक्शन ग्लोबल नहीं है, तो यहीं हैंडल कर लें
-                        const modal = document.getElementById('new-cust-modal');
-                        if (modal) {
-                            document.getElementById('nc-account-no').value = accountNo;
-                            document.getElementById('nc-name').value = "";
-                            document.getElementById('nc-mobile').value = "";
-                            document.getElementById('nc-address').value = "";
-                            modal.style.setProperty('display', 'flex', 'important');
-                            document.getElementById('nc-name').focus();
 
-                            const btnContinue = document.getElementById('btn-nc-continue');
-                            const btnCancel = document.getElementById('btn-nc-cancel');
+                            btnContinue.textContent = "Processing...";
+                            btnContinue.disabled = true;
 
-                            btnCancel.onclick = function() {
-                                modal.style.display = 'none';
-                                custNameInput.value = ""; accInput.value = ""; accInput.focus();
-                            };
-
-                            btnContinue.onclick = async function() {
-                                const fullName = document.getElementById('nc-name').value.trim().toUpperCase();
-                                const mobile = document.getElementById('nc-mobile').value.trim();
-                                const address = document.getElementById('nc-address').value.trim().toUpperCase();
-
-                                if (!fullName || !mobile) {
-                                    window.showSystemAlert("नाम और मोबाइल नंबर आवश्यक है!", "Error", "❌");
-                                    return;
-                                }
-
-                                try {
-                                    await window.supabaseClient.from('banking_customers').insert([{
-                                        account_number: accountNo, customer_name: fullName, mobile_number: mobile, customer_address: address
+                            try {
+                                const { error: insertErr } = await window.supabaseClient
+                                    .from('banking_customers')
+                                    .insert([{
+                                        account_number: accountNo, 
+                                        customer_name: fullName, 
+                                        mobile_number: mobile, 
+                                        customer_address: address
                                     }]);
-                                    modal.style.display = 'none';
-                                    custNameInput.value = fullName;
-                                    amountInput.focus();
-                                } catch (e) { console.error(e); }
-                            };
-                        }
+
+                                if (insertErr) throw insertErr;
+
+                                modal.style.display = 'none';
+                                window.showSystemAlert(`🎉 खाता ${accountNo} सफलतापूर्वक पंजीकृत हुआ!`, "Success", "✅");
+                                
+                                custNameInput.value = fullName;
+                                amountInput.focus();
+                            } catch (e) { 
+                                console.error(e); 
+                                window.showSystemAlert("पंजीकरण विफल: " + e.message, "Error", "❌");
+                            } finally {
+                                btnContinue.textContent = "Register & Continue";
+                                btnContinue.disabled = false;
+                            }
+                        };
                     }
                 }
             } catch (err) { 
@@ -272,7 +280,7 @@ window.initDepositPage = async function (currentUser) {
         if (clearBtn) clearBtn.onclick = masterFormClear;
 
         // ========================================================
-        // 🔄 [GLOBAL EVENT DELEGATION] 100% BULLETPROOF SWAPPER
+        // 🔄 [GLOBAL EVENT DELEGATION] स्विचर इंजन
         // ========================================================
         document.body.addEventListener('click', function(e) {
             if (e.target && e.target.id === 'btn-switch-deposit-mode') {
