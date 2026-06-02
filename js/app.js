@@ -46,7 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const mobile = document.getElementById('reg-mobile').value.trim(); 
             const settlementAcc = document.getElementById('reg-settlement-acc').value.trim();
             const solId = document.getElementById('reg-sol-id').value.trim();
-            const address = document.getElementById('reg-address').value.trim().toUpperCase(); // 📍 एड्रेस निकाला गया
+            const address = document.getElementById('reg-address').value.trim().toUpperCase(); 
             const submitBtn = registerForm.querySelector('button[type="submit"]');
 
             submitBtn.textContent = "Processing Request...";
@@ -68,7 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     mobile_no: mobile,  
                     settlement_account: settlementAcc,
                     sol_id: solId,                     
-                    address: address, // 📍 पेलोड में एड्रेस शामिल किया
+                    address: address, 
                     status: 'pending',
                     objection_remark: null
                 };
@@ -82,7 +82,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (updateError) throw updateError;
                     window.showSystemAlert("🔄 Request Re-Submitted Successfully with updated Bank Credentials!");
                 } else {
-                    const { error: insertError } = await window.supabaseClient
+                    const { error: insertError = null } = await window.supabaseClient
                         .from('user_roles')
                         .insert([{ email: email, ...payload }]);
 
@@ -181,7 +181,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const isNameMissing = !user.full_name || user.full_name.trim() === "";
         const isSettlementMissing = !user.settlement_account || user.settlement_account.trim() === "";
         const isSolMissing = !user.sol_id || user.sol_id.trim() === "";
-        const isAddressMissing = !user.address || user.address.trim() === ""; // 📍 एड्रेस मिसिंग चेक
+        const isAddressMissing = !user.address || user.address.trim() === ""; 
 
         if (isKoMissing || isMobileMissing || isNameMissing || isSettlementMissing || isSolMissing || isAddressMissing) {
             const mdModal = document.getElementById('missing-detail-modal');
@@ -192,7 +192,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if(document.getElementById('md-name-block')) document.getElementById('md-name-block').style.display = isNameMissing ? 'block' : 'none';
             if(document.getElementById('md-settlement-block')) document.getElementById('md-settlement-block').style.display = isSettlementMissing ? 'block' : 'none';
             if(document.getElementById('md-sol-block')) document.getElementById('md-sol-block').style.display = isSolMissing ? 'block' : 'none';
-            if(document.getElementById('md-address-block')) document.getElementById('md-address-block').style.display = isAddressMissing ? 'block' : 'none'; // 📍
+            if(document.getElementById('md-address-block')) document.getElementById('md-address-block').style.display = isAddressMissing ? 'block' : 'none'; 
 
             if (mdModal) mdModal.style.setProperty('display', 'flex', 'important');
 
@@ -203,7 +203,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const updatedName = isNameMissing ? document.getElementById('md-name-input').value.trim().toUpperCase() : user.full_name;
                 const updatedSettlement = isSettlementMissing ? document.getElementById('md-settlement-input').value.trim() : user.settlement_account;
                 const updatedSol = isSolMissing ? document.getElementById('md-sol-input').value.trim() : user.sol_id;
-                const updatedAddress = isAddressMissing ? document.getElementById('md-address-input').value.trim().toUpperCase() : user.address; // 📍
+                const updatedAddress = isAddressMissing ? document.getElementById('md-address-input').value.trim().toUpperCase() : user.address; 
 
                 try {
                     const { error } = await window.supabaseClient
@@ -214,7 +214,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             full_name: updatedName,
                             settlement_account: updatedSettlement, 
                             sol_id: updatedSol,
-                            address: updatedAddress // 📍
+                            address: updatedAddress 
                         })
                         .eq('id', user.id);
 
@@ -225,7 +225,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     user.full_name = updatedName;
                     user.settlement_account = updatedSettlement;
                     user.sol_id = updatedSol;
-                    user.address = updatedAddress; // 📍
+                    user.address = updatedAddress; 
 
                     mdModal.style.display = 'none';
                     await window.showSystemAlert("Your comprehensive banking logs have been updated in Database. Workspace unlocked!", "Verification Success", "✅");
@@ -236,13 +236,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             };
         } else {
+            document.getElementById('missing-detail-modal').style.display = 'none';
             proceedToDashboard(user);
         }
     }
 
     function proceedToDashboard(user) {
         currentLoggedInUser = user; 
-         window.currentUser = user;
+        window.currentUser = user;
         authScreen.classList.add('hidden');
         mainDashboard.classList.remove('hidden');
         document.getElementById('user-display').textContent = `${user.full_name} (${user.role.toUpperCase()})`;
@@ -261,7 +262,7 @@ document.addEventListener('DOMContentLoaded', () => {
         allMenuButtons.forEach(btn => {
             const page = btn.getAttribute('data-page');
             if (role === 'agent') {
-                const allowed = ['home', 'deposit', 'withdrawal', 'search'];
+                const allowed = ['home', 'deposit', 'deposit-bulk', 'withdrawal', 'search'];
                 btn.style.setProperty('display', allowed.includes(page) ? 'block' : 'none', 'important');
             } else if (role === 'admin') {
                 btn.style.setProperty('display', page === 'super-admin' ? 'none' : 'block', 'important');
@@ -273,7 +274,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     navButtons.forEach(button => {
         button.addEventListener('click', (e) => {
-            // बबल्स/चाइल्ड एलिमेंट्स से सेफ्टी के लिए क्लोजेस्ट बटन एलीमेंट ढूंढना
             const btnTarget = e.target.closest('[data-page]');
             if (!btnTarget) return;
 
@@ -300,36 +300,45 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // === फिक्स किया हुआ मॉड्यूल इनिशियलाइज़र ===
-   function initializePageModules(pageName) {
+    // === 🌟 [DYNAMIC ROUTER SWITCHER ENGINE] 🌟 ===
+    function initializePageModules(pageName) {
+        if (pageName === 'home') {
+            initHomepageModule();
+        }
 
-    if (pageName === 'home') {
-        initHomepageModule();
-    }
+        // १. सिंगल डिपॉजिट इनिशियलाइज़र
+        if (pageName === 'deposit') {
+            if (typeof window.initDepositPage === 'function') {
+                window.initDepositPage(currentLoggedInUser);
+            } else {
+                console.error("initDepositPage function missing in deposit.js");
+            }
+        }
 
-    if (pageName === 'deposit') {
-        if (typeof window.initDepositPage === 'function') {
-            window.initDepositPage(currentLoggedInUser);
-        } else {
-            console.error("initDepositPage function missing in deposit.js");
+        // २. बल्क डिपॉजिट इनिशियलाइज़र (स्वतंत्र रूट)
+        if (pageName === 'deposit-bulk') {
+            if (typeof window.initBulkDepositPage === 'function') {
+                window.initBulkDepositPage(currentLoggedInUser);
+            } else {
+                console.error("initBulkDepositPage function missing in deposit-bulk.js");
+            }
+        }
+
+        if (pageName === 'search') {
+            if (typeof initSearchModule === 'function') {
+                initSearchModule();
+            }
+        }
+
+        if (pageName === 'super-admin') {
+            if (typeof initSuperAdminModule === 'function') {
+                initSuperAdminModule();
+            }
         }
     }
 
-    if (pageName === 'search') {
-        if (typeof initSearchModule === 'function') {
-            initSearchModule();
-        }
-    }
-
-    if (pageName === 'super-admin') {
-        if (typeof initSuperAdminModule === 'function') {
-            initSuperAdminModule();
-        }
-    }
-}
-
-   // ==========================================
-    // 7. MULTI-TENANT KO-CODE LIVE BALANCE LOGIC (UPDATED WITH COINS & SENSITIVE COMMISSION)
+    // ==========================================
+    // 7. MULTI-TENANT KO-CODE LIVE BALANCE LOGIC
     // ==========================================
     async function initHomepageModule() {
         if (!currentLoggedInUser || !currentLoggedInUser.ko_code) return;
@@ -339,12 +348,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const balanceDisplay = document.getElementById('hp-settlement-balance');
         const cashInHandDisplay = document.getElementById('hp-cash-in-hand');
         const commissionDisplay = document.getElementById('hp-today-commission');
-        const toggleCommBtn = document.getElementById('btn-toggle-commission'); // 👈 आँख वाला बटन
+        const toggleCommBtn = document.getElementById('btn-toggle-commission'); 
 
         if (koDisplay) koDisplay.textContent = `KO CODE: ${koCode}`;
 
         try {
-            // [1] लाइव डेटा हमेशा डेटाबेस (user_roles) से सिंक रखें
             const { data: userUpdate, error: fetchErr } = await window.supabaseClient
                 .from('user_roles')
                 .select('*')
@@ -355,13 +363,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentLoggedInUser = userUpdate; 
             }
 
-            // [2] होमपेज यूआई पर सेटलमेंट बैलेंस अपडेट करना
             if (balanceDisplay) {
                 const sBal = parseFloat(currentLoggedInUser.settlement_balance) || 0;
                 balanceDisplay.textContent = `₹ ${sBal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
             }
 
-            // [3] अवेलेबल डिनॉमिनेशन काउंटिंग और कुल कैश इन हैंड
             const n500 = parseInt(currentLoggedInUser.cash_500) || 0;
             const n200 = parseInt(currentLoggedInUser.cash_200) || 0;
             const n100 = parseInt(currentLoggedInUser.cash_100) || 0;
@@ -377,7 +383,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 cashInHandDisplay.textContent = `₹ ${finalCashInHand.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
             }
 
-            // डोम कार्ड्स में डेटा लाइव प्रदर्शित करना
             if(document.getElementById('note-count-500')) document.getElementById('note-count-500').textContent = n500;
             if(document.getElementById('note-count-200')) document.getElementById('note-count-200').textContent = n200;
             if(document.getElementById('note-count-100')) document.getElementById('note-count-100').textContent = n100;
@@ -387,7 +392,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if(document.getElementById('note-count-5')) document.getElementById('note-count-5').textContent = n5;
             if(document.getElementById('coin-total-count')) document.getElementById('coin-total-count').textContent = `₹ ${cCoins}`;
 
-            // 📈 [4] आज का लाइव नेट कमीशन कैलकुलेशन लॉजिक (Eye Icon Privacy के साथ)
             if (commissionDisplay && toggleCommBtn) {
                 const todayStr = new Date().toISOString().split('T')[0]; 
 
@@ -404,27 +408,22 @@ document.addEventListener('DOMContentLoaded', () => {
                     totalTodayCommission = txList.reduce((sum, tx) => sum + (parseFloat(tx.commission) || 0), 0);
                 }
 
-                // असली अमाउंट को एक स्ट्रिंग फॉर्मेट में तैयार करके रख लेते हैं
                 const formattedCommission = `₹ ${totalTodayCommission.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
                 const maskedCommission = "₹ ••••••";
 
-                // डिफ़ॉल्ट रूप से हमेशा छुपा हुआ (Masked) ही दिखेगा जब पेज खुलेगा
                 commissionDisplay.textContent = maskedCommission;
                 toggleCommBtn.textContent = "👁️";
-                
-                // पुराना इवेंट लिसनर हटाना ताकि बटन पर बार-बार क्लिक करने से डुप्लीकेट इवेंट न बनें
                 toggleCommBtn.onclick = null;
 
-                // आँख बटन पर क्लिक करने का धासू लॉजिक
                 let isHidden = true;
                 toggleCommBtn.onclick = function() {
                     if (isHidden) {
-                        commissionDisplay.textContent = formattedCommission; // असली अमाउंट दिखाओ
-                        toggleCommBtn.textContent = "🙈"; // आँख बंद करने का सिंबल
+                        commissionDisplay.textContent = formattedCommission; 
+                        toggleCommBtn.textContent = "🙈"; 
                         isHidden = false;
                     } else {
-                        commissionDisplay.textContent = maskedCommission; // अमाउंट छुपाओ
-                        toggleCommBtn.textContent = "👁️"; // खुली आँख का सिंबल
+                        commissionDisplay.textContent = maskedCommission; 
+                        toggleCommBtn.textContent = "👁️"; 
                         isHidden = true;
                     }
                 };
