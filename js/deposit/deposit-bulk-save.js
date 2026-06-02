@@ -3,7 +3,8 @@
 // ========================================================
 
 document.addEventListener('click', async (e) => {
-    if (e.target && e.target.id === 'btn-dep-save') {
+    // 🛑 फ़िक्स: आईडी को 'btn-dep-save' से बदलकर 'btn-bulk-dep-save' किया गया
+    if (e.target && e.target.id === 'btn-bulk-dep-save') {
         
         const depositorNameInput = document.getElementById('bulk-depositor-name');
         // सुरक्षा गार्ड: अगर स्क्रीन पर बल्क पेज एक्टिव नहीं है तो यहीं रोक दो
@@ -172,7 +173,9 @@ document.addEventListener('click', async (e) => {
             window.showSystemAlert(`📦 बल्क डिपॉजिट सफल!\nकुल खाते: ${bulkTransactions.length}\nकुल जमा राशि: ₹${bulkGrandTotal.toLocaleString('en-IN')}`, "Success", "✅");
 
             if (typeof window.loadTodayTransactions === 'function') window.loadTodayTransactions();
-            document.getElementById('btn-dep-clear')?.click();
+            
+            // 🛑 फ़िक्स: रीसेट करने के लिए 'btn-bulk-dep-clear' को क्लिक किया गया
+            document.getElementById('btn-bulk-dep-clear')?.click();
 
         } catch (err) {
             console.error("Bulk Core Insertion Error:", err);
@@ -181,13 +184,13 @@ document.addEventListener('click', async (e) => {
     }
 });
 
-// ⌨️ बल्क कीबोर्ड शॉर्टकट्स
+// ⌨️ बल्क कीबोर्ड शॉर्टकट्स (आईडी फ़िक्स के साथ)
 document.addEventListener('keydown', function(e) {
     if ((e.key === 's' || e.key === 'S') && (e.ctrlKey || e.metaKey)) {
         e.preventDefault(); 
-        document.getElementById('btn-dep-save')?.click();
+        document.getElementById('btn-bulk-dep-save')?.click();
     }
     if (e.key === 'Escape' || e.key === 'Esc') {
-        document.getElementById('btn-dep-clear')?.click();
+        document.getElementById('btn-bulk-dep-clear')?.click();
     }
 });
