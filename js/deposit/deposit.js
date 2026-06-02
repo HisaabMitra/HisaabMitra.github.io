@@ -245,46 +245,58 @@ window.initDepositPage = async function (currentUser) {
         if (clearBtn) clearBtn.onclick = masterFormClear;
 
         // ========================================================
-        // 🔄 IN-PAGE 100% FIXED LOCAL BLOCK SWITCHER (MODE SWAPPER)
+        // 🔄 [GLOBAL EVENT DELEGATION] 100% BULLETPROOF SWAPPER
         // ========================================================
-        const switchBtn = document.getElementById('btn-switch-deposit-mode');
-        if (switchBtn) {
-            switchBtn.onclick = function() {
+        // भाई, यह पूरे डॉक्यूमेंट पर नज़र रखेगा, बटन कभी भी लोड हो यह उसे ढूंढ ही लेगा!
+        document.body.addEventListener('click', function(e) {
+            if (e.target && e.target.id === 'btn-switch-deposit-mode') {
+                console.log("Switcher Button Clicked Successfully!");
+                
+                const switchBtn = e.target;
                 const currentMode = switchBtn.getAttribute('data-current-mode');
                 const singleWrapper = document.getElementById('single-deposit-view-wrapper');
                 const bulkWrapper = document.getElementById('bulk-deposit-view-wrapper');
                 const titleLabel = document.getElementById('deposit-module-title');
 
+                // सुरक्षा जांच: अगर एलिमेंट्स स्क्रीन पर नहीं हैं तो ज़बरदस्ती ढूंढो
+                if (!singleWrapper || !bulkWrapper) {
+                    console.error("Critical wrappers missing in DOM!");
+                    return;
+                }
+
                 if (currentMode === 'single') {
-                    // सिंगल ब्लॉक छुपाएं और बल्क ग्रिड ब्लॉक दिखाएं
+                    // 1. सिंगल को छुपाओ, बल्क को दिखाओ
                     singleWrapper.classList.add('hidden-block');
                     bulkWrapper.classList.remove('hidden-block');
 
-                    titleLabel.innerHTML = "📦 BULK DEPOSIT MANAGEMENT";
+                    // 2. यूआई टेक्स्ट और रंग बदलो
+                    if (titleLabel) titleLabel.innerHTML = "📦 BULK DEPOSIT MANAGEMENT";
                     switchBtn.textContent = "👤 Switch to Single Counter";
-                    switchBtn.style.background = "#27ae60"; // ग्रीन थीम
+                    switchBtn.style.background = "#27ae60"; // ग्रीन कलर
                     switchBtn.setAttribute('data-current-mode', 'bulk');
 
-                    // बल्k का जावास्क्रिप्ट इंजन तुरंत इनिशियलाइज़ करें
+                    // 3. बल्क का दिमाग (Engine) तुरंत एक्टिवेट करो
                     if (typeof window.initBulkDepositPage === 'function') {
-                        window.initBulkDepositPage(currentUser);
+                        window.initBulkDepositPage(window.currentUser);
                     }
                 } else {
-                    // बल्क ब्लॉक छुपाएं और वापस सिंगल काउंटर पर आएं
+                    // वापस सिंगल काउंटर पर आएं
                     bulkWrapper.classList.add('hidden-block');
                     singleWrapper.classList.remove('hidden-block');
 
-                    titleLabel.innerHTML = "SINGLE CASH COUNTER";
+                    if (titleLabel) titleLabel.innerHTML = "SINGLE CASH COUNTER";
                     switchBtn.textContent = "📦 Switch to Bulk Deposit";
-                    switchBtn.style.background = "#f2994a"; // ऑरेंज थीम
+                    switchBtn.style.background = "#f2994a"; // ऑरेंज कलर
                     switchBtn.setAttribute('data-current-mode', 'single');
 
-                    masterFormClear(); // फॉर्म डेटा क्लियर करें
-                    loadTodayTransactions(); // लेज़र सिंक करें
+                    // सिंगल फॉर्म को साफ़ और लेज़र रिफ्रेश करें
+                    if (typeof masterFormClear === 'function') masterFormClear();
+                    if (typeof loadTodayTransactions === 'function') loadTodayTransactions();
                 }
-            };
-        }
+            }
+        });
 
+        
         // ⌨️ कीबोर्ड शॉर्टकट्स (Ctrl+S, Esc) ग्लोबल बाइंडिंग इसी के अंदर
         document.onkeydown = function(e) {
             if ((e.key === 's' || e.key === 'S') && (e.ctrlKey || e.metaKey)) {
