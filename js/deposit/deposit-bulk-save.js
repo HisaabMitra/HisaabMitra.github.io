@@ -6,13 +6,14 @@ document.addEventListener('click', async (e) => {
     if (e.target && e.target.id === 'btn-dep-save') {
         
         const depositorNameInput = document.getElementById('bulk-depositor-name');
-        if (!depositorNameInput) return; // अगर स्क्रीन पर बल्क पेज एक्टिव नहीं है तो बाहर निकलें
+        // सुरक्षा गार्ड: अगर स्क्रीन पर बल्क पेज एक्टिव नहीं है तो यहीं रोक दो
+        if (!depositorNameInput) return; 
 
         const depositorName = depositorNameInput.value.trim().toUpperCase();
         const depositorMobile = document.getElementById('bulk-depositor-mobile').value.trim();
         const rows = document.querySelectorAll('#bulk-accounts-tbody tr');
 
-        // डिनॉमिनेशन वैल्यूज निकालें
+        // डिनॉमिनेशन काउंटर से लाइव कैश उठाएं
         let netCash = 0;
         let denomValues = {};
         if (window.DenominationComponent) {
@@ -20,9 +21,9 @@ document.addEventListener('click', async (e) => {
             denomValues = window.DenominationComponent.getValues() || {};
         }
 
-        // बुनियादी जमाकर्ता वैलिडेशन
+        // जमाकर्ता डेटा वैलिडेशन
         if (!depositorName || !depositorMobile) {
-            window.showSystemAlert("जмаकर्ता (Depositor) का नाम और मोबाइल नंबर भरना अनिवार्य है!", "Validation Error", "⚠️");
+            window.showSystemAlert("जमाकर्ता (Depositor) का नाम और मोबाइल नंबर भरना अनिवार्य है!", "Validation Error", "⚠️");
             return;
         }
 
@@ -40,7 +41,7 @@ document.addEventListener('click', async (e) => {
         let bulkGrandTotal = 0;
         let accountNumbersInBatch = [];
 
-        // ग्रिड से सारा डेटा कलेक्ट और वेरिफाई करें
+        // ग्रिड की सभी रोज़ से लाइव डेटा कलेक्ट करें
         for (let row of rows) {
             const accInput = row.querySelector('.bulk-acc-input');
             const nameInput = row.querySelector('.bulk-name-input');
@@ -77,10 +78,10 @@ document.addEventListener('click', async (e) => {
             });
         }
 
-        // कैश और ग्रैंड टोटल मैचिंग
+        // कैश मिलान वैलिडेशन Check
         if (netCash === 0) {
             const proceedWithoutCash = await new Promise((resolve) => {
-                window.showSystemConfirm("बल्क डिपॉजिट में कोई कैश डिनॉमिनेशन नहीं भरा गया है। क्या आप बिना कैश के आगे बढ़ना चाहते हैं?", "Warning", () => resolve(true));
+                window.showSystemConfirm("बल्क ग्रिड में कोई कैश डिनॉमिनेशन नहीं भरा गया है। क्या आप बिना कैश के आगे बढ़ना चाहते हैं?", "Warning", () => resolve(true));
             });
             if (!proceedWithoutCash) return;
         } else if (Math.abs(netCash - bulkGrandTotal) > 0.01) {
@@ -88,7 +89,7 @@ document.addEventListener('click', async (e) => {
             return;
         }
 
-        // 🛑 प्रत्येक अकाउंट की आज की लिमिट डेटाबेस से बैच-वेरिफाई करें
+        // 🛑 [BULK BATCH LIMIT CHECK] सभी खातों की लिमिट एक मिलीसेकंड में चेक करें
         const today = new Date().toISOString().split('T')[0];
         try {
             const { data: existingTxList, error: limitErr } = await window.supabaseClient
@@ -119,13 +120,13 @@ document.addEventListener('click', async (e) => {
             return;
         }
 
-        // 🚀 सब सुरक्षित! अब बैच इंसर्ट प्रोसेस शुरू करें
+        // 🚀 गो-अहेड हरी झंडी! बैच प्रोसेसिंग शुरू करें
         try {
             const bulkId = `BLK-${Date.now()}`;
             
             const finalTransactionsPayload = bulkTransactions.map((tx, idx) => {
                 let comm = Math.min(tx.amount * 0.004, 50);
-                // डिनॉमिनेशन सिर्फ पहली रो के साथ अटैच करें ताकि वॉल्ट बैलेंस डुप्लिकेट न हो
+                // डिनॉमिनेशन केवल पहली रो के साथ सिंक करें ताकि तिजोरी में कैश रिपीट न हो
                 const denomPayload = (idx === 0) ? { ...denomValues } : {};
 
                 return {
@@ -137,14 +138,14 @@ document.addEventListener('click', async (e) => {
                 };
             });
 
-            // १. डेटाबेस में एक साथ बैच इंसर्ट भेजें
+            // स्टेप १: Supabase में कंबाइन इंसर्ट भेजें
             const { error: insertErr } = await window.supabaseClient
                 .from('deposit_transactions')
                 .insert(finalTransactionsPayload);
 
             if (insertErr) throw insertErr;
 
-            // २. सेटलमेंट और वॉल्ट डेटा सिंक करें
+            // स्टेप २: सेटलमेंट बैलेंस और वॉल्ट अपडेट
             const currentSettlementBalance = parseFloat(window.currentUser.settlement_balance) || 0;
             const updatedSettlementBalance = currentSettlementBalance - bulkGrandTotal;
 
@@ -177,5 +178,16 @@ document.addEventListener('click', async (e) => {
             console.error("Bulk Core Insertion Error:", err);
             window.showSystemAlert("बल्क ट्रांजैक्शन फेल हो गया: " + err.message, "Error", "❌");
         }
+    }
+});
+
+// ⌨️ बल्क कीबोर्ड शॉर्टकट्स
+document.addEventListener('keydown', function(e) {
+    if ((e.key === 's' || e.key === 'S') && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault(); 
+        document.getElementById('btn-dep-save')?.click();
+    }
+    if (e.key === 'Escape' || e.key === 'Esc') {
+        document.getElementById('btn-dep-clear')?.click();
     }
 });
