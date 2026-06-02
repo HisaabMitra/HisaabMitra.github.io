@@ -10,13 +10,13 @@ window.initDepositPage = async function (currentUser) {
         const koCodeLabel = document.getElementById('lbl-ko-code');
         if (koCodeLabel) koCodeLabel.innerText = currentUser.ko_code;
 
-        // 💥 [MASTER SHARED CONTAINER FIX]: केवल एक बार साझा कंटेनर में विजेट लोड करें
+        // 💥 मास्टर शेयर्ड कंटेनर में विजेट को इमीडिएटली रेंडर करें
         if (window.DenominationComponent) {
             setTimeout(() => {
                 window.DenominationComponent.clear();
                 window.DenominationComponent.render('master-shared-denomination-container');
                 
-                // साझा इनपुट ट्रैकर (दोनों मोड के लिए लाइव रिफ्लेक्शन एक्टिवेट)
+                // साझा इनपुट ट्रैकर को फ्रेश बाइंड करें
                 const masterContainer = document.getElementById('master-shared-denomination-container');
                 if (masterContainer) {
                     masterContainer.querySelectorAll('.denom-in, .denom-out').forEach(input => {
@@ -49,7 +49,7 @@ window.initDepositPage = async function (currentUser) {
 
                 tbody.innerHTML = '';
                 if (!data || data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:15px; color:#777;">आज आपका कोई सिंगल ट्रांजैक्शन नहीं मिला</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:15px; color:#777;">आज आपका कोई SINGLE TRANSACTION नहीं मिला</td></tr>';
                     return;
                 }
 
@@ -277,7 +277,7 @@ window.initDepositPage = async function (currentUser) {
 
                 if (!singleWrapper || !bulkWrapper) return;
 
-                // 🧹 स्विच बटन दबाते ही सबसे पहले सिंगल फॉर्म और डिनॉमिनेशन साफ करें
+                // 🧹 स्विच होते ही सिंगल फॉर्म साफ़ करें
                 masterFormClear();
 
                 if (currentMode === 'single') {
