@@ -255,3 +255,70 @@ window.initDepositPage = async function (currentUser) {
         console.error("Counter Page Init Error:", error); 
     }
 };
+
+
+
+// ========================================================
+        // 🔄 IN-PAGE DYNAMIC LIVE SWITCHER MECHANISM (CORNER BUTTON)
+        // ========================================================
+        const switchBtn = document.getElementById('btn-switch-deposit-mode');
+        if (switchBtn) {
+            switchBtn.onclick = async function() {
+                const currentMode = switchBtn.getAttribute('data-current-mode');
+                const singleWrapper = document.getElementById('single-deposit-view-wrapper');
+                const bulkWrapper = document.getElementById('bulk-deposit-view-wrapper');
+                const titleLabel = document.getElementById('deposit-module-title');
+
+                if (currentMode === 'single') {
+                    // स्थिति ए: सिंगल से बल्क में जाना है
+                    switchBtn.textContent = "⌛ Loading Bulk Engine...";
+                    switchBtn.disabled = true;
+
+                    try {
+                        // १. बल्क का HTML अलग फ़ाइल से लाइव लेकर आएं
+                        const res = await fetch('./pages/deposit-bulk.html');
+                        if (!res.ok) throw new Error("Bulk template file missing");
+                        const bulkHtml = await res.text();
+                        
+                        // २. उसे इंजेक्ट करें और स्क्रीन विज़िबल करें
+                        bulkWrapper.innerHTML = bulkHtml;
+                        singleWrapper.classList.add('hidden-block');
+                        bulkWrapper.classList.remove('hidden-block');
+
+                        // ३. बटन और टाइटल्स को बदलें
+                        titleLabel.innerHTML = "📦 BULK DEPOSIT MANAGEMENT";
+                        switchBtn.textContent = "👤 Switch to Single Counter";
+                        switchBtn.style.background = "#27ae60"; // ग्रीन कलर ताकि पता चले अलग मोड है
+                        switchBtn.setAttribute('data-current-mode', 'bulk');
+
+                        // ४. बल्क का दिमाग (Engine) शुरू कर दें
+                        if (typeof window.initBulkDepositPage === 'function') {
+                            window.initBulkDepositPage(currentUser);
+                        }
+
+                    } catch (err) {
+                        console.error("Failed to swap to bulk layout:", err);
+                        window.showSystemAlert("बल्क लेआउट लोड करने में विफलता!", "System Error", "❌");
+                        switchBtn.textContent = "📦 Switch to Bulk Deposit";
+                    } finally {
+                        switchBtn.disabled = false;
+                    }
+
+                } else {
+                    // स्थिति बी: बल्क से वापस सिंगल काउंटर में आना है
+                    bulkWrapper.classList.add('hidden-block');
+                    singleWrapper.classList.remove('hidden-block');
+                    bulkWrapper.innerHTML = ""; // मेमोरी साफ़ करें
+
+                    titleLabel.innerHTML = "IN-PAGE COUNTER SWITCHER";
+                    switchBtn.textContent = "📦 Switch to Bulk Deposit";
+                    switchBtn.style.background = "#f2994a"; 
+                    switchBtn.setAttribute('data-current-mode', 'single');
+
+                    // सिंगल का लेज़र दोबारा रिफ्रेश करें
+                    if (typeof window.loadTodayTransactions === 'function') {
+                        window.loadTodayTransactions();
+                    }
+                }
+            };
+        }
