@@ -1,43 +1,88 @@
-// js/deposit/deposit-bulk.js
+// ========================================================
+// 📦 BULK DEPOSIT CONTROLLER & LIVE AUTO-REGISTRATION ENGINE
+// ========================================================
+
 let bulkRowCounter = 0;
 let globalCurrentUser = null; // SOL ID एक्सेस करने के लिए लोकल कॉपी
 
+// 🌟 [MASTER INITIALIZER]: इसे सीधे window ऑब्जेक्ट पर बाइंड किया ताकि deposit.js इसे ढूंढ सके
 window.initBulkDepositPage = async function (currentUser) {
+    console.log("Bulk Deposit Engine Initializing...");
     try {
         globalCurrentUser = currentUser; // यूज़र डेटा सेव करें
 
+        // [1] काउंटर KO Code स्क्रीन पर सेट करें
+        const koCodeLabel = document.getElementById('lbl-bulk-ko-code');
+        if (koCodeLabel) koCodeLabel.innerText = currentUser.ko_code;
+
+        // [2] डिनॉमिनेशन विजेट को बल्क कंटेनर में रेंडर करें और फ्रेश बाइंड करें
         if (window.DenominationComponent) {
             setTimeout(() => {
+                // पहले पुराने किसी भी विजेट का डेटा साफ करके फ्रेंडर करें
+                window.DenominationComponent.clear();
                 window.DenominationComponent.render('bulk-denomination-container');
-            }, 100);
+                
+                // 💥 [CRITICAL FIX]: बल्क स्क्रीन पर डिनॉमिनेशन इनपुट के बदलावों को ट्रैक करने के लिए इवेंट दोबारा अटैच करें
+                const bulkDenomContainer = document.getElementById('bulk-denomination-container');
+                if (bulkDenomContainer) {
+                    bulkDenomContainer.querySelectorAll('.denom-in, .denom-out').forEach(input => {
+                        input.addEventListener('input', () => {
+                            if (typeof window.DenominationComponent.calculate === 'function') {
+                                window.DenominationComponent.calculate();
+                            }
+                        });
+                    });
+                }
+            }, 150);
         }
 
+        // [3] डिफ़ॉल्ट रूप से पहली खाली खाता रो (Row) जोड़ें
         const tbody = document.getElementById('bulk-accounts-tbody');
         if (tbody) {
-            tbody.innerHTML = ''; 
+            tbody.innerHTML = ''; // पुराना कोई भी कचरा साफ़ करें
             window.addNewBulkRow();
         }
 
+        // [4] 🧹 Clear / रीसेट ऑल बटन लॉजिक (आईडी 'btn-bulk-dep-clear' के साथ सिंक)
         const clearBtn = document.getElementById('btn-bulk-dep-clear');
         if (clearBtn) {
             clearBtn.onclick = function() {
-                document.getElementById('bulk-depositor-name').value = "";
-                document.getElementById('bulk-depositor-mobile').value = "";
-                if (tbody) tbody.innerHTML = "";
-                document.getElementById('lbl-bulk-grand-total').innerText = "₹0.00";
-                if (window.DenominationComponent) window.DenominationComponent.clear();
+                const nameField = document.getElementById('bulk-depositor-name');
+                const mobileField = document.getElementById('bulk-depositor-mobile');
+                const grandTotalField = document.getElementById('lbl-bulk-grand-total');
+                const accountsTbody = document.getElementById('bulk-accounts-tbody');
+
+                if (nameField) nameField.value = "";
+                if (mobileField) mobileField.value = "";
+                if (accountsTbody) accountsTbody.innerHTML = "";
+                if (grandTotalField) grandTotalField.innerText = "₹0.00";
+                
+                // डिनॉमिनेशन कॉम्पोनेन्ट को रीसेट करें
+                if (window.DenominationComponent && typeof window.DenominationComponent.clear === 'function') {
+                    window.DenominationComponent.clear();
+                }
+                
                 window.addNewBulkRow();
+                console.log("Bulk Form Reset Done.");
             };
         }
 
+        // [5] ➕ '+ Add Row' बटन को इवेंट असाइन करें
         const addRowBtn = document.getElementById('btn-bulk-add-row');
         if (addRowBtn) {
             addRowBtn.onclick = window.addNewBulkRow;
         }
 
-    } catch (err) { console.error("Bulk Initializer Core Error:", err); }
+    } catch (err) {
+        console.error("Bulk Initializer Core Error:", err);
+    }
 };
 
+// ========================================================
+// 🛠️ ग्रिड रो-मैनेजमेंट और लाइव वेरिफिकेशन फंक्शन्स (Global)
+// ========================================================
+
+// [A] नई डायनेमिक रो जोड़ने का फंक्शन
 window.addNewBulkRow = function() {
     const tbody = document.getElementById('bulk-accounts-tbody');
     if (!tbody) return;
@@ -57,6 +102,7 @@ window.addNewBulkRow = function() {
     attachBulkRowEvents(rowId);
 };
 
+// [B] रो हटाने का फंक्शन
 window.removeBulkRow = function(rowId) {
     const tbody = document.getElementById('bulk-accounts-tbody');
     if (!tbody || tbody.children.length <= 1) {
@@ -76,6 +122,7 @@ function formatBulkAccountNumber(inputAcc, solId) {
     return `${solId}${parts[0].padStart(2, '0')}${parts[1].padStart(8, '0')}`;
 }
 
+// [C] लाइव खाता वेरिफिकेशन और ऑटो-रजिस्ट्रेशन पॉपअप इंटरफेस
 function attachBulkRowEvents(rowId) {
     const row = document.getElementById(rowId);
     if (!row) return;
@@ -86,7 +133,7 @@ function attachBulkRowEvents(rowId) {
 
     if (!accInput) return;
 
-    // 🏦 लाइव सर्च + ऑटो फॉर्मेटर लॉजिक
+    // अकाउंट नंबर बॉक्स से बाहर आते ही (Blur Event) लाइव सर्च
     accInput.addEventListener('blur', async () => {
         let accountNo = accInput.value.trim();
         if (!accountNo) return;
@@ -101,7 +148,7 @@ function attachBulkRowEvents(rowId) {
         }
 
         nameInput.value = "Searching ledger...";
-        
+
         try {
             const { data: customer, error } = await window.supabaseClient
                 .from('banking_customers') 
@@ -123,7 +170,7 @@ function attachBulkRowEvents(rowId) {
                     openRegistrationPrompt(accountNo, (registeredName) => {
                         if (registeredName) {
                             nameInput.value = registeredName.toUpperCase();
-                            // रजिस्ट्रेशन पूरा होने के बाद सीधा फोकस अमाउंट पर
+                            // पंजीकरण पूरा होने के बाद सीधा फोकस अमाउंट पर लॉक करें
                             setTimeout(() => { amtInput.focus(); }, 50);
                         } else {
                             nameInput.value = "";
@@ -143,7 +190,7 @@ function attachBulkRowEvents(rowId) {
     amtInput.addEventListener('input', () => window.calculateBulkGrandTotal());
 }
 
-// [E] ग्रिड का कुल योग (Grand Total) कैलकुलेटर
+// [D] ग्रिड का कुल योग (Grand Total) कैलकुलेटर
 window.calculateBulkGrandTotal = function() {
     let grandTotal = 0;
     document.querySelectorAll('.bulk-amount-input').forEach(input => {
@@ -156,7 +203,7 @@ window.calculateBulkGrandTotal = function() {
     }
 };
 
-// नया ग्राहक पंजीकरण मॉडल ऑपरेशंस (प्रॉम्ट मैकेनिज्म)
+// [E] नया ग्राहक पंजीकरण मॉडल ऑपरेशंस (प्रॉम्ट मैकेनिज्म)
 function openRegistrationPrompt(accountNo, callback) {
     const modal = document.getElementById('new-cust-modal');
     if (!modal) return callback(null);
