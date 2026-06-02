@@ -22,7 +22,8 @@ window.initBulkDepositPage = async function (currentUser) {
 
         // [3] डिफ़ॉल्ट रूप से पहली खाली खाता रो (Row) जोड़ें
         const tbody = document.getElementById('bulk-accounts-tbody');
-        if (tbody && tbody.children.length === 0) {
+        if (tbody) {
+            tbody.innerHTML = ''; // पुराना कोई भी कचरा साफ़ करें
             window.addNewBulkRow();
         }
 
@@ -52,7 +53,6 @@ window.initBulkDepositPage = async function (currentUser) {
                 data.forEach(tx => {
                     const time = new Date(tx.transaction_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                     
-                    // अगर बल्क आईडी है तो वो दिखाएं, नहीं तो नॉर्मल अकाउंट नंबर
                     const identifier = tx.bulk_id ? `📦 ${tx.bulk_id}` : tx.account_number;
                     const displayName = tx.bulk_id ? `Depositor: ${tx.depositor_name || 'N/A'}` : tx.customer_name;
                     const txTypeHint = tx.bulk_id ? `<br><small style="color:#777;">To: ${tx.customer_name}</small>` : '';
@@ -93,20 +93,31 @@ window.initBulkDepositPage = async function (currentUser) {
             }
         });
 
-        // [6] Clear / रीसेट ऑल बटन लॉजिक
-        document.getElementById('btn-dep-clear').onclick = function() {
-            document.getElementById('bulk-depositor-name').value = "";
-            document.getElementById('bulk-depositor-mobile').value = "";
-            document.getElementById('bulk-accounts-tbody').innerHTML = "";
-            document.getElementById('lbl-bulk-grand-total').innerText = "₹0.00";
-            
-            if (window.DenominationComponent && typeof window.clearAllDenominationInputs === 'function') {
-                window.clearAllDenominationInputs();
-            }
-            
-            window.addNewBulkRow();
-            console.log("Bulk Form Reset Done.");
-        };
+        // [6] Clear / रीसेट ऑल बटन लॉजिक (आईडी 'btn-bulk-dep-clear' के साथ सिंक किया गया)
+        const clearBtn = document.getElementById('btn-bulk-dep-clear');
+        if (clearBtn) {
+            clearBtn.onclick = function() {
+                document.getElementById('bulk-depositor-name').value = "";
+                document.getElementById('bulk-depositor-mobile').value = "";
+                const accountsTbody = document.getElementById('bulk-accounts-tbody');
+                if (accountsTbody) accountsTbody.innerHTML = "";
+                document.getElementById('lbl-bulk-grand-total').innerText = "₹0.00";
+                
+                // 🪙 फ़िक्स: डिनॉमिनेशन कॉम्पोनेन्ट को रीसेट करने का सही फंक्शन बाइंड किया
+                if (window.DenominationComponent && typeof window.DenominationComponent.clear === 'function') {
+                    window.DenominationComponent.clear();
+                }
+                
+                window.addNewBulkRow();
+                console.log("Bulk Form Reset Done.");
+            };
+        }
+
+        // 🛑 फ़िक्स: HTML लोड होने के बाद '+ Add Row' बटन को इन-लाइन बाइंड किया (DOMContentLoaded का लफड़ा ख़त्म)
+        const addRowBtn = document.getElementById('btn-bulk-add-row');
+        if (addRowBtn) {
+            addRowBtn.onclick = window.addNewBulkRow;
+        }
 
     } catch (err) {
         console.error("Bulk Initializer Error:", err);
@@ -295,11 +306,3 @@ window.calculateBulkGrandTotal = function() {
         labelTotal.innerText = `₹${grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
     }
 };
-
-// डोम लोड होने पर `+ Add Row` को लिसनर बाइंड करना
-document.addEventListener('DOMContentLoaded', () => {
-    const addRowBtn = document.getElementById('btn-bulk-add-row');
-    if (addRowBtn) {
-        addRowBtn.onclick = window.addNewBulkRow;
-    }
-});
