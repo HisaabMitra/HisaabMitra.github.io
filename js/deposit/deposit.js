@@ -10,21 +10,18 @@ window.initDepositPage = async function (currentUser) {
         const koCodeLabel = document.getElementById('lbl-ko-code');
         if (koCodeLabel) koCodeLabel.innerText = currentUser.ko_code;
 
-        // [2] डिनॉमिनेशन विजेट रेंडर करें और सिंगल काउंटर लिसनर अटैच करें
+        // 💥 [MASTER SHARED CONTAINER FIX]: केवल एक बार साझा कंटेनर में विजेट लोड करें
         if (window.DenominationComponent) {
             setTimeout(() => {
                 window.DenominationComponent.clear();
-                window.DenominationComponent.render('denomination-widget-container');
+                window.DenominationComponent.render('master-shared-denomination-container');
                 
-                // 💥 सिंगल इनपुट के लिए लिसनर हुक
-                const singleContainer = document.getElementById('denomination-widget-container');
-                if (singleContainer) {
-                    singleContainer.querySelectorAll('.denom-in, .denom-out').forEach(input => {
+                // साझा इनपुट ट्रैकर (दोनों मोड के लिए लाइव रिफ्लेक्शन एक्टिवेट)
+                const masterContainer = document.getElementById('master-shared-denomination-container');
+                if (masterContainer) {
+                    masterContainer.querySelectorAll('.denom-in, .denom-out').forEach(input => {
                         input.addEventListener('input', () => {
-                            const switchBtn = document.getElementById('btn-switch-deposit-mode');
-                            const mode = switchBtn ? switchBtn.getAttribute('data-current-mode') : 'single';
-                            // केवल सिंगल काउंटर एक्टिव होने पर ही अमाउंट को लाइव अपडेट करो
-                            if (mode === 'single' && typeof window.DenominationComponent.calculate === 'function') {
+                            if (typeof window.DenominationComponent.calculate === 'function') {
                                 window.DenominationComponent.calculate();
                             }
                         });
@@ -49,14 +46,6 @@ window.initDepositPage = async function (currentUser) {
                     .order('transaction_date', { ascending: false });
 
                 if (error) throw error;
-
-                const tableElement = tbody.closest('table');
-                if (tableElement) {
-                    const theadRow = tableElement.querySelector('thead tr');
-                    if (theadRow && !theadRow.querySelector('.action-header') && theadRow.children.length < 5) {
-                        theadRow.insertAdjacentHTML('beforeend', '<th class="action-header" style="padding:12px; text-align: center;">Action</th>');
-                    }
-                }
 
                 tbody.innerHTML = '';
                 if (!data || data.length === 0) {
@@ -288,7 +277,7 @@ window.initDepositPage = async function (currentUser) {
 
                 if (!singleWrapper || !bulkWrapper) return;
 
-                // 🧹 स्विच बटन दबाते ही सिंगल फॉर्म और डिनॉमिनेशन साफ करें
+                // 🧹 स्विच बटन दबाते ही सबसे पहले सिंगल फॉर्म और डिनॉमिनेशन साफ करें
                 masterFormClear();
 
                 if (currentMode === 'single') {
