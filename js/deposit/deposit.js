@@ -18,7 +18,7 @@ window.initDepositPage = async function (currentUser) {
             }, 100); 
         }
 
-        // [3] आज की सिंगल ट्रांजैक्शन्स लोड करने का फ़ंक्शन (डुप्लिकेट हेडर प्रोटेक्शन के साथ)
+        // [3] आज की सिंगल ट्रांजैक्शन्स लोड करने का फ़ंक्शन
         async function loadTodayTransactions() {
             const tbody = document.getElementById('today-tx-body');
             if (!tbody) return;
@@ -30,13 +30,13 @@ window.initDepositPage = async function (currentUser) {
                     .from('deposit_transactions')
                     .select('*')
                     .eq('ko_code', currentUser.ko_code)
-                    .is('bulk_id', null) // सिर्फ सिंगल डिपॉजिट देखना है
+                    .is('bulk_id', null) 
                     .gte('transaction_date', `${today}T00:00:00`)
                     .order('transaction_date', { ascending: false });
 
                 if (error) throw error;
 
-                // 🛑 सुरक्षा गार्ड: अगर टेबल हेडर में पहले से एक्शन कॉलम है, तो दोबारा मत जोड़ो
+                // सुरक्षा गार्ड: टेबल हेडर में एक्शन कॉलम फिक्स
                 const tableElement = tbody.closest('table');
                 if (tableElement) {
                     const theadRow = tableElement.querySelector('thead tr');
@@ -54,7 +54,7 @@ window.initDepositPage = async function (currentUser) {
                 data.forEach(tx => {
                     const time = new Date(tx.transaction_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                     const name = tx.customer_name || "N/A";
-                    const txStr = btoa(JSON.stringify(tx)); // Base64 कनवर्ट
+                    const txStr = btoa(JSON.stringify(tx)); 
 
                     tbody.insertAdjacentHTML('beforeend', `
                         <tr style="border-bottom: 1px solid #eee;">
@@ -64,21 +64,18 @@ window.initDepositPage = async function (currentUser) {
                             <td style="padding:12px;">${time}</td>
                             <td style="padding:12px; text-align:center;">
                                 <div style="display:inline-flex; align-items:center; gap:15px; justify-content:center;">
-                                    <span class="btn-edit-tx" data-tx="${txStr}" style="cursor:pointer; font-size:1.1rem; user-select:none; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'" title="Edit Transaction">✏️</span>
-                                    <span class="btn-print-receipt" data-tx="${txStr}" style="cursor:pointer; font-size:1.2rem; user-select:none; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'" title="Print Slip">🖨️</span>
+                                    <span class="btn-edit-tx" data-tx="${txStr}" style="cursor:pointer; font-size:1.1rem; user-select:none;" title="Edit Transaction">✏️</span>
+                                    <span class="btn-print-receipt" data-tx="${txStr}" style="cursor:pointer; font-size:1.2rem; user-select:none;" title="Print Slip">🖨️</span>
                                 </div>
                             </td>
                         </tr>
                     `);
                 });
 
-                // इवेंट लिसनर्स री-अटैच करें
                 attachEditEventListeners();
                 if (typeof attachPrintEventListeners === 'function') attachPrintEventListeners();
 
-            } catch (err) { 
-                console.error("Table Load Error:", err); 
-            }
+            } catch (err) { console.error("Table Load Error:", err); }
         }
 
         // [4] एडिट बटन पर क्लिक होने का लॉजिक
@@ -97,7 +94,6 @@ window.initDepositPage = async function (currentUser) {
                             wordsDisplay.innerText = `${window.numberToHindiWords(parseInt(txData.amount))} रुपए मात्र`;
                         }
 
-                        // डिनॉमिनेशन लोड करें
                         const notes = [500, 200, 100, 50, 20, 10, 5];
                         notes.forEach(note => {
                             const inInput = document.querySelector(`.denom-in[data-note="${note}"]`);
@@ -113,7 +109,6 @@ window.initDepositPage = async function (currentUser) {
 
                         if (window.DenominationComponent) window.DenominationComponent.calculate();
 
-                        // 🔄 सेव बटन को एडिट (Update) मोड में बदलें
                         const saveBtn = document.getElementById('btn-dep-save');
                         if (saveBtn) {
                             saveBtn.innerText = "🔄 Update Transaction";
@@ -123,18 +118,15 @@ window.initDepositPage = async function (currentUser) {
                         }
 
                         window.showSystemAlert("पुरानी सिंगल एंट्री लोड हो गई है!", "Edit Mode Activated", "ℹ️");
-                    } catch (err) {
-                        console.error("Error loading tx for edit:", err);
-                    }
+                    } catch (err) { console.error("Error loading tx for edit:", err); }
                 };
             });
         }
 
-        // ग्लोबल लिसनर्स के लिए लेज़र लोड को बाइंड करें
         window.loadTodayTransactions = loadTodayTransactions;
         loadTodayTransactions();
 
-        // [5] डोम एलिमेंट्स और वॉयस असिस्टेंट मैपिंग
+        // [5] डोम एलिमेंट्स मैपिंग
         const accInput = document.getElementById('dep-account-no');
         const custNameInput = document.getElementById('dep-cust-name');
         const amountInput = document.getElementById('dep-amount');
@@ -142,7 +134,6 @@ window.initDepositPage = async function (currentUser) {
         const speakBtn = document.getElementById('btn-speak-hindi');
         const remarksInput = document.getElementById('dep-remarks');
 
-        // लाइव अमाउंट इन वर्ड्स
         if (amountInput) {
             amountInput.addEventListener('input', () => {
                 const amt = parseInt(amountInput.value) || 0;
@@ -151,12 +142,6 @@ window.initDepositPage = async function (currentUser) {
             amountInput.addEventListener('wheel', e => e.preventDefault());
         }
 
-        // हिंदी वॉयस असिस्टेंट
-        let systemVoices = [];
-        function loadVoices() { systemVoices = window.speechSynthesis.getVoices(); }
-        loadVoices();
-        if (window.speechSynthesis.onvoiceschanged !== undefined) window.speechSynthesis.onvoiceschanged = loadVoices;
-
         if (speakBtn) {
             speakBtn.addEventListener('click', () => {
                 const amt = parseInt(amountInput.value) || 0;
@@ -164,13 +149,10 @@ window.initDepositPage = async function (currentUser) {
                 window.speechSynthesis.cancel();
                 const utterance = new SpeechSynthesisUtterance(`${window.numberToHindiWords(amt)} रुपए जमा के लिए तैयार है`);
                 utterance.lang = 'hi-IN';
-                let hindiVoice = systemVoices.find(v => v.lang.startsWith('hi') || v.name.includes('Hindi'));
-                if (hindiVoice) utterance.voice = hindiVoice;
                 window.speechSynthesis.speak(utterance);
             });
         }
 
-        // PNB स्टाइल फॉर्मेटर (e.g. 12-345678 कनवर्ट्स टू फुल एकाउंट नंबर)
         function formatAccountNumber(inputAcc, solId) {
             let acc = inputAcc.trim();
             if (acc.length > 10 || !acc.includes('-')) return acc;
@@ -178,7 +160,7 @@ window.initDepositPage = async function (currentUser) {
             return `${solId}${parts[0].padStart(2, '0')}${parts[1].padStart(8, '0')}`;
         }
 
-        // 🏦 सुपरफास्ट सिंगल कस्टमर सर्च (Blur Event)
+        // 🏦 [DYN-POPUP INTERFACE]: सुपरफास्ट सिंगल कस्टमर सर्च + ऑटो पॉपअप इंटीग्रेशन
         async function searchCustomer() {
             let accountNo = accInput.value.trim();
             if (!accountNo) return;
@@ -202,35 +184,82 @@ window.initDepositPage = async function (currentUser) {
                 if (error) throw error;
 
                 if (data) {
+                    // स्थिति 1: पुराना ग्राहक मिल गया
                     custNameInput.value = data.customer_name.toUpperCase();
                     amountInput.focus(); 
                 } else {
-                    custNameInput.value = "";
-                    window.showSystemAlert(`खाता संख्या ${accountNo} सिस्टम में पंजीकृत नहीं है!`, "Account Not Found", "❌");
-                    accInput.value = "";
-                    accInput.focus();
+                    // 🌟 स्थिति 2: नया ग्राहक मिला! अलर्ट रोकने के बजाय सीधे 'new-cust-modal' ट्रिगर करो
+                    custNameInput.value = "NOT REGISTERED";
+                    
+                    // आपके साझा रजिस्ट्रेशन प्रॉम्ट को कॉल करें जो बल्क फाइल में भी काम करता था
+                    if (typeof openRegistrationPrompt === 'function') {
+                        openRegistrationPrompt(accountNo, (registeredName) => {
+                            if (registeredName) {
+                                custNameInput.value = registeredName.toUpperCase();
+                                amountInput.focus();
+                            } else {
+                                custNameInput.value = "";
+                                accInput.value = "";
+                                accInput.focus();
+                            }
+                        });
+                    } else {
+                        // बैकअप सुरक्षा: अगर किसी वजह से फंक्शन ग्लोबल नहीं है, तो यहीं हैंडल कर लें
+                        const modal = document.getElementById('new-cust-modal');
+                        if (modal) {
+                            document.getElementById('nc-account-no').value = accountNo;
+                            document.getElementById('nc-name').value = "";
+                            document.getElementById('nc-mobile').value = "";
+                            document.getElementById('nc-address').value = "";
+                            modal.style.setProperty('display', 'flex', 'important');
+                            document.getElementById('nc-name').focus();
+
+                            const btnContinue = document.getElementById('btn-nc-continue');
+                            const btnCancel = document.getElementById('btn-nc-cancel');
+
+                            btnCancel.onclick = function() {
+                                modal.style.display = 'none';
+                                custNameInput.value = ""; accInput.value = ""; accInput.focus();
+                            };
+
+                            btnContinue.onclick = async function() {
+                                const fullName = document.getElementById('nc-name').value.trim().toUpperCase();
+                                const mobile = document.getElementById('nc-mobile').value.trim();
+                                const address = document.getElementById('nc-address').value.trim().toUpperCase();
+
+                                if (!fullName || !mobile) {
+                                    window.showSystemAlert("नाम और मोबाइल नंबर आवश्यक है!", "Error", "❌");
+                                    return;
+                                }
+
+                                try {
+                                    await window.supabaseClient.from('banking_customers').insert([{
+                                        account_number: accountNo, customer_name: fullName, mobile_number: mobile, customer_address: address
+                                    }]);
+                                    modal.style.display = 'none';
+                                    custNameInput.value = fullName;
+                                    amountInput.focus();
+                                } catch (e) { console.error(e); }
+                            };
+                        }
+                    }
                 }
             } catch (err) { 
                 console.error("Search error:", err.message); 
-                custNameInput.value = "ERROR FETCHING";
+                custNameInput.value = "";
             }
         }
         if (accInput) accInput.addEventListener('blur', searchCustomer);
 
-        // [6] 🧹 मास्टर रीसेट फंक्शन (बटन, फॉर्म और डिनॉमिनेशन तीनों को 100% साफ करने के लिए)
+        // [6] 🧹 मास्टर रीसेट फंक्शन
         function masterFormClear() {
             if (accInput) accInput.value = ""; 
             if (custNameInput) custNameInput.value = ""; 
             if (amountInput) amountInput.value = ""; 
             if (remarksInput) remarksInput.value = "";
             if (wordsDisplay) wordsDisplay.innerText = "Zero Rupees Only";
-            
-            // डिनॉमिनेशन विजेट को रीसेट करें
-            if (window.DenominationComponent && typeof window.DenominationComponent.clear === 'function') {
-                window.DenominationComponent.clear();
-            }
+            if (window.DenominationComponent) window.DenominationComponent.clear();
 
-            // बटन को वापस नॉर्मल Save मोड में लाएं
             const saveBtn = document.getElementById('btn-dep-save');
             if (saveBtn) {
                 saveBtn.innerText = "💾 Save";
@@ -238,70 +267,56 @@ window.initDepositPage = async function (currentUser) {
                 delete saveBtn.dataset.mode;
                 delete saveBtn.dataset.editingTxId;
             }
-            console.log("Single Form & Edit mode completely reset.");
         }
-
         const clearBtn = document.getElementById('btn-dep-clear');
         if (clearBtn) clearBtn.onclick = masterFormClear;
 
         // ========================================================
         // 🔄 [GLOBAL EVENT DELEGATION] 100% BULLETPROOF SWAPPER
         // ========================================================
-        // भाई, यह पूरे डॉक्यूमेंट पर नज़र रखेगा, बटन कभी भी लोड हो यह उसे ढूंढ ही लेगा!
         document.body.addEventListener('click', function(e) {
             if (e.target && e.target.id === 'btn-switch-deposit-mode') {
-                console.log("Switcher Button Clicked Successfully!");
-                
                 const switchBtn = e.target;
                 const currentMode = switchBtn.getAttribute('data-current-mode');
                 const singleWrapper = document.getElementById('single-deposit-view-wrapper');
                 const bulkWrapper = document.getElementById('bulk-deposit-view-wrapper');
                 const titleLabel = document.getElementById('deposit-module-title');
 
-                // सुरक्षा जांच: अगर एलिमेंट्स स्क्रीन पर नहीं हैं तो ज़बरदस्ती ढूंढो
-                if (!singleWrapper || !bulkWrapper) {
-                    console.error("Critical wrappers missing in DOM!");
-                    return;
-                }
+                if (!singleWrapper || !bulkWrapper) return;
 
                 if (currentMode === 'single') {
-                    // 1. सिंगल को छुपाओ, बल्क को दिखाओ
                     singleWrapper.classList.add('hidden-block');
                     bulkWrapper.classList.remove('hidden-block');
 
-                    // 2. यूआई टेक्स्ट और रंग बदलो
                     if (titleLabel) titleLabel.innerHTML = "📦 BULK DEPOSIT MANAGEMENT";
                     switchBtn.textContent = "👤 Switch to Single Counter";
-                    switchBtn.style.background = "#27ae60"; // ग्रीन कलर
+                    switchBtn.style.background = "#27ae60"; 
                     switchBtn.setAttribute('data-current-mode', 'bulk');
 
-                    // 3. बल्क का दिमाग (Engine) तुरंत एक्टिवेट करो
                     if (typeof window.initBulkDepositPage === 'function') {
-                        window.initBulkDepositPage(window.currentUser);
+                        window.initBulkDepositPage(currentUser);
                     }
                 } else {
-                    // वापस सिंगल काउंटर पर आएं
                     bulkWrapper.classList.add('hidden-block');
                     singleWrapper.classList.remove('hidden-block');
 
                     if (titleLabel) titleLabel.innerHTML = "SINGLE CASH COUNTER";
                     switchBtn.textContent = "📦 Switch to Bulk Deposit";
-                    switchBtn.style.background = "#f2994a"; // ऑरेंज कलर
+                    switchBtn.style.background = "#f2994a"; 
                     switchBtn.setAttribute('data-current-mode', 'single');
 
-                    // सिंगल फॉर्म को साफ़ और लेज़र रिफ्रेश करें
-                    if (typeof masterFormClear === 'function') masterFormClear();
-                    if (typeof loadTodayTransactions === 'function') loadTodayTransactions();
+                    masterFormClear();
+                    loadTodayTransactions();
                 }
             }
         });
 
-        
-        // ⌨️ कीबोर्ड शॉर्टकट्स (Ctrl+S, Esc) ग्लोबल बाइंडिंग इसी के अंदर
+        // कीबोर्ड शॉर्टकट्स
         document.onkeydown = function(e) {
+            const switchBtn = document.getElementById('btn-switch-deposit-mode');
+            const currentMode = switchBtn ? switchBtn.getAttribute('data-current-mode') : 'single';
             if ((e.key === 's' || e.key === 'S') && (e.ctrlKey || e.metaKey)) {
                 e.preventDefault(); 
-                const currentMode = switchBtn ? switchBtn.getAttribute('data-current-mode') : 'single';
                 if (currentMode === 'single') {
                     document.getElementById('btn-dep-save')?.click();
                 } else {
@@ -309,7 +324,6 @@ window.initDepositPage = async function (currentUser) {
                 }
             }
             if (e.key === 'Escape' || e.key === 'Esc') {
-                const currentMode = switchBtn ? switchBtn.getAttribute('data-current-mode') : 'single';
                 if (currentMode === 'single') {
                     masterFormClear();
                 } else {
@@ -318,7 +332,5 @@ window.initDepositPage = async function (currentUser) {
             }
         };
 
-    } catch (error) { 
-        console.error("Counter Page Init Critical Error:", error); 
-    }
+    } catch (error) { console.error(error); }
 };
