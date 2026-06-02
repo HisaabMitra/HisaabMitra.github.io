@@ -167,7 +167,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-   // ==========================================
+    // ==========================================
     // 4. PROFILE INTEGRITY CHECK (WITH ADDRESS SYNC)
     // ==========================================
     async function showDashboard(user) {
@@ -262,7 +262,7 @@ document.addEventListener('DOMContentLoaded', () => {
         allMenuButtons.forEach(btn => {
             const page = btn.getAttribute('data-page');
             if (role === 'agent') {
-                const allowed = ['home', 'deposit', 'deposit-bulk', 'withdrawal', 'search'];
+                const allowed = ['home', 'deposit', 'withdrawal', 'search'];
                 btn.style.setProperty('display', allowed.includes(page) ? 'block' : 'none', 'important');
             } else if (role === 'admin') {
                 btn.style.setProperty('display', page === 'super-admin' ? 'none' : 'block', 'important');
@@ -287,10 +287,14 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    // 🌟 [MASTER CASH-BREAKER CORE LOADER ENGINE] 🌟
     async function loadPage(pageName) {
         workspace.innerHTML = `<div class="loading">Loading component...</div>`;
         try {
-            const response = await fetch(`./pages/${pageName}.html`);
+            // यूआरएल के पीछे लाइव टाइमस्टैम्प जोड़ा गया ताकि पुराना कैश लोड न हो
+            const cacheBreaker = Date.now();
+            const response = await fetch(`./pages/${pageName}.html?v=${cacheBreaker}`);
+            
             if (!response.ok) throw new Error(`Page lookup error (${response.status})`);
             const htmlContent = await response.text();
             workspace.innerHTML = htmlContent;
@@ -300,27 +304,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // === 🌟 [DYNAMIC ROUTER SWITCHER ENGINE] 🌟 ===
     function initializePageModules(pageName) {
         if (pageName === 'home') {
             initHomepageModule();
         }
 
-        // १. सिंगल डिपॉजिट इनिशियलाइज़र
         if (pageName === 'deposit') {
             if (typeof window.initDepositPage === 'function') {
                 window.initDepositPage(currentLoggedInUser);
             } else {
                 console.error("initDepositPage function missing in deposit.js");
-            }
-        }
-
-        // २. बल्क डिपॉजिट इनिशियलाइज़र (स्वतंत्र रूट)
-        if (pageName === 'deposit-bulk') {
-            if (typeof window.initBulkDepositPage === 'function') {
-                window.initBulkDepositPage(currentLoggedInUser);
-            } else {
-                console.error("initBulkDepositPage function missing in deposit-bulk.js");
             }
         }
 
