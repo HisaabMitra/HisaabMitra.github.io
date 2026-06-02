@@ -273,6 +273,12 @@ window.initDepositPage = async function (currentUser) {
 
 
 
+
+
+
+
+
+
 // 🖨️ THERMAL RECEIPT PRINT ENGINE (58mm / 2-Inch Standard)
 function attachPrintEventListeners() {
     document.querySelectorAll('.btn-print-receipt').forEach(btn => {
@@ -384,3 +390,177 @@ function attachPrintEventListeners() {
         };
     });
 }
+
+
+
+
+
+// ========================================================
+// 📦 BULK DEPOSIT & AUTO-REGISTRATION MODAL INTERFACES
+// ========================================================
+
+let bulkRowCounter = 0;
+
+// [1] सिंगल और बल्क पैनल के बीच स्विच करने का लॉजिक
+document.addEventListener('click', (e) => {
+    if (!e.target) return;
+    
+    if (e.target.id === 'mode-single-dep') {
+        document.getElementById('bulk-deposit-panel')?.classList.add('hidden');
+        document.getElementById('single-deposit-form-block')?.classList.remove('hidden'); // आपके सिंगल फॉर्म की आईडी
+        e.target.className = "btn btn-primary";
+        document.getElementById('mode-bulk-dep').className = "btn btn-secondary";
+    }
+    
+    if (e.target.id === 'mode-bulk-dep') {
+        document.getElementById('single-deposit-form-block')?.classList.add('hidden');
+        document.getElementById('bulk-deposit-panel')?.classList.remove('hidden');
+        e.target.className = "btn btn-primary";
+        document.getElementById('mode-single-dep').className = "btn btn-secondary";
+        
+        // अगर बल्क टेबल एकदम खाली है, तो डिफ़ॉल्ट रूप से पहली रो खोल दें
+        const tbody = document.getElementById('bulk-accounts-tbody');
+        if (tbody && tbody.children.length === 0) {
+            addNewBulkRow();
+        }
+    }
+});
+
+// [2] नई डायनेमिक रो जोड़ने का फंक्शन
+function addNewBulkRow() {
+    const tbody = document.getElementById('bulk-accounts-tbody');
+    if (!tbody) return;
+
+    bulkRowCounter++;
+    const rowId = `bulk-row-${bulkRowCounter}`;
+
+    const trHtml = `
+        <tr id="${rowId}" style="border-bottom: 1px solid #eee;">
+            <td style="padding: 8px;">
+                <input type="text" class="bulk-acc-input" data-row="${rowId}" placeholder="Enter Account No." style="width: 95%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+            </td>
+            <td style="padding: 8px;">
+                <input type="text" class="bulk-name-input" id="name-${rowId}" placeholder="Fetching name..." style="width: 95%; padding: 8px; border: 1px solid #checkbox; border-radius: 4px; background: #f9f9f9; text-transform: uppercase;" readonly>
+            </td>
+            <td style="padding: 8px;">
+                <input type="number" class="bulk-amount-input" placeholder="Max 25000" min="1" max="25000" style="width: 90%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+            </td>
+            <td style="padding: 8px; text-align: center;">
+                <button type="button" onclick="removeBulkRow('${rowId}')" style="background: #c5221f; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer;">❌</button>
+            </td>
+        </tr>
+    `;
+    tbody.insertAdjacentHTML('beforeend', trHtml);
+    attachBulkRowEvents(rowId);
+}
+
+// रो हटाने का फंक्शन
+window.removeBulkRow = function(rowId) {
+    const row = document.getElementById(rowId);
+    if (row) row.remove();
+    calculateBulkGrandTotal(); // टोटल दोबारा गिनें
+};
+
+// [3] 🌟 सबसे इम्पोर्टेन्ट: अकाउंट नंबर चेक और ऑटो-रजिस्ट्रेशन लॉजिक 🌟
+function attachBulkRowEvents(rowId) {
+    const row = document.getElementById(rowId);
+    if (!row) return;
+
+    const accInput = row.querySelector('.bulk-acc-input');
+    const nameInput = row.querySelector('.bulk-name-input');
+    const amtInput = row.querySelector('.bulk-amount-input');
+
+    if (!accInput) return;
+
+    // जब ऑपरेटर अकाउंट नंबर डालकर बाहर क्लिक करेगा या एंटर मारेगा
+    accInput.addEventListener('blur', async () => {
+        const accountNo = accInput.value.trim();
+        if (!accountNo) return;
+
+        nameInput.value = "Searching ledger...";
+
+        try {
+            // मान लेते हैं आपकी कस्टमर्स मास्टर टेबल का नाम 'customers' है 
+            // (अगर आपकी टेबल का नाम अलग है जैसे 'customer_masters' तो उसे बदल लें)
+            const { data: customer, error } = await window.supabaseClient
+                .from('customers') 
+                .select('customer_name')
+                .eq('account_number', accountNo)
+                .maybeSingle();
+
+            if (error) throw error;
+
+            if (customer) {
+                // केस ए: ग्राहक मिल गया!
+                nameInput.value = customer.customer_name.toUpperCase();
+                nameInput.removeAttribute('readonly'); // एडिटिंग के लिए अनलॉक करें
+                nameInput.style.background = "#fff";
+            } else {
+                // केस बी: ग्राहक नहीं मिला! पुराना रजिस्ट्रेशन मॉडल ट्रिगर करें 💥
+                nameInput.value = "NOT REGISTERED";
+                
+                window.showSystemConfirm(
+                    `अकाउंट नंबर ${accountNo} डेटाबेस में पंजीकृत नहीं है।\nक्या आप अभी नया कस्टमर रजिस्ट्रेशन फॉर्म खोलना चाहते हैं?`,
+                    "New Customer Detected",
+                    async () => {
+                        // 📋 यहाँ हम आपके पुराने न्यू कस्टमर रजिस्ट्रेशन मॉडल को कॉल करेंगे
+                        // मान लेते हैं आपके पास window.openNewCustomerModal जैसा कोई ग्लोबल फंक्शन है
+                        if (typeof window.triggerNewCustomerRegistration === 'function') {
+                            
+                            // हम रजिस्ट्रेशन मॉड्यूल को अकाउंट नंबर पास कर देते हैं ताकि ऑपरेटर को दोबारा टाइप न करना पड़े
+                            const registeredName = await window.triggerNewCustomerRegistration(accountNo);
+                            
+                            if (registeredName) {
+                                // रजिस्ट्रेशन सफल होने के बाद नाम अपने आप रो में सेट हो जाएगा
+                                nameInput.value = registeredName.toUpperCase();
+                                nameInput.style.background = "#fff";
+                                nameInput.removeAttribute('readonly');
+                            } else {
+                                nameInput.value = "";
+                                accInput.value = "";
+                                window.showSystemAlert("रजिस्ट्रेशन रद्द कर दिया गया। कृपया वैध खाता संख्या डालें।", "Cancelled", "⚠️");
+                            }
+                        } else {
+                            // अगर ग्लोबल फंक्शन नहीं मिल रहा, तो हम नाम को मैन्युअल भरने के लिए खोल देते हैं
+                            window.showSystemAlert("कस्टमर रजिस्ट्रेशन मॉडल स्क्रिप्ट लोड नहीं है! आप नाम मैन्युअल टाइप कर सकते हैं।", "Notice", "ℹ️");
+                            nameInput.removeAttribute('readonly');
+                            nameInput.style.background = "#fff";
+                            nameInput.value = "";
+                            nameInput.focus();
+                        }
+                    }
+                );
+            }
+        } catch (err) {
+            console.error("Bulk Account Fetch Error:", err);
+            nameInput.value = "ERROR FETCHING";
+        }
+    });
+    
+    // अमाउंट बॉक्स में टाइप करने पर ग्रैंड टोटल कैलकुलेटर को ट्रिगर करें
+    amtInput.addEventListener('input', () => {
+        calculateBulkGrandTotal();
+    });
+}
+
+// सभी रोज़ का टोटल जोड़कर डिनॉमिनेशन कॉम्पोनेंट को बताने वाला फंक्शन
+function calculateBulkGrandTotal() {
+    let grandTotal = 0;
+    document.querySelectorAll('.bulk-amount-input').forEach(input => {
+        grandTotal += parseFloat(input.value) || 0;
+    });
+    
+    // यह आपके पुराने डिनॉमिनेशन कैलकुलेटर को ग्रैंड टोटल भेज देगा ताकि नोट मैच हो सकें
+    console.log("Current Bulk Grand Total Required:", grandTotal);
+    // इन फ्यूचर सेव बटन दबाने पर हम इस टोटल को डिनॉमिनेशन कॉम्पोनेंट के टोटल से मैच करेंगे
+}
+
+// ऐड रो बटन का लिसनर सेट करना
+document.addEventListener('DOMContentLoaded', () => {
+    const addRowBtn = document.getElementById('btn-bulk-add-row');
+    if (addRowBtn) {
+        addRowBtn.addEventListener('click', addNewBulkRow);
+    }
+});
+
+
