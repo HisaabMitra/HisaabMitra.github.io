@@ -279,8 +279,8 @@ window.initDepositPage = async function (currentUser) {
         const clearBtn = document.getElementById('btn-dep-clear');
         if (clearBtn) clearBtn.onclick = masterFormClear;
 
-        // ========================================================
-        // 🔄 [GLOBAL EVENT DELEGATION] स्विचर इंजन
+      // ========================================================
+        // 🔄 [GLOBAL EVENT DELEGATION] स्विचर इंजन (ऑटो-क्लियर के साथ)
         // ========================================================
         document.body.addEventListener('click', function(e) {
             if (e.target && e.target.id === 'btn-switch-deposit-mode') {
@@ -292,7 +292,11 @@ window.initDepositPage = async function (currentUser) {
 
                 if (!singleWrapper || !bulkWrapper) return;
 
+                // 🧹 स्विच बटन दबाते ही सबसे पहले सिंगल फॉर्म और डिनॉमिनेशन साफ करें
+                if (typeof masterFormClear === 'function') masterFormClear();
+
                 if (currentMode === 'single') {
+                    // सिंगल ब्लॉक छुपाएं और बल्क ग्रिड ब्लॉक दिखाएं
                     singleWrapper.classList.add('hidden-block');
                     bulkWrapper.classList.remove('hidden-block');
 
@@ -301,10 +305,12 @@ window.initDepositPage = async function (currentUser) {
                     switchBtn.style.background = "#27ae60"; 
                     switchBtn.setAttribute('data-current-mode', 'bulk');
 
+                    // बल्क का जावास्क्रिप्ट इंजन इनिशियलाइज़ करें
                     if (typeof window.initBulkDepositPage === 'function') {
                         window.initBulkDepositPage(currentUser);
                     }
                 } else {
+                    // बल्क ब्लॉक छुपाएं और वापस सिंगल काउंटर पर आएं
                     bulkWrapper.classList.add('hidden-block');
                     singleWrapper.classList.remove('hidden-block');
 
@@ -313,8 +319,11 @@ window.initDepositPage = async function (currentUser) {
                     switchBtn.style.background = "#f2994a"; 
                     switchBtn.setAttribute('data-current-mode', 'single');
 
-                    masterFormClear();
-                    loadTodayTransactions();
+                    // 🧹 बल्क से सिंगल में आते ही बल्क के फॉर्म को भी साफ करें
+                    const bulkClearBtn = document.getElementById('btn-bulk-dep-clear');
+                    if (bulkClearBtn) bulkClearBtn.click();
+
+                    loadTodayTransactions(); // लेज़र सिंक करें
                 }
             }
         });
