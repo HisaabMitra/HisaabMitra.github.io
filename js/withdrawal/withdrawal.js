@@ -1,188 +1,263 @@
 // ========================================================
-// 💾 AEPS CASH WITHDRAWAL CORE SAVE & SECURITY ENGINE
+// 💸 AEPS CASH WITHDRAWAL CORE CONTROL ENGINE
 // ========================================================
 
-async function executeWithdrawalSaveProcess(targetButton) {
-    const aadhaarInput = document.getElementById('wit-aadhaar-no');
-    const nameInput = document.getElementById('wit-cust-name');
-    const amountInput = document.getElementById('wit-amount');
-    const remarksInput = document.getElementById('wit-remarks');
-
-    if (!aadhaarInput || !amountInput) return;
-
-    const aadhaarNo = aadhaarInput.value.trim();
-    const customerName = nameInput ? nameInput.value.trim() : "";
-    const withdrawalAmount = parseFloat(amountInput.value) || 0;
-    const remarks = remarksInput ? remarksInput.value.trim() : "";
-
-    // [CRITICAL DEFINITION]: स्कोप और मोड डिटेक्शन वेरिएबल्स
-    const isEditMode = targetButton.dataset.mode === "edit";
-    const editingWitId = targetButton.dataset.editingWitId;
-
-    // डिनॉमिनेशन लाइव काउंटर से कैश डेटा उठाएं
-    let netCash = 0;
-    let denomValues = {};
-    if (window.DenominationComponent) {
-        netCash = parseFloat(window.DenominationComponent.calculate()) || 0;
-        denomValues = window.DenominationComponent.getValues() || {};
-    }
-
-    // १. बुनियादी डेटा वैधीकरण (कस्टम अलर्ट सिस्टम के साथ)
-    if (!aadhaarNo || aadhaarNo.length !== 12 || isNaN(aadhaarNo)) {
-        window.showSystemAlert("कृपया एक वैध 12-अंकीय आधार संख्या दर्ज करें!", "Validation Error", "⚠️");
-        return;
-    }
-    if (!customerName || customerName === "NOT REGISTERED" || customerName.includes("ledger")) {
-        window.showSystemAlert("बिना पंजीकृत ग्राहक के निकासी प्रोसेस नहीं की जा सकती!", "Validation Error", "⚠️");
-        return;
-    }
-    if (withdrawalAmount < 100 || withdrawalAmount > 10000) {
-        window.showSystemAlert("निकासी राशि न्यूनतम ₹100 und अधिकतम ₹10,000 होनी चाहिए!", "Validation Error", "⚠️");
-        return;
-    }
-
-    // २. 🛡️ डिनॉमिनेशन सुरक्षा गार्ड (Strict Cash Match Rule & Custom Alert Sync)
-    if (netCash === 0) {
-        // 🌟 इनबिल्ट confirm() को रिप्लेस करके सुरक्षित कस्टम डोम कन्फर्मेशन प्रॉम्ट
-        const proceedWithoutCash = confirm("चेतावनी: आपने डिनॉमिनेशन (नोटों का विवरण) नहीं भरा है। क्या आप इस निकासी को बिना नोट मिलान के प्रोसेस करना चाहते हैं?");
-        if (!proceedWithoutCash) return;
-    } else if (Math.abs(netCash - withdrawalAmount) > 0.01) {
-        window.showSystemAlert(`Txn Fail: डिनॉमिनेशन टोटल (₹${netCash}) और निकासी राशि (₹${withdrawalAmount}) मैच नहीं कर रहे हैं!`, "Cash Mismatch", "❌");
-        return;
-    }
-
-    targetButton.textContent = "Verifying Aadhaar...";
-    targetButton.disabled = true;
+window.initWithdrawalPage = async function (currentUser) {
+    console.log("⚡ Jarvis AEPS Withdrawal Engine Initializing...");
+    
+    // कोर यूआई एलिमेंट्स को हुक करें
+    const witAadhaarInput = document.getElementById('wit-aadhaar-no');
+    const witNameInput = document.getElementById('wit-cust-name');
+    const witAmountInput = document.getElementById('wit-amount');
+    const witWordsDisplay = document.getElementById('wit-amount-words');
 
     try {
-        const todayStr = new Date().toISOString().split('T')[0];
-
-        // 🚨 दैनिक विथड्रॉल सीमा की जांच (केवल न्यू एंट्री मोड में चेक करें, एडिट में नहीं)
-        if (!isEditMode) {
-            const { data: todayTxs, error: limitErr } = await window.supabaseClient
-                .from('withdrawal_transactions')
-                .select('amount')
-                .eq('aadhaar_number', aadhaarNo)
-                .gte('transaction_date', `${todayStr}T00:00:00`);
-
-            if (limitErr) throw limitErr;
-
-            let totalWithdrawnToday = 0;
-            if (todayTxs) {
-                todayTxs.forEach(tx => { totalWithdrawnToday += parseFloat(tx.amount) || 0; });
-            }
-
-            if (totalWithdrawnToday + withdrawalAmount > 10000) {
-                window.showSystemAlert(`Txn Blocked: इस आधार कार्ड की दैनिक विथड्रॉल सीमा समाप्त हो चुकी है!\n\nआज पहले निकाला गया: ₹${totalWithdrawnToday}\nअधिकतम शेष अनुमति: ₹${10000 - totalWithdrawnToday}`, "Daily Limit Exceeded", "❌");
-                targetButton.textContent = "Dispense Cash";
-                targetButton.disabled = false;
-                return;
-            }
-        }
-
-        let currentSettlementBalance = parseFloat(window.currentUser.settlement_balance) || 0;
-        let finalVaultData = { ...window.currentUser };
-
-        // 💥 [REVERSE PHASE - केवल विथड्रॉल एडिट के लिए]
-        if (isEditMode && editingWitId) {
-            console.log("Reversing old withdrawal effect for ID:", editingWitId);
-            
-            const { data: oldTx, error: fetchOldErr } = await window.supabaseClient
-                .from('withdrawal_transactions')
-                .select('*')
-                .eq('id', editingWitId)
-                .maybeSingle();
-
-            if (fetchOldErr) throw fetchOldErr;
-
-            if (oldTx) {
-                // पुराना पैसा सेटलमेंट से वापस घटाएं
-                currentSettlementBalance -= parseFloat(oldTx.amount) || 0;
-
-                // पुराने जाने वाले नोटों का असर तिजोरी में वापस प्लस करें
-                const notes = [500, 200, 100, 50, 20, 10, 5];
-                notes.forEach(n => {
-                    finalVaultData[`cash_${n}`] = (parseInt(finalVaultData[`cash_${n}`]) || 0) + (parseInt(oldTx[`denom_out_${n}`]) || 0) - (parseInt(oldTx[`denom_in_${n}`]) || 0);
-                });
-                finalVaultData.cash_coins = (parseInt(finalVaultData.cash_coins) || 0) + (parseInt(oldTx.denom_out_coins) || 0) - (parseInt(oldTx.denom_in_coins) || 0);
-            }
-        }
-
-        // ३. कमीशन की गणना
-        let commission = Math.min(withdrawalAmount * 0.004, 50);
-
-        const mainWithdrawalPayload = {
-            aadhaar_number: aadhaarNo,
-            customer_name: customerName,
-            amount: withdrawalAmount,
-            remarks: remarks,
-            ko_code: window.currentUser.ko_code,
-            commission: commission,
-            ...denomValues 
-        };
-
-        // ४. Supabase ऑपरेशन (UPDATE या INSERT)
-        if (isEditMode && editingWitId) {
-            const { error: updateErr } = await window.supabaseClient
-                .from('withdrawal_transactions')
-                .update(mainWithdrawalPayload)
-                .eq('id', editingWitId);
-            if (updateErr) throw updateErr;
+        // 🚀 [DEDICATED INJECTION]: आते ही नए स्वतंत्र विथड्रॉल डिनॉमिनेशन कॉम्पोनेन्ट को रेंडर करें
+        if (window.WitDenominationComponent) {
+            setTimeout(() => {
+                console.log("Initializing Dedicated Withdrawal Denomination Panel...");
+                window.WitDenominationComponent.clear();
+                window.WitDenominationComponent.render('master-shared-denomination-container');
+            }, 50);
         } else {
-            const { error: insertErr } = await window.supabaseClient
-                .from('withdrawal_transactions')
-                .insert([mainWithdrawalPayload]);
-            if (insertErr) throw insertErr;
+            console.error("WitDenominationComponent structure not found in window stack!");
         }
 
-        // ५. सेटलमेंट बैलेंस और तिजोरी (Vault) अपडेट गणना
-        const updatedSettlementBalance = currentSettlementBalance + withdrawalAmount;
+        // 📊 [LEDGER SYSTEM]: आज की लाइव निकासी (Withdrawal) लेज़र तालिका लोड करें
+        window.loadTodayWithdrawals = async function() {
+            const tbody = document.getElementById('today-wit-body');
+            if (!tbody) return;
 
-        const nextVaultData = {
-            settlement_balance: updatedSettlementBalance,
-            cash_500: (parseInt(finalVaultData.cash_500) || 0) + (denomValues.denom_in_500 || 0) - (denomValues.denom_out_500 || 0),
-            cash_200: (parseInt(finalVaultData.cash_200) || 0) + (denomValues.denom_in_200 || 0) - (denomValues.denom_out_200 || 0),
-            cash_100: (parseInt(finalVaultData.cash_100) || 0) + (denomValues.denom_in_100 || 0) - (denomValues.denom_out_100 || 0),
-            cash_50:  (parseInt(finalVaultData.cash_50)  || 0) + (denomValues.denom_in_50  || 0) - (denomValues.denom_out_50  || 0),
-            cash_20:  (parseInt(finalVaultData.cash_20)  || 0) + (denomValues.denom_in_20  || 0) - (denomValues.denom_out_20  || 0),
-            cash_10:  (parseInt(finalVaultData.cash_10)  || 0) + (denomValues.denom_in_10  || 0) - (denomValues.denom_out_10  || 0),
-            cash_5:   (parseInt(finalVaultData.cash_5)   || 0) + (denomValues.denom_in_5   || 0) - (denomValues.denom_out_5   || 0),
-            cash_coins: (parseInt(finalVaultData.cash_coins) || 0) + (denomValues.denom_in_coins || 0) - (denomValues.denom_out_coins || 0)
+            const todayStr = new Date().toISOString().split('T')[0];
+
+            try {
+                const { data, error } = await window.supabaseClient
+                    .from('withdrawal_transactions')
+                    .select('*')
+                    .eq('ko_code', currentUser.ko_code)
+                    .gte('transaction_date', `${todayStr}T00:00:00`)
+                    .order('transaction_date', { ascending: false });
+
+                if (error) throw error;
+
+                tbody.innerHTML = '';
+                if (!data || data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:15px; color:#777;">आज काउंटर पर कोई निकासी (Withdrawal) नहीं मिली</td></tr>';
+                    return;
+                }
+
+                // कतारों को क्रम संख्या (Sr. No.) के साथ लाइव रेंडर करना
+                data.forEach((tx, index) => {
+                    const timeStr = new Date(tx.transaction_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    const txStr = btoa(JSON.stringify(tx));
+                    const srNo = data.length - index; // रिवर्स क्रोनोलॉजिकल ऑर्डर नंबर
+
+                    tbody.insertAdjacentHTML('beforeend', `
+                        <tr style="border-bottom: 1px solid #eee;">
+                            <td style="padding:12px; font-weight: bold; color: #555; text-align:center;">${srNo}</td>
+                            <td style="padding:12px; font-weight: 600; letter-spacing:0.5px;">${tx.aadhaar_number}</td>
+                            <td style="padding:12px; text-transform: uppercase;">${tx.customer_name}</td>
+                            <td style="padding:12px; font-weight:bold; color:#c5221f;">₹${parseFloat(tx.amount).toFixed(2)}</td>
+                            <td style="padding:12px;">${timeStr}</td>
+                            <td style="padding:12px; text-align:center;">
+                                <div style="display:inline-flex; align-items:center; gap:15px; justify-content:center;">
+                                    <span class="btn-edit-wit-tx" data-tx="${txStr}" style="cursor:pointer; font-size:1.1rem; user-select:none;" title="Edit Withdrawal">✏️</span>
+                                    <span class="btn-print-wit-receipt" data-tx="${txStr}" style="cursor:pointer; font-size:1.2rem; user-select:none;" title="Print Slip">🖨️</span>
+                                </div>
+                            </td>
+                        </tr>
+                    `);
+                });
+
+                attachWithdrawalEditListeners();
+
+            } catch (err) { 
+                console.error("Withdrawal Ledger Load Error:", err); 
+            }
         };
 
-        const { error: userUpdateError } = await window.supabaseClient
-            .from('user_roles')
-            .update(nextVaultData)
-            .eq('id', window.currentUser.id);
+        // 🔍 [RADAR SEARCH]: आधार नंबर ब्लर होते ही लाइव सर्च इंजन (Strict 12 Digit Rules)
+        if (witAadhaarInput) {
+            witAadhaarInput.addEventListener('blur', async () => {
+                const aadhaarNo = witAadhaarInput.value.trim();
+                if (!aadhaarNo) return;
 
-        if (userUpdateError) throw userUpdateError;
+                if (aadhaarNo.length !== 12 || isNaN(aadhaarNo)) {
+                    window.showSystemAlert("आधार नंबर पूरे 12 अंकों का होना अनिवार्य है!", "Validation Error", "❌");
+                    return;
+                }
 
-        // ग्लोबल यूज़र ऑब्जेक्ट सिंक करें
-        Object.assign(window.currentUser, nextVaultData);
+                if (witNameInput) witNameInput.value = "Searching ledger...";
 
-        // 🌟 [CUSTOM HUB INTEGRATION]: यहाँ अब आपका कस्टमाइज्ड अलार्म सिस्टम फायर होगा!
-        window.showSystemAlert(
-            isEditMode ? "🔄 विथड्रॉल ट्रांजैक्शन सफलतापूर्वक अपडेट हुआ!" : "🎉 कैश विथड्रॉल सफल! कृपया ग्राहक को नकद भुगतान करें।", 
-            "AEPS Success", 
-            "✅"
-        );
+                try {
+                    const { data: customer, error } = await window.supabaseClient
+                        .from('banking_customers')
+                        .select('*')
+                        .eq('aadhaar_number', aadhaarNo)
+                        .maybeSingle();
 
-        // यूआई रिफ्रेश और क्लियरेंस
-        if (typeof window.loadTodayWithdrawals === 'function') window.loadTodayWithdrawals();
-        if (typeof window.masterWithdrawalClear === 'function') window.masterWithdrawalClear();
+                    if (error) throw error;
 
-    } catch (err) {
-        console.error("Withdrawal Core Save Fail:", err);
-        window.showSystemAlert("लेनदेन सुरक्षित करने में विफलता: " + err.message, "System Error", "❌");
-    } finally {
-        targetButton.textContent = isEditMode ? "🔄 Update Withdrawal" : "💸 Dispense Cash";
-        targetButton.disabled = false;
+                    if (customer) {
+                        if (witNameInput) witNameInput.value = customer.customer_name.toUpperCase();
+                        if (witAmountInput) witAmountInput.focus(); // ⚡ फोकस लॉक सीधा अमाउंट इनपुट पर!
+                    } else {
+                        if (witNameInput) witNameInput.value = "NOT REGISTERED";
+                        
+                        // नया कस्टमर पंजीकरण पॉपअप ट्रिगर
+                        const modal = document.getElementById('new-cust-modal');
+                        if (modal) {
+                            document.getElementById('nc-aadhaar-no').value = aadhaarNo;
+                            document.getElementById('nc-account-no').value = "";
+                            document.getElementById('nc-name').value = "";
+                            document.getElementById('nc-mobile').value = "";
+                            document.getElementById('nc-address').value = "";
+
+                            modal.style.setProperty('display', 'flex', 'important');
+                            document.getElementById('nc-name').focus();
+
+                            document.getElementById('btn-nc-cancel').onclick = function() {
+                                modal.style.display = 'none';
+                                if (witNameInput) witNameInput.value = "";
+                                witAadhaarInput.value = ""; 
+                                witAadhaarInput.focus();
+                            };
+
+                            document.getElementById('btn-nc-continue').onclick = async function() {
+                                const fullName = document.getElementById('nc-name').value.trim().toUpperCase();
+                                const mobile = document.getElementById('nc-mobile').value.trim();
+                                const address = document.getElementById('nc-address').value.trim().toUpperCase();
+                                const accNo = document.getElementById('nc-account-no').value.trim();
+
+                                if (!fullName || !mobile) {
+                                    window.showSystemAlert("नाम और मोबाइल नंबर आवश्यक है!", "Validation Error", "❌");
+                                    return;
+                                }
+
+                                try {
+                                    const { error: insErr } = await window.supabaseClient
+                                        .from('banking_customers')
+                                        .insert([{
+                                            aadhaar_number: aadhaarNo,
+                                            account_number: accNo || null, // विथड्रॉल में वैकल्पिक खाता नंबर लिंकिंग
+                                            customer_name: fullName,
+                                            mobile_number: mobile,
+                                            customer_address: address
+                                        }]);
+
+                                    if (insErr) throw insErr;
+
+                                    modal.style.display = 'none';
+                                    window.showSystemAlert("🎉 नया ग्राहक आधार के साथ पंजीकृत हुआ!", "Success", "✅");
+                                    if (witNameInput) witNameInput.value = fullName;
+                                    if (witAmountInput) witAmountInput.focus();
+                                } catch (e) {
+                                    window.showSystemAlert("पंजीकरण विफल: " + e.message, "Error", "❌");
+                                }
+                            };
+                        }
+                    }
+                } catch (err) { 
+                    console.error("Aadhaar Search Error:", err); 
+                }
+            });
+        }
+
+        // 🔢 [LIVE TRANSLATOR]: लाइव हिंदी नंबर्स-टू-वर्ड्स कनवर्टर (utils.js सिंक)
+        if (witAmountInput) {
+            witAmountInput.addEventListener('input', () => {
+                const amt = parseInt(witAmountInput.value) || 0;
+                if (witWordsDisplay) {
+                    if (amt === 0) {
+                        witWordsDisplay.innerText = "Zero Rupees Only";
+                    } else if (typeof window.numberToHindiWords === 'function') {
+                        witWordsDisplay.innerText = `${window.numberToHindiWords(amt)} रुपए मात्र`;
+                    } else {
+                        witWordsDisplay.innerText = `₹${amt.toLocaleString('en-IN')} मात्र`;
+                    }
+                }
+            });
+            witAmountInput.addEventListener('wheel', e => e.preventDefault()); // माउस व्हील स्क्रॉल ब्लॉक गार्ड
+        }
+
+        // ✏️ [EDIT MODULE]: एडिट निकासी प्रविष्टि लिसनर (With New WitDenomination Engine Alignment)
+        function attachWithdrawalEditListeners() {
+            document.querySelectorAll('.btn-edit-wit-tx').forEach(btn => {
+                btn.onclick = function() {
+                    try {
+                        const txData = JSON.parse(atob(this.getAttribute('data-tx')));
+                        
+                        document.getElementById('wit-aadhaar-no').value = txData.aadhaar_number;
+                        document.getElementById('wit-cust-name').value = txData.customer_name;
+                        document.getElementById('wit-amount').value = txData.amount;
+                        document.getElementById('wit-remarks').value = txData.remarks || "";
+                        
+                        if (witWordsDisplay && typeof window.numberToHindiWords === 'function') {
+                            witWordsDisplay.innerText = `${window.numberToHindiWords(parseInt(txData.amount))} रुपए मात्र`;
+                        }
+
+                        // 💥 [RE-POPULATE COUNTER]: पुराने नोटों की संख्या को नए विथड्रॉल कॉम्पोनेन्ट में लोड करना
+                        const notes = [500, 200, 100, 50, 20, 10, 5];
+                        notes.forEach(note => {
+                            const inInput = document.querySelector(`.wit-denom-in[data-note="${note}"]`);
+                            const outInput = document.querySelector(`.wit-denom-out[data-note="${note}"]`);
+                            if (inInput) inInput.value = txData[`denom_in_${note}`] || 0;
+                            if (outInput) outInput.value = txData[`denom_out_${note}`] || 0;
+                        });
+
+                        const coinIn = document.querySelector('.wit-denom-in[data-note="coins"]');
+                        const coinOut = document.querySelector('.wit-denom-out[data-note="coins"]');
+                        if (coinIn) coinIn.value = txData[`denom_in_coins`] || 0;
+                        if (coinOut) coinOut.value = txData[`denom_out_coins`] || 0;
+
+                        // लाइव कैलकुलेटर को तुरंत ट्रिगर करें
+                        if (window.WitDenominationComponent) window.WitDenominationComponent.calculate();
+
+                        // बटन को अपडेट मोड में सेट करें
+                        const saveBtn = document.getElementById('btn-wit-save');
+                        if (saveBtn) {
+                            saveBtn.innerText = "🔄 Update Withdrawal";
+                            saveBtn.style.background = "#d35400";
+                            saveBtn.dataset.mode = "edit";
+                            saveBtn.dataset.editingWitId = txData.id;
+                        }
+
+                        window.showSystemAlert("पुरानी निकासी प्रविष्टि संपादन मोड में लोड हो गई है!", "Edit Mode", "ℹ️");
+                    } catch (e) { 
+                        console.error("Edit Mode Loader Failure:", e); 
+                    }
+                };
+            });
+        }
+
+        // 🧹 [CLEAR MOTOR]: मास्टर फॉर्म और कॉम्पोनेन्ट रीसेटर
+        window.masterWithdrawalClear = function() {
+            if (witAadhaarInput) witAadhaarInput.value = "";
+            if (witNameInput) witNameInput.value = "";
+            if (witAmountInput) witAmountInput.value = "";
+            if (document.getElementById('wit-remarks')) document.getElementById('wit-remarks').value = "";
+            if (witWordsDisplay) witWordsDisplay.innerText = "Zero Rupees Only";
+            
+            // नए समर्पित कॉम्पोनेन्ट को रीसेट करें
+            if (window.WitDenominationComponent) window.WitDenominationComponent.clear();
+
+            // बटन को वापस ओरिजिनल स्टेट में लाएं
+            const saveBtn = document.getElementById('btn-wit-save');
+            if (saveBtn) {
+                saveBtn.innerText = "💸 Dispense Cash";
+                saveBtn.style.background = "#7d0022";
+                delete saveBtn.dataset.mode;
+                delete saveBtn.dataset.editingWitId;
+            }
+        };
+
+        const clearBtn = document.getElementById('btn-wit-clear');
+        if (clearBtn) clearBtn.onclick = window.masterWithdrawalClear;
+
+        // इंजन लोड होते ही तालिका डेटा सिंक करें
+        window.loadTodayWithdrawals();
+
+    } catch (err) { 
+        console.error("Withdrawal Initialization Core Fatal Failure:", err); 
     }
-}
-
-// Global Event Delegation Listener
-document.addEventListener('click', async (e) => {
-    if (e.target && e.target.id === 'btn-wit-save') {
-        executeWithdrawalSaveProcess(e.target);
-    }
-});
+};
