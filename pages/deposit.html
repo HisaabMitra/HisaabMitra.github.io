@@ -12,6 +12,13 @@
     .bulk-input:focus { border-color: #7d0022; outline: none; }
     .bulk-input[readonly] { background: #f8f9fa; color: #7d0022; font-weight: bold; cursor: not-allowed; }
     .hidden-block { display: none !important; }
+
+    /* 📊 नए एडवांस मॉडल्स के लिए स्पेशल सीएसएस */
+    .sch-row-input { width: 100px; padding: 6px; border: 1px solid #ccc; border-radius: 4px; text-align: right; font-weight: bold; }
+    .sch-row-input:focus { border-color: #27ae60; outline: none; }
+    .modal-tab-header { display: flex; border-bottom: 2px solid #eee; margin-bottom: 15px; gap: 10px; }
+    .modal-tab-btn { padding: 10px 15px; border: none; background: none; cursor: pointer; font-weight: bold; color: #666; font-size: 0.9rem; }
+    .modal-tab-btn.active { color: #7d0022; border-bottom: 3px solid #7d0022; }
 </style>
 
 <!-- 🔄 टॉप मोड स्विचर पैनल -->
@@ -28,7 +35,7 @@
 <!-- 📦 मुख्य मास्टर ग्रिड (Left Forms + Right Fixed Denomination) -->
 <div style="display: flex; gap: 25px; flex-wrap: wrap; width: 100%; box-sizing: border-box;">
     
-    <!-- 🟢 [COLUMN 1]: वर्किंग काउंटर एरिया (70% चौड़ाई) -->
+    <!-- 🟢 [COLUMN 1]: वर्किंग काउंटर连接 (70% चौड़ाई) -->
     <div style="flex: 2; min-width: 450px; display: flex; flex-direction: column; gap: 25px;">
         
         <!-- ======================================================== -->
@@ -55,7 +62,8 @@
                     </div>
                     <div class="form-group" style="margin-bottom: 15px;">
                         <label style="font-weight:600; color: #444; display:block; margin-bottom:6px; font-size:0.9rem;">Amount to Deposit (₹) *</label>
-                        <input type="number" id="dep-amount" placeholder="0.00" min="1" max="25000" style="width:100%; padding: 11px 14px; font-size:1.2rem; font-weight:bold; color: #27ae60; border: 1px solid #dcdcdc; border-radius:6px; box-sizing: border-box;" required>
+                        <!-- 🚀 ध्यान दें: यहाँ से max="25000" हटा दिया गया है ताकि ऑपरेटर बड़ी रकम डालकर लिमिट स्प्लिट विंडो खोल सके -->
+                        <input type="number" id="dep-amount" placeholder="0.00" min="1" style="width:100%; padding: 11px 14px; font-size:1.2rem; font-weight:bold; color: #27ae60; border: 1px solid #dcdcdc; border-radius:6px; box-sizing: border-box;" required>
                     </div>
                     <div style="background: #fafafa; padding: 12px 15px; border: 1px solid #eaeaea; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                         <div style="flex: 1; padding-right: 10px;">
@@ -153,6 +161,119 @@
         </thead>
         <tbody id="today-tx-body"></tbody>
     </table>
+</div>
+
+<!-- ======================================================== -->
+<!-- 🚨 [POPUP 1]: SMART MULTI-DAY SPLIT MODAL (LIMIT EXCEED) -->
+-- ======================================================== -->
+<div id="smart-split-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 99999; align-items: center; justify-content: center;">
+    <div style="background: white; padding: 25px 30px; border-radius: 12px; max-width: 550px; width: 95%; text-align: left; box-shadow: 0 15px 40px rgba(0,0,0,0.3); border-top: 6px solid #e67e22;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 1.6rem;">⚠️</span>
+                <h3 style="color: #e67e22; margin: 0; font-size: 1.35rem; font-weight: 700;">Daily Limit Exceeded</h3>
+            </div>
+            <strong id="lbl-split-total-deposit" style="background: #fef5ec; color: #e67e22; padding: 5px 12px; border-radius: 6px; font-size: 1.1rem;">₹0.00</strong>
+        </div>
+        <p style="font-size: 0.85rem; color: #666; margin-bottom: 15px;">यह राशि ₹25,000 की दैनिक सीमा से अधिक है। सिस्टम इसे सुरक्षित रूप से एकाधिक दिनों (Multiple Days) में विभाजित कर रहा है:</p>
+        
+        <div style="background: #fafafa; padding: 12px; border: 1px solid #eee; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px;">
+            <div>
+                <label style="font-size: 0.85rem; font-weight: 600; color: #444;">कितने दिनों में विभाजित करना है?</label>
+                <span style="display: block; font-size: 0.75rem; color: #888;">(Select days to auto-spread)</span>
+            </div>
+            <select id="ddl-split-days" style="padding: 8px 12px; border-radius: 6px; border: 1px solid #ccc; font-weight: bold; font-size: 0.95rem; cursor: pointer;">
+                <option value="2">2 Days (Tomorrow)</option>
+                <option value="3">3 Days</option>
+                <option value="4">4 Days</option>
+                <option value="5">5 Days</option>
+            </select>
+        </div>
+
+        <!-- डायनेमिक स्प्लिट ग्रिड हेडर -->
+        <div style="display: flex; justify-content: space-between; background: #eaedd1; padding: 8px 12px; border-radius: 6px; font-weight: bold; font-size: 0.85rem; color: #555; margin-bottom: 8px;">
+            <span>Scheduled Date</span>
+            <span>Deposit Share Amount</span>
+        </div>
+
+        <!-- जादुई कतारें जहाँ स्प्लिटिंग वैल्यू लाइव रेंडर होगी -->
+        <div id="split-rows-container" style="max-height: 180px; overflow-y: auto; margin-bottom: 15px; padding: 2px;"></div>
+
+        <!-- लाइव पेंडिंग बैलेंस मैचिंग इंडिकेटर बार -->
+        <div style="display: flex; justify-content: space-between; align-items: center; background: #f4f6f8; padding: 10px 15px; border-radius: 6px; border: 1px solid #e2e8f0; margin-bottom: 20px;">
+            <span style="font-size: 0.85rem; font-weight: 600; color: #555;">लंबित/शेष राशि (Pending):</span>
+            <strong id="lbl-split-pending-rem" style="font-size: 1.1rem; color: #c5221f;">₹0.00</strong>
+        </div>
+
+        <div style="display: flex; gap: 12px; justify-content: flex-end;">
+            <button id="btn-split-cancel" style="padding: 10px 18px; background: #f4f6f8; border: 1px solid #ddd; color: #555; cursor: pointer; border-radius: 6px; font-weight: 600; font-size: 0.85rem;">Cancel</button>
+            <button id="btn-split-confirm" style="padding: 10px 22px; background: #27ae60; color: white; border: none; cursor: pointer; border-radius: 6px; font-weight: 700; font-size: 0.85rem; box-shadow: 0 2px 5px rgba(39,174,96,0.2);">Confirm & Lock Split</button>
+        </div>
+    </div>
+</div>
+
+<!-- ======================================================== -->
+<!-- 🌅 [POPUP 2]: MORNING PENDING CLEARANCE BOARD MODAL -->
+<!-- ======================================================== -->
+<div id="morning-release-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 99998; align-items: center; justify-content: center;">
+    <div style="background: white; padding: 25px 30px; border-radius: 12px; max-width: 750px; width: 95%; text-align: left; box-shadow: 0 15px 40px rgba(0,0,0,0.3); border-top: 6px solid #7d0022;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 1.6rem;">📅</span>
+                <h3 style="color: #7d0022; margin: 0; font-size: 1.35rem; font-weight: 700;">Scheduled Deposits Clearance Board</h3>
+            </div>
+            <button type="button" onclick="document.getElementById('morning-release-modal').style.display='none'" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #999;">&times;</button>
+        </div>
+
+        <!-- नेविगेशन टैब्स (जैसा टोनी स्टार्क ने डिज़ाइन सोचा था) -->
+        <div class="modal-tab-header">
+            <button id="tab-btn-today" class="modal-tab-btn active">Available Today For Release (<span id="lbl-cnt-today">0</span>)</button>
+            <button id="tab-btn-future" class="modal-tab-btn">Future Blocked Queue (<span id="lbl-cnt-future">0</span>)</button>
+        </div>
+
+        <!-- 📜 TAB 1: आज की रिलीज होने वाली लाइव सूची -->
+        <div id="tab-content-today" style="display: block;">
+            <div style="max-height: 250px; overflow-y: auto; border: 1px solid #eee; border-radius: 8px; margin-bottom: 15px;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                    <thead style="background: #f8f9fa; position: sticky; top: 0;">
+                        <tr style="border-bottom: 2px solid #eee; text-align: left;">
+                            <th style="padding: 10px; width: 8%; text-align: center;"><input type="checkbox" id="chk-release-all-master" style="cursor:pointer;"></th>
+                            <th style="padding: 10px;">Account Number</th>
+                            <th style="padding: 10px;">Customer Name</th>
+                            <th style="padding: 10px; text-align: right;">Release Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbl-morning-today-tbody">
+                        <!-- कतारें जावास्क्रिप्ट से लोड होंगी -->
+                    </tbody>
+                </table>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+                <span style="font-size: 0.8rem; color: #666;">चुने गए खाते आज की मुख्य लेज़र सूची में प्रोसेस होकर सेटलमेंट से डेबिट होंगे।</span>
+                <button id="btn-process-morning-releases" style="padding: 11px 22px; background: #7d0022; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; box-shadow: 0 3px 8px rgba(125,0,34,0.25);">🚀 Process Selected Entries</button>
+            </div>
+        </div>
+
+        <!-- 📜 TAB 2: भविष्य के ब्लॉक डिपॉजिट की सूची (केवल देखने के लिए) -->
+        <div id="tab-content-future" style="display: none;">
+            <div style="max-height: 250px; overflow-y: auto; border: 1px solid #eee; border-radius: 8px;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                    <thead style="background: #f8f9fa; position: sticky; top: 0;">
+                        <tr style="border-bottom: 2px solid #eee; text-align: left;">
+                            <th style="padding: 10px;">Scheduled Date</th>
+                            <th style="padding: 10px;">Account Number</th>
+                            <th style="padding: 10px;">Customer Name</th>
+                            <th style="padding: 10px; text-align: right;">Blocked Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbl-morning-future-tbody">
+                        <!-- भविष्य की कतारें यहाँ दिखेंगी -->
+                    </tbody>
+                </table>
+            </div>
+            <p style="font-size: 0.8rem; color: #e67e22; margin-top: 12px; font-weight: 600;">⚠️ सूचना: यह कतार लॉक्ड है। ये राशियाँ अपनी निर्धारित तारीखों पर स्वतः ही 'Available' टैब में स्थानांतरित हो जाएँगी।</p>
+        </div>
+    </div>
 </div>
 
 <!-- NEW CUSTOMER POPUP MODAL -->
