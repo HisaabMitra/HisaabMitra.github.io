@@ -38,7 +38,6 @@ window.initDepositPage = async function (currentUser) {
             const today = new Date().toISOString().split('T')[0];
 
             try {
-                // 🚀 फिक्स: यहाँ से .is('bulk_id', null) हटा दिया गया है ताकि बल्क की एंट्रियां भी लाइव दिखें!
                 const { data, error } = await window.supabaseClient
                     .from('deposit_transactions')
                     .select('*')
@@ -76,7 +75,7 @@ window.initDepositPage = async function (currentUser) {
                             <td style="padding:12px;">${time}</td>
                             <td style="padding:12px; text-align:center;">
                                 <div style="display:inline-flex; align-items:center; gap:15px; justify-content:center;">
-                                    ${!tx.bulk_id ? `<span class="btn-edit-tx" data-tx="${txStr}" style="cursor:pointer; font-size:1.1rem; user-select:none;" title="Edit Transaction">✏️</span>` : ''}
+                                    <span class="btn-edit-tx" data-tx="${txStr}" style="cursor:pointer; font-size:1.1rem; user-select:none;" title="Edit Transaction">✏️</span>
                                     <span class="btn-print-receipt" data-tx="${txStr}" style="cursor:pointer; font-size:1.2rem; user-select:none;" title="Print Slip">🖨️</span>
                                 </div>
                             </td>
@@ -90,12 +89,31 @@ window.initDepositPage = async function (currentUser) {
             } catch (err) { console.error("Table Load Error:", err); }
         }
 
+        // [4] एडिट बटन क्लिक हैंडलर (मल्टी-मोड ड्युअल डिटेक्शन इंजन)
         function attachEditEventListeners() {
             document.querySelectorAll('.btn-edit-tx').forEach(btn => {
                 btn.onclick = function() {
                     try {
                         const txData = JSON.parse(atob(this.getAttribute('data-tx')));
                         
+                        // 📦 स्थिति A: यदि यह एक बल्क बैच ट्रांजैक्शन है
+                        if (txData.bulk_id) {
+                            const switchBtn = document.getElementById('btn-switch-deposit-mode');
+                            if (switchBtn && switchBtn.getAttribute('data-current-mode') === 'single') {
+                                // ज़बरदस्ती यूआई लेआउट को बल्क मोड ग्रिड पर स्विच करें
+                                switchBtn.click();
+                            }
+                            
+                            // बल्क इंजन को पूरा कंबाइन बैच लोड करने का निर्देश दें
+                            if (typeof window.loadBulkBatchForEdit === 'function') {
+                                window.loadBulkBatchForEdit(txData);
+                            } else {
+                                console.error("loadBulkBatchForEdit function is missing in deposit-bulk.js");
+                            }
+                            return;
+                        }
+
+                        // 👤 स्थिति B: यदि यह एक नॉर्मल सिंगल काउंटर ट्रांजैक्शन है
                         document.getElementById('dep-account-no').value = txData.account_number;
                         document.getElementById('dep-cust-name').value = txData.customer_name;
                         document.getElementById('dep-amount').value = txData.amount;
@@ -287,7 +305,6 @@ window.initDepositPage = async function (currentUser) {
 
                 if (!singleWrapper || !bulkWrapper) return;
 
-                // 🧹 स्विच होते ही सिंगल फॉर्म साफ़ करें
                 masterFormClear();
 
                 if (currentMode === 'single') {
@@ -311,7 +328,6 @@ window.initDepositPage = async function (currentUser) {
                     switchBtn.style.background = "#f2994a"; 
                     switchBtn.setAttribute('data-current-mode', 'single');
 
-                    // 🧹 बल्क से सिंगल में आते ही बल्क फॉर्म भी साफ करें
                     const bulkClearBtn = document.getElementById('btn-bulk-dep-clear');
                     if (bulkClearBtn) bulkClearBtn.click();
 
