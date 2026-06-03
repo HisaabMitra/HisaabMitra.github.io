@@ -43,11 +43,13 @@ async function executeWithdrawalSaveProcess(targetButton) {
         return;
     }
 
+   // ========================================================
     // २. 🛡️ डिनॉमिनेशन सुरक्षा गार्ड (Strict Cash Match Rule & Custom Alert Validation)
+    // ========================================================
     if (netCash === 0) {
         // 🌟 पुराने साधारण confirm() को हटाकर कस्टमाइज्ड प्रॉम्ट इंजन लगाया
         const proceedWithoutCash = await window.showSystemPrompt(
-            "चेतावनी: आपने डिनॉमिनेशन (नोटों का विवरण) नहीं भरा है।\nक्या आप इस जमा राशि को बिना नोट मिलान के प्रोसेस करना चाहते हैं?\n\nआगे बढ़ने के लिए 'YES' टाइप करें:", 
+            "चेतावनी: आपने डिनॉमिनेशन (नोटों का विवरण) नहीं भरा है।\nक्या आप इस जमा राशि को बिना नोट मिलान के प्रोसेस करना चाहते हैं?\n\nआगे बढ़ने के लिए 'YES' टाइप करें:", 
             "Vault Security Validation", 
             "⚠️"
         );
@@ -59,10 +61,10 @@ async function executeWithdrawalSaveProcess(targetButton) {
             }
             return; // थ्रेड यहीं ब्रेक हो जाएगा
         }
-    }
-    } else if (Math.abs(netCash - withdrawalAmount) > 0.01) {
+    } // 👈 🌟 यहाँ सिर्फ एक ब्रैकेट आएगा, जिससे पहला 'if' सही तरीके से बंद होगा
+    else if (Math.abs(netCash - withdrawalAmount) > 0.01) {
         // अगर डिनॉमिनेशन भरा गया है और वह मैच नहीं है, तो सीधा TXN FAIL एरर फेंकें
-        window.showSystemAlert(`Txn Fail: डिनॉमिनेशन टोटल (₹${netCash}) और निकासी राशि (₹${withdrawalAmount}) मैच नहीं कर रहे हैं!`, "Cash Mismatch", "❌");
+        await window.showSystemAlert(`Txn Fail: डिनॉमिनेशन टोटल (₹${netCash}) और निकासी राशि (₹${withdrawalAmount}) मैच नहीं कर रहे हैं!`, "Cash Mismatch", "❌");
         return;
     }
 
