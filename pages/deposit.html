@@ -1,4 +1,3 @@
-<!-- pages/deposit.html -->
 <style>
     input[type=number]::-webkit-inner-spin-button, 
     input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
@@ -21,7 +20,6 @@
     .modal-tab-btn.active { color: #7d0022; border-bottom: 3px solid #7d0022; }
 </style>
 
-<!-- 🔄 टॉप मोड स्विचर पैनल -->
 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: #fafafa; padding: 10px 15px; border-radius: 8px; border: 1px solid #eaeaea;">
     <div style="display: flex; align-items: center; gap: 10px;">
         <span style="font-size: 1.3rem;">💰</span>
@@ -32,15 +30,10 @@
     </button>
 </div>
 
-<!-- 📦 मुख्य मास्टर ग्रिड (Left Forms + Right Fixed Denomination) -->
 <div style="display: flex; gap: 25px; flex-wrap: wrap; width: 100%; box-sizing: border-box;">
     
-    <!-- 🟢 [COLUMN 1]: वर्किंग काउंटर连接 (70% चौड़ाई) -->
     <div style="flex: 2; min-width: 450px; display: flex; flex-direction: column; gap: 25px;">
         
-        <!-- ======================================================== -->
-        <!-- 👤 VIEW A: SINGLE DEPOSIT CONTAINER -->
-        <!-- ======================================================== -->
         <div id="single-deposit-view-wrapper">
             <div class="deposit-wrapper" style="padding: 24px; background: #fff; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
@@ -62,7 +55,6 @@
                     </div>
                     <div class="form-group" style="margin-bottom: 15px;">
                         <label style="font-weight:600; color: #444; display:block; margin-bottom:6px; font-size:0.9rem;">Amount to Deposit (₹) *</label>
-                        <!-- 🚀 ध्यान दें: यहाँ से max="25000" हटा दिया गया है ताकि ऑपरेटर बड़ी रकम डालकर लिमिट स्प्लिट विंडो खोल सके -->
                         <input type="number" id="dep-amount" placeholder="0.00" min="1" style="width:100%; padding: 11px 14px; font-size:1.2rem; font-weight:bold; color: #27ae60; border: 1px solid #dcdcdc; border-radius:6px; box-sizing: border-box;" required>
                     </div>
                     <div style="background: #fafafa; padding: 12px 15px; border: 1px solid #eaeaea; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
@@ -84,9 +76,6 @@
             </div>
         </div>
 
-        <!-- ======================================================== -->
-        <!-- 📦 VIEW B: BULK DEPOSIT CONTAINER -->
-        <!-- ======================================================== -->
         <div id="bulk-deposit-view-wrapper" class="hidden-block">
             <div class="deposit-wrapper" style="padding: 24px; background: #fff; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
@@ -137,35 +126,30 @@
 
     </div>
 
-    <!-- 🔵 [COLUMN 2]: साझा मास्टर डिनॉमिनेशन कंटेनर (30% चौड़ाई - हमेशा लाइव और विज़िबल) -->
     <div style="flex: 0.9; min-width: 320px; display: block !important;">
         <div id="master-shared-denomination-container" style="background: #fdfdfd; padding: 20px; border: 1px solid #eef0f2; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.02); min-height: 400px;">
-            <!-- डिनॉमिनेशन कंपोनेंट इसके अंदर लाइव इंजेक्ट होगा -->
-        </div>
+            </div>
     </div>
 
 </div>
 
-<!-- साझा लाइव लेज़र टेबल -->
 <div class="transaction-container" style="margin-top: 25px; padding: 24px; background: #fff; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
     <h3 style="color: #7d0022; margin-bottom: 15px; border-bottom: 2px solid #f4f6f8; padding-bottom: 8px;">📊 Counter Live Transactions Ledger</h3>
     <table class="styled-table">
         <thead>
             <tr style="background-color: #7d0022; color: white;">
-                <th style="padding: 12px;">Account / Bulk ID</th>
-                <th style="padding: 12px;">Name / Depositor</th>
-                <th style="padding: 12px;">Amount</th>
-                <th style="padding: 12px;">Time</th>
-                <th style="padding: 12px; text-align: center;">Action</th>
+                <th style="padding: 12px; text-align: center; width: 8%;">Sr. No.</th>
+                <th style="padding: 12px; width: 22%;">Account / Bulk ID</th>
+                <th style="padding: 12px; width: 30%;">Name / Depositor</th>
+                <th style="padding: 12px; width: 15%;">Amount</th>
+                <th style="padding: 12px; width: 13%;">Time</th>
+                <th style="padding: 12px; text-align: center; width: 12%;">Action</th>
             </tr>
         </thead>
         <tbody id="today-tx-body"></tbody>
     </table>
 </div>
 
-<!-- ======================================================== -->
-<!-- 🚨 [POPUP 1]: SMART MULTI-DAY SPLIT MODAL (LIMIT EXCEED) -->
-<!-- ======================================================== -->
 <div id="smart-split-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 99999; align-items: center; justify-content: center;">
     <div style="background: white; padding: 25px 30px; border-radius: 12px; max-width: 550px; width: 95%; text-align: left; box-shadow: 0 15px 40px rgba(0,0,0,0.3); border-top: 6px solid #e67e22;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
@@ -190,16 +174,13 @@
             </select>
         </div>
 
-        <!-- डायनेमिक स्प्लिट ग्रिड हेडर -->
         <div style="display: flex; justify-content: space-between; background: #eaedd1; padding: 8px 12px; border-radius: 6px; font-weight: bold; font-size: 0.85rem; color: #555; margin-bottom: 8px;">
             <span>Scheduled Date</span>
             <span>Deposit Share Amount</span>
         </div>
 
-        <!-- जादुई कतारें जहाँ स्प्लिटिंग वैल्यू लाइव रेंडर होगी -->
         <div id="split-rows-container" style="max-height: 180px; overflow-y: auto; margin-bottom: 15px; padding: 2px;"></div>
 
-        <!-- लाइव पेंडिंग बैलेंस मैचिंग इंडिकेटर बार -->
         <div style="display: flex; justify-content: space-between; align-items: center; background: #f4f6f8; padding: 10px 15px; border-radius: 6px; border: 1px solid #e2e8f0; margin-bottom: 20px;">
             <span style="font-size: 0.85rem; font-weight: 600; color: #555;">लंबित/शेष राशि (Pending):</span>
             <strong id="lbl-split-pending-rem" style="font-size: 1.1rem; color: #c5221f;">₹0.00</strong>
@@ -212,9 +193,6 @@
     </div>
 </div>
 
-<!-- ======================================================== -->
-<!-- 🌅 [POPUP 2]: MORNING PENDING CLEARANCE BOARD MODAL -->
-<!-- ======================================================== -->
 <div id="morning-release-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 99998; align-items: center; justify-content: center;">
     <div style="background: white; padding: 25px 30px; border-radius: 12px; max-width: 750px; width: 95%; text-align: left; box-shadow: 0 15px 40px rgba(0,0,0,0.3); border-top: 6px solid #7d0022;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
@@ -225,13 +203,11 @@
             <button type="button" onclick="document.getElementById('morning-release-modal').style.display='none'" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #999;">&times;</button>
         </div>
 
-        <!-- नेविगेशन टैब्स (जैसा टोनी स्टार्क ने डिज़ाइन सोचा था) -->
         <div class="modal-tab-header">
             <button id="tab-btn-today" class="modal-tab-btn active">Available Today For Release (<span id="lbl-cnt-today">0</span>)</button>
             <button id="tab-btn-future" class="modal-tab-btn">Future Blocked Queue (<span id="lbl-cnt-future">0</span>)</button>
         </div>
 
-        <!-- 📜 TAB 1: आज की रिलीज होने वाली लाइव सूची -->
         <div id="tab-content-today" style="display: block;">
             <div style="max-height: 250px; overflow-y: auto; border: 1px solid #eee; border-radius: 8px; margin-bottom: 15px;">
                 <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
@@ -243,9 +219,7 @@
                             <th style="padding: 10px; text-align: right;">Release Amount</th>
                         </tr>
                     </thead>
-                    <tbody id="tbl-morning-today-tbody">
-                        <!-- कतारें जावास्क्रिप्ट से लोड होंगी -->
-                    </tbody>
+                    <tbody id="tbl-morning-today-tbody"></tbody>
                 </table>
             </div>
             <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
@@ -254,7 +228,6 @@
             </div>
         </div>
 
-        <!-- 📜 TAB 2: भविष्य के ब्लॉक डिपॉजिट की सूची (केवल देखने के लिए) -->
         <div id="tab-content-future" style="display: none;">
             <div style="max-height: 250px; overflow-y: auto; border: 1px solid #eee; border-radius: 8px;">
                 <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
@@ -266,9 +239,7 @@
                             <th style="padding: 10px; text-align: right;">Blocked Amount</th>
                         </tr>
                     </thead>
-                    <tbody id="tbl-morning-future-tbody">
-                        <!-- भविष्य की कतारें यहाँ दिखेंगी -->
-                    </tbody>
+                    <tbody id="tbl-morning-future-tbody"></tbody>
                 </table>
             </div>
             <p style="font-size: 0.8rem; color: #e67e22; margin-top: 12px; font-weight: 600;">⚠️ सूचना: यह कतार लॉक्ड है। ये राशियाँ अपनी निर्धारित तारीखों पर स्वतः ही 'Available' टैब में स्थानांतरित हो जाएँगी।</p>
@@ -276,7 +247,6 @@
     </div>
 </div>
 
-<!-- NEW CUSTOMER POPUP MODAL -->
 <div id="new-cust-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.55); backdrop-filter: blur(3px); z-index: 99999; align-items: center; justify-content: center;">
     <div style="background: white; padding: 25px 30px; border-radius: 10px; max-width: 400px; width: 90%; text-align: left; box-shadow: 0 10px 30px rgba(0,0,0,0.2); border-top: 6px solid #7d0022;">
         <div style="display:flex; align-items:center; gap:10px; margin-bottom: 8px;">
