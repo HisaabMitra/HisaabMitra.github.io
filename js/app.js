@@ -38,7 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (registerForm) {
        registerForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const name = document.getElementById('reg-name').value.trim().toUpperCase(); // Auto-Capitalize Name
+            const name = document.getElementById('reg-name').value.trim().toUpperCase(); 
             const email = document.getElementById('reg-email').value.trim();
             const password = document.getElementById('reg-password').value;
             const role = document.getElementById('reg-role').value;
@@ -291,7 +291,6 @@ document.addEventListener('DOMContentLoaded', () => {
     async function loadPage(pageName) {
         workspace.innerHTML = `<div class="loading">Loading component...</div>`;
         try {
-            // यूआरएल के पीछे लाइव टाइमस्टैम्प जोड़ा गया ताकि पुराना कैश लोड न हो
             const cacheBreaker = Date.now();
             const response = await fetch(`./pages/${pageName}.html?v=${cacheBreaker}`);
             
@@ -304,6 +303,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // 🌟 [CRITICAL FIX]: विथड्रॉल मॉड्यूल को इंजेक्ट और वायर करना 🌟
     function initializePageModules(pageName) {
         if (pageName === 'home') {
             initHomepageModule();
@@ -314,6 +314,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.initDepositPage(currentLoggedInUser);
             } else {
                 console.error("initDepositPage function missing in deposit.js");
+            }
+        }
+
+        // 💸 विथड्रॉल काउंटर के लिए मॉड्यूल लॉन्चर वायर लिंक
+        if (pageName === 'withdrawal') {
+            if (typeof window.initWithdrawalPage === 'function') {
+                window.initWithdrawalPage(currentLoggedInUser);
+            } else {
+                console.error("initWithdrawalPage function missing in withdrawal.js");
             }
         }
 
@@ -331,7 +340,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ==========================================
-    // 7. MULTI-TENANT KO-CODE LIVE BALANCE LOGIC
+    // 7. MULTI-TENANT KO-CODE LIVE BALANCE LOGIC WITH DUAL COMMISSION
     // ==========================================
     async function initHomepageModule() {
         if (!currentLoggedInUser || !currentLoggedInUser.ko_code) return;
@@ -385,20 +394,36 @@ document.addEventListener('DOMContentLoaded', () => {
             if(document.getElementById('note-count-5')) document.getElementById('note-count-5').textContent = n5;
             if(document.getElementById('coin-total-count')) document.getElementById('coin-total-count').textContent = `₹ ${cCoins}`;
 
+            // 🌟 [DUAL COMMISSION SYNCHRONIZATION ENGINE] 🌟
             if (commissionDisplay && toggleCommBtn) {
                 const todayStr = new Date().toISOString().split('T')[0]; 
 
-                const { data: txList, error: txErr } = await window.supabaseClient
+                // १. आज का पूरा डिपॉजिट कमीशन निकालें
+                const { data: depList, error: depErr } = await window.supabaseClient
                     .from('deposit_transactions')
                     .select('commission')
                     .eq('ko_code', koCode)
                     .gte('transaction_date', `${todayStr}T00:00:00`);
 
-                if (txErr) throw txErr;
+                if (depErr) throw depErr;
+
+                // २. आज का पूरा विथड्रॉल कमीशन निकालें
+                const { data: witList, error: witErr } = await window.supabaseClient
+                    .from('withdrawal_transactions')
+                    .select('commission')
+                    .eq('ko_code', koCode)
+                    .gte('transaction_date', `${todayStr}T00:00:00`);
+
+                if (witErr) throw witErr;
 
                 let totalTodayCommission = 0;
-                if (txList && txList.length > 0) {
-                    totalTodayCommission = txList.reduce((sum, tx) => sum + (parseFloat(tx.commission) || 0), 0);
+                
+                // दोनों सूचियों का कमीशन जोड़ें
+                if (depList && depList.length > 0) {
+                    totalTodayCommission += depList.reduce((sum, tx) => sum + (parseFloat(tx.commission) || 0), 0);
+                }
+                if (witList && witList.length > 0) {
+                    totalTodayCommission += witList.reduce((sum, tx) => sum + (parseFloat(tx.commission) || 0), 0);
                 }
 
                 const formattedCommission = `₹ ${totalTodayCommission.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
