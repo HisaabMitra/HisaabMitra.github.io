@@ -7,8 +7,7 @@ let globalCurrentUser = null; // SOL ID एक्सेस करने के �
 
 // 🌟 [MASTER INITIALIZER]: इसे सीधे window ऑब्जेक्ट पर बाइंड किया ताकि deposit.js इसे ढूंढ सके
 window.initBulkDepositPage = async function (currentUser) {
-    console.log("Bulk Deposit Engine Initializing...");
-    try {
+       try {
         globalCurrentUser = currentUser; // यूज़र डेटा सेव करें
 
         // [1] काउंटर KO Code स्क्रीन पर सेट करें
@@ -59,7 +58,6 @@ window.initBulkDepositPage = async function (currentUser) {
                 }
 
                 window.addNewBulkRow();
-                console.log("Bulk Form Reset Done.");
             };
         }
 
