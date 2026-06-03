@@ -105,10 +105,11 @@ window.DenominationComponent = {
     },
 
     // 3. इवेंट लिसनर्स अटैच करने के लिए फंक्शन
-    attachListeners: function() {
+   attachListeners: function() {
         document.querySelectorAll('.denom-in, .denom-out').forEach(input => {
             input.addEventListener('input', () => this.calculate());
-            input.addEventListener('wheel', (e) => e.preventDefault());
+            // ⚡ { passive: false } जोड़ने से क्रोम की वायलेशन वार्निंग तुरंत बंद हो जाएगी
+            input.addEventListener('wheel', (e) => e.preventDefault(), { passive: false });
         });
     },
 
