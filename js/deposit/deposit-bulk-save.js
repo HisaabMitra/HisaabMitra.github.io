@@ -1,8 +1,8 @@
 // ========================================================
-// 📦 BULK DEPOSIT SAVE ENGINE (BATCH PROCESSING ENGINE)
+// 📦 BULK DEPOSIT SAVE & UPDATE ENGINE (BATCH REVERSE LOGIC)
 // ========================================================
 
-// मुख्य कोर सेव फंक्शन जिसे हम दोनों इवेंट्स से चलाएंगे
+// मुख्य कोर सेव/अपडेट फंक्शन जिसे हम दोनों इवेंट्स से चलाएंगे
 async function executeBulkSaveProcess(targetButton) {
     const depositorNameInput = document.getElementById('bulk-depositor-name');
     if (!depositorNameInput) return; 
@@ -87,40 +87,87 @@ async function executeBulkSaveProcess(targetButton) {
         return;
     }
 
-    // 🛑 [BULK BATCH LIMIT CHECK] सभी खातों की लिमिट चेक करें
-    const today = new Date().toISOString().split('T')[0];
-    try {
-        const { data: existingTxList, error: limitErr } = await window.supabaseClient
-            .from('deposit_transactions')
-            .select('account_number, amount')
-            .in('account_number', accountNumbersInBatch)
-            .gte('transaction_date', `${today}T00:00:00`);
+    // 🔄 मोड डिटेक्शन (Is Edit Mode Active?)
+    const isEditMode = targetButton.dataset.mode === "edit";
+    const targetBulkId = targetButton.dataset.editingBulkId;
 
-        if (limitErr) throw limitErr;
+    // 🛑 [BULK BATCH LIMIT CHECK - केवल न्यू एंट्रीज के लिए]
+    if (!isEditMode) {
+        const today = new Date().toISOString().split('T')[0];
+        try {
+            const { data: existingTxList, error: limitErr } = await window.supabaseClient
+                .from('deposit_transactions')
+                .select('account_number, amount')
+                .in('account_number', accountNumbersInBatch)
+                .gte('transaction_date', `${today}T00:00:00`);
 
-        let accountTotalsMap = {};
-        if (existingTxList) {
-            existingTxList.forEach(tx => {
-                accountTotalsMap[tx.account_number] = (accountTotalsMap[tx.account_number] || 0) + (parseFloat(tx.amount) || 0);
-            });
-        }
+            if (limitErr) throw limitErr;
 
-        for (let tx of bulkTransactions) {
-            const pastDeposit = accountTotalsMap[tx.account_number] || 0;
-            if (pastDeposit + tx.amount > 25000) {
-                const remaining = 25000 - pastDeposit;
-                window.showSystemAlert(`🛑 दैनिक सीमा उल्लंघन!\n\nखाता संख्या ${tx.account_number} में आज पहले ही ₹${pastDeposit.toLocaleString('en-IN')} जमा हो चुके हैं।\nअब इस खाते में अधिकतम ₹${remaining > 0 ? remaining : 0} ही जमा किए जा सकते हैं।`, "Limit Exceeded", "❌");
-                return;
+            let accountTotalsMap = {};
+            if (existingTxList) {
+                existingTxList.forEach(tx => {
+                    accountTotalsMap[tx.account_number] = (accountTotalsMap[tx.account_number] || 0) + (parseFloat(tx.amount) || 0);
+                });
             }
+
+            for (let tx of bulkTransactions) {
+                const pastDeposit = accountTotalsMap[tx.account_number] || 0;
+                if (pastDeposit + tx.amount > 25000) {
+                    const remaining = 25000 - pastDeposit;
+                    window.showSystemAlert(`🛑 दैनिक सीमा उल्लंघन!\n\nखाता संख्या ${tx.account_number} में आज पहले ही ₹${pastDeposit.toLocaleString('en-IN')} जमा हो चुके हैं।\nअब इस खाते में अधिकतम ₹${remaining > 0 ? remaining : 0} ही जमा किए जा सकते हैं।`, "Limit Exceeded", "❌");
+                    return;
+                }
+            }
+        } catch (err) {
+            console.error("Bulk Limit Query Error:", err);
+            return;
         }
-    } catch (err) {
-        console.error("Bulk Limit Query Error:", err);
-        return;
     }
 
-    // 🚀 गो-अहेड हरी झंडी! बैच प्रोसेसिंग शुरू करें
+    // 🚀 गो-अहेड! बैच प्रोसेसिंग इंजन शुरू करें
     try {
-        const bulkId = `BLK-${Date.now()}`;
+        let currentSettlementBalance = parseFloat(window.currentUser.settlement_balance) || 0;
+        let finalVaultData = { ...window.currentUser };
+
+        // 💥 [REVERSE TRANSACTION PHASE]
+        if (isEditMode && targetBulkId) {
+            console.log("Reversing old bulk batch effect for ID:", targetBulkId);
+            
+            // १. पुराने बैच का डेटा निकालकर असर उल्टा (Reverse) करें
+            const { data: oldBatch, error: fetchOldErr } = await window.supabaseClient
+                .from('deposit_transactions')
+                .select('*')
+                .eq('bulk_id', targetBulkId);
+
+            if (fetchOldErr) throw fetchOldErr;
+
+            if (oldBatch && oldBatch.length > 0) {
+                let oldGrandTotal = 0;
+                oldBatch.forEach(tx => { oldGrandTotal += parseFloat(tx.amount) || 0; });
+
+                // पुराना पैसा बैलेंस में वापस जोड़ें (Reverse Effect)
+                currentSettlementBalance += oldGrandTotal;
+
+                // पहली रो से पुराने नोटों का असर तिजोरी से घटाएं
+                const firstTx = oldBatch[0];
+                const notes = [500, 200, 100, 50, 20, 10, 5];
+                notes.forEach(n => {
+                    finalVaultData[`cash_${n}`] = (parseInt(finalVaultData[`cash_${n}`]) || 0) - (parseInt(firstTx[`denom_in_${n}`]) || 0) + (parseInt(firstTx[`denom_out_${n}`]) || 0);
+                });
+                finalVaultData.cash_coins = (parseInt(finalVaultData.cash_coins) || 0) - (parseInt(firstTx.denom_in_coins) || 0) + (parseInt(firstTx.denom_out_coins) || 0);
+            }
+
+            // २. पुराने बैच के सभी रिकॉर्ड्स को डेटाबेस से साफ़ (DELETE) मारें
+            const { error: deleteErr } = await window.supabaseClient
+                .from('deposit_transactions')
+                .delete()
+                .eq('bulk_id', targetBulkId);
+
+            if (deleteErr) throw deleteErr;
+        }
+
+        // ३. नया पेलोड तैयार करें (नया ID या संपादित पुराना ID)
+        const activeBulkId = isEditMode ? targetBulkId : `BLK-${Date.now()}`;
         
         const finalTransactionsPayload = bulkTransactions.map((tx, idx) => {
             let comm = Math.min(tx.amount * 0.004, 50);
@@ -128,34 +175,33 @@ async function executeBulkSaveProcess(targetButton) {
 
             return {
                 ...tx,
-                bulk_id: bulkId,
+                bulk_id: activeBulkId,
                 ko_code: window.currentUser.ko_code,
                 commission: comm,
                 ...denomPayload
             };
         });
 
-        // १. Supabase में कंबाइन इंसर्ट भेजें
+        // ४. डेटाबेस में कंबाइन फ्रेश इंसर्ट भेजें
         const { error: insertErr } = await window.supabaseClient
             .from('deposit_transactions')
             .insert(finalTransactionsPayload);
 
         if (insertErr) throw insertErr;
 
-        // २. सेटलमेंट बैलेंस और वॉल्ट अपडेट
-        const currentSettlementBalance = parseFloat(window.currentUser.settlement_balance) || 0;
+        // ५. नए डेटा के हिसाब से सेटलमेंट बैलेंस और वॉल्ट अपडेट
         const updatedSettlementBalance = currentSettlementBalance - bulkGrandTotal;
 
         const nextVaultData = {
             settlement_balance: updatedSettlementBalance,
-            cash_500: (parseInt(window.currentUser.cash_500) || 0) + (denomValues.denom_in_500 || 0) - (denomValues.denom_out_500 || 0),
-            cash_200: (parseInt(window.currentUser.cash_200) || 0) + (denomValues.denom_in_200 || 0) - (denomValues.denom_out_200 || 0),
-            cash_100: (parseInt(window.currentUser.cash_100) || 0) + (denomValues.denom_in_100 || 0) - (denomValues.denom_out_100 || 0),
-            cash_50:  (parseInt(window.currentUser.cash_50)  || 0) + (denomValues.denom_in_50  || 0) - (denomValues.denom_out_50  || 0),
-            cash_20:  (parseInt(window.currentUser.cash_20)  || 0) + (denomValues.denom_in_20  || 0) - (denomValues.denom_out_20  || 0),
-            cash_10:  (parseInt(window.currentUser.cash_10)  || 0) + (denomValues.denom_in_10  || 0) - (denomValues.denom_out_10  || 0),
-            cash_5:   (parseInt(window.currentUser.cash_5)   || 0) + (denomValues.denom_in_5   || 0) - (denomValues.denom_out_5   || 0),
-            cash_coins: (parseInt(window.currentUser.cash_coins) || 0) + (denomValues.denom_in_coins || 0) - (denomValues.denom_out_coins || 0)
+            cash_500: (parseInt(finalVaultData.cash_500) || 0) + (denomValues.denom_in_500 || 0) - (denomValues.denom_out_500 || 0),
+            cash_200: (parseInt(finalVaultData.cash_200) || 0) + (denomValues.denom_in_200 || 0) - (denomValues.denom_out_200 || 0),
+            cash_100: (parseInt(finalVaultData.cash_100) || 0) + (denomValues.denom_in_100 || 0) - (denomValues.denom_out_100 || 0),
+            cash_50:  (parseInt(finalVaultData.cash_50)  || 0) + (denomValues.denom_in_50  || 0) - (denomValues.denom_out_50  || 0),
+            cash_20:  (parseInt(finalVaultData.cash_20)  || 0) + (denomValues.denom_in_20  || 0) - (denomValues.denom_out_20  || 0),
+            cash_10:  (parseInt(finalVaultData.cash_10)  || 0) + (denomValues.denom_in_10  || 0) - (denomValues.denom_out_10  || 0),
+            cash_5:   (parseInt(finalVaultData.cash_5)   || 0) + (denomValues.denom_in_5   || 0) - (denomValues.denom_out_5   || 0),
+            cash_coins: (parseInt(finalVaultData.cash_coins) || 0) + (denomValues.denom_in_coins || 0) - (denomValues.denom_out_coins || 0)
         };
 
         const { error: userUpdateError } = await window.supabaseClient
@@ -166,11 +212,24 @@ async function executeBulkSaveProcess(targetButton) {
         if (userUpdateError) throw userUpdateError;
 
         Object.assign(window.currentUser, nextVaultData);
-        window.showSystemAlert(`📦 बल्क डिपॉजिट सफल!\nकुल खाते: ${bulkTransactions.length}\nकुल जमा राशि: ₹${bulkGrandTotal.toLocaleString('en-IN')}`, "Success", "✅");
+        
+        window.showSystemAlert(
+            isEditMode ? `📦 बल्क बैच ${activeBulkId} सफलतापूर्वक संशोधित (Updated) हुआ!` : `📦 नया बल्क डिपॉजिट सफल!`, 
+            "Success", "✅"
+        );
 
         if (typeof window.loadTodayTransactions === 'function') window.loadTodayTransactions();
         
+        // फॉर्म को वापस नॉर्मल क्लियर मोड पर लाएं
         document.getElementById('btn-bulk-dep-clear')?.click();
+
+        // यदि एडिट मोड था, तो बटन का रूप वापस डिफ़ॉल्ट करें
+        if (isEditMode) {
+            targetButton.innerText = "💾 Save Bulk Transactions";
+            targetButton.style.background = "#7d0022";
+            delete targetButton.dataset.mode;
+            delete targetButton.dataset.editingBulkId;
+        }
 
     } catch (err) {
         console.error("Bulk Core Insertion Error:", err);
