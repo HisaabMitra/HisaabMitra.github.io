@@ -303,7 +303,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // 🌟 [CRITICAL FIX]: विथड्रॉल मॉड्यूल को इंजेक्ट और वायर करना 🌟
+    // 🌟 [CRITICAL SYNCHRONIZATION HUB] 🌟
     function initializePageModules(pageName) {
         if (pageName === 'home') {
             initHomepageModule();
@@ -317,12 +317,23 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // 💸 विथड्रॉल काउंटर के लिए मॉड्यूल लॉन्चर वायर लिंक
+        // 💸 विथड्रॉल काउंटर के लिए मॉड्यूल लॉन्चर + न्यू डेडिकेटेड डिनॉमिनेशन रेंडर लिंक फिक्स
         if (pageName === 'withdrawal') {
             if (typeof window.initWithdrawalPage === 'function') {
                 window.initWithdrawalPage(currentLoggedInUser);
             } else {
                 console.error("initWithdrawalPage function missing in withdrawal.js");
+            }
+
+            // 🌟 [FORCE DEDICATED WITHDRAWAL DENOMINATION RENDER]: नए पैनल को डायरेक्ट बलपूर्वक रेंडर करेगा
+            if (window.WitDenominationComponent) {
+                setTimeout(() => {
+                    console.log("Forcing Withdrawal Denomination Render from Core Launcher...");
+                    window.WitDenominationComponent.clear();
+                    window.WitDenominationComponent.render('master-shared-denomination-container');
+                }, 100); // 100ms का सुरक्षित डिले ताकि डोम रेंडर पूरा हो सके
+            } else {
+                console.error("WitDenominationComponent is missing in global window scope!");
             }
         }
 
