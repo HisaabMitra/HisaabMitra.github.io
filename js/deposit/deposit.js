@@ -1,5 +1,5 @@
 // ========================================================
-// 💰 SINGLE CASH DEPOSIT COUNTER & IN-PAGE SWITCHER LOGIC
+// 💰 SINGLE CASH DEPOSIT COUNTER & ADVANCED SCHEDULER ENGINE
 // ========================================================
 
 window.initDepositPage = async function (currentUser) {
@@ -10,13 +10,12 @@ window.initDepositPage = async function (currentUser) {
         const koCodeLabel = document.getElementById('lbl-ko-code');
         if (koCodeLabel) koCodeLabel.innerText = currentUser.ko_code;
 
-        // 💥 मास्टर शेयर्ड कंटेनर में विजेट को इमीडिएटली रेंडर करें
+        // [1] मास्टर शेयर्ड कंटेनर में डिनॉमिनेशन कॉम्पोनेन्ट रेंडर करें
         if (window.DenominationComponent) {
             setTimeout(() => {
                 window.DenominationComponent.clear();
                 window.DenominationComponent.render('master-shared-denomination-container');
                 
-                // साझा इनपुट ट्रैकर को फ्रेश बाइंड करें
                 const masterContainer = document.getElementById('master-shared-denomination-container');
                 if (masterContainer) {
                     masterContainer.querySelectorAll('.denom-in, .denom-out').forEach(input => {
@@ -30,7 +29,255 @@ window.initDepositPage = async function (currentUser) {
             }, 100); 
         }
 
-       // [3] आज की कंबाइन ट्रांजैक्शन्स (Single + Bulk) लोड करने का फ़ंक्शन
+        // ========================================================
+        // 🔔 [MODULE A]: SCHEDULED DEPOSITS NOTIFICATION & MORNING BOARD LOGIC
+        // ========================================================
+        
+        let globalTodayPendingRecords = []; // आज रिलीज होने वाले रिकॉर्ड्स की लोकल कॉपी
+
+        async function checkAndSyncScheduledDeposits() {
+            console.log("Scanning Scheduled Deposits Ledger...");
+            const todayStr = new Date().toISOString().split('T')[0];
+
+            try {
+                // १. डेटाबेस से PENDING स्टेटस वाले सभी शेड्यूल डिपॉजिट्स निकालें
+                const { data, error } = await window.supabaseClient
+                    .from('scheduled_deposits')
+                    .select('*')
+                    .eq('ko_code', currentUser.ko_code)
+                    .eq('status', 'PENDING');
+
+                if (error) throw error;
+
+                // २. आज की तारीख और भविष्य की तारीखों में डेटा को वर्गीकृत (Classify) करें
+                globalTodayPendingRecords = data.filter(r => r.scheduled_date <= todayStr);
+                const futurePendingRecords = data.filter(r => r.scheduled_date > todayStr);
+
+                // ३. टॉप बैनर घंटी (Bell Badge) को लाइव अपडेट करें
+                const bellBadge = document.getElementById('badge-pending-count');
+                if (bellBadge) {
+                    if (globalTodayPendingRecords.length > 0) {
+                        bellBadge.innerText = globalTodayPendingRecords.length;
+                        bellBadge.style.display = 'block';
+                    } else {
+                        bellBadge.style.display = 'none';
+                    }
+                }
+
+                // ४. मॉर्निंग क्लियरेंस बोर्ड की दोनों तालिकाओं (Tables) को पॉप्युलेट करें
+                renderMorningClearanceBoard(globalTodayPendingRecords, futurePendingRecords);
+
+                // ५. ऑटो-ट्रिगर: यदि सुबह-सुबह काउंटर खुला है और आज की तारीख के रिकॉर्ड्स पेंडिंग हैं, तो पॉपअप फ्लैश करें
+                if (globalTodayPendingRecords.length > 0) {
+                    const morningModal = document.getElementById('morning-release-modal');
+                    if (morningModal && morningModal.style.display !== 'flex') {
+                        morningModal.style.setProperty('display', 'flex', 'important');
+                    }
+                }
+
+            } catch (err) {
+                console.error("Scheduled Sync Core Error:", err);
+            }
+        }
+
+        // मॉर्निंग क्लियरेंस बोर्ड में डेटा रेंडर करने का फ़ंक्शन
+        function renderMorningClearanceBoard(todayRecords, futureRecords) {
+            document.getElementById('lbl-cnt-today').innerText = todayRecords.length;
+            document.getElementById('lbl-cnt-future').innerText = futureRecords.length;
+
+            // TAB 1: Available Today
+            const todayTbody = document.getElementById('tbl-morning-today-tbody');
+            if (todayTbody) {
+                todayTbody.innerHTML = '';
+                if (todayRecords.length === 0) {
+                    todayTbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:#888;">आज की तारीख में कोई लंबित शेड्यूलिंग रिलीज नहीं है।</td></tr>';
+                } else {
+                    todayRecords.forEach(r => {
+                        todayTbody.insertAdjacentHTML('beforeend', `
+                            <tr style="border-bottom: 1px solid #f1f1f1;">
+                                <td style="padding:10px; text-align:center;"><input type="checkbox" class="chk-morning-release-item" data-id="${r.id}" style="cursor:pointer;"></td>
+                                <td style="padding:10px; font-weight:600;">${r.account_number}</td>
+                                <td style="padding:10px; text-transform:uppercase;">${r.customer_name}</td>
+                                <td style="padding:10px; text-align:right; font-weight:bold; color:#7d0022;">₹${parseFloat(r.amount).toFixed(2)}</td>
+                            </tr>
+                        `);
+                    });
+                }
+            }
+
+            // TAB 2: Future Blocked
+            const futureTbody = document.getElementById('tbl-morning-future-tbody');
+            if (futureTbody) {
+                futureTbody.innerHTML = '';
+                if (futureRecords.length === 0) {
+                    futureTbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:#888;">भविष्य की कतार में कोई रिकॉर्ड लॉक नहीं है।</td></tr>';
+                } else {
+                    futureRecords.forEach(r => {
+                        // ब्रिटिश फॉर्मेट डेट को रीडेबल बनाएं
+                        const dateParts = r.scheduled_date.split('-');
+                        const formattedDate = `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`;
+
+                        futureTbody.insertAdjacentHTML('beforeend', `
+                            <tr style="border-bottom: 1px solid #f1f1f1; background:#fdfdfd;">
+                                <td style="padding:10px; font-weight:bold; color:#e67e22;">${formattedDate}</td>
+                                <td style="padding:10px;">${r.account_number}</td>
+                                <td style="padding:10px; text-transform:uppercase;">${r.customer_name}</td>
+                                <td style="padding:10px; text-align:right; font-weight:600; color:#444;">₹${parseFloat(r.amount).toFixed(2)}</td>
+                            </tr>
+                        `);
+                    });
+                }
+            }
+        }
+
+        // 🔔 टॉप घंटी आइकॉन पर मैनुअल क्लिक इवेंट बाइंडिंग
+        const triggerBellBtn = document.getElementById('btn-trigger-pending-modal');
+        if (triggerBellBtn) {
+            triggerBellBtn.onclick = function () {
+                const morningModal = document.getElementById('morning-release-modal');
+                if (morningModal) morningModal.style.setProperty('display', 'flex', 'important');
+            };
+        }
+
+        // 📜 मॉर्निंग बोर्ड के नेविगेशन टैब्स टॉगल इंजन लॉजिक
+        const tabBtnToday = document.getElementById('tab-btn-today');
+        const tabBtnFuture = document.getElementById('tab-btn-future');
+        const tabContentToday = document.getElementById('tab-content-today');
+        const tabContentFuture = document.getElementById('tab-content-future');
+
+        if (tabBtnToday && tabBtnFuture) {
+            tabBtnToday.onclick = function () {
+                tabBtnToday.classList.add('active'); tabBtnFuture.classList.remove('active');
+                tabContentToday.style.display = 'block'; tabContentFuture.style.display = 'none';
+            };
+            tabBtnFuture.onclick = function () {
+                tabBtnFuture.classList.add('active'); tabBtnToday.classList.remove('active');
+                tabContentFuture.style.display = 'block'; tabContentToday.style.display = 'none';
+            };
+        }
+
+        // मास्टर चेकबॉक्स 'Check All' नियंत्रण
+        const masterChkBox = document.getElementById('chk-release-all-master');
+        if (masterChkBox) {
+            masterChkBox.onchange = function () {
+                document.querySelectorAll('.chk-morning-release-item').forEach(chk => {
+                    chk.checked = masterChkBox.checked;
+                });
+            };
+        }
+
+
+        // ========================================================
+        // 🚀 [MODULE B]: LIVE MULTI-DAY AUTO-SPLIT ENGINE LOGIC
+        // ========================================================
+        
+        let activeSplitPayload = null; // स्प्लिटिंग के समय कोर कस्टमर इन्फो होल्ड करने के लिए
+
+        // यह फंक्शन चुने गए दिनों के आधार पर पॉपअप में लाइव तारीखें और इनपुट बॉक्स बिछाएगा
+        function calculateAndRenderSplitRows() {
+            const totalAmount = parseFloat(document.getElementById('dep-amount').value) || 0;
+            const daysToSpread = parseInt(document.getElementById('ddl-split-days').value) || 2;
+            const container = document.getElementById('split-rows-container');
+
+            if (!container) return;
+            container.innerHTML = '';
+
+            // प्रतिदिन का डिफ़ॉल्ट औसत हिस्सा निकालें
+            let baseShare = Math.floor(totalAmount / daysToSpread);
+            let shareAmounts = Array(daysToSpread).fill(baseShare);
+            
+            // अगर डिवाइड करने के बाद कुछ पैसे बच जाते हैं, तो उन्हें पहले दिन (आज) में जोड़ दें
+            let remainder = totalAmount - (baseShare * daysToSpread);
+            shareAmounts[0] += remainder;
+
+            // यदि पहले दिन का हिस्सा 25,000 की सीमा लांघ रहा है, तो उसे 25,000 पर लॉक करें और बाकी आगे शिफ्ट करें
+            if (shareAmounts[0] > 25000) {
+                let overflow = shareAmounts[0] - 25000;
+                shareAmounts[0] = 25000;
+                
+                // बचे हुए दिनों में ओवरफ्लो बराबर बांट दें
+                let extraPerDay = Math.floor(overflow / (daysToSpread - 1));
+                let extraRemainder = overflow - (extraPerDay * (daysToSpread - 1));
+
+                for (let i = 1; i < daysToSpread; i++) {
+                    shareAmounts[i] += extraPerDay;
+                }
+                shareAmounts[1] += extraRemainder; // अतिरिक्त बचा पैसा दूसरे दिन में जमा
+            }
+
+            // तारीखों का लाइव स्प्रेडर चक्र
+            let currentDate = new Date();
+
+            for (let i = 0; i < daysToSpread; i++) {
+                if (i > 0) currentDate.setDate(currentDate.getDate() + 1); // हर चक्र पर १ दिन आगे बढ़ाएं
+                const dateStr = currentDate.toISOString().split('T')[0];
+                const displayDate = dateStr.split('-').reverse().join('-'); // DD-MM-YYYY यूज़र डिस्प्ले
+
+                container.insertAdjacentHTML('beforeend', `
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; background:#fafafa; padding:6px 12px; border-radius:6px; border:1px solid #f1f1f1;">
+                        <span style="font-weight:600; color:#555;">${i === 0 ? "🌟 Today (आज)" : `📅 Day ${i+1} (${displayDate})`}</span>
+                        <input type="number" class="sch-row-input" data-date="${dateStr}" data-index="${i}" value="${shareAmounts[i]}" min="0" max="25000">
+                    </div>
+                `);
+            }
+
+            // इनपुट बॉक्स में बदलाव होते ही लाइव शेष राशि ट्रैक करने के लिए इवेंट लिसनर हुक
+            container.querySelectorAll('.sch-row-input').forEach(input => {
+                input.addEventListener('input', trackLiveSplitBalance);
+            });
+
+            trackLiveSplitBalance(); // शुरुआती बैलेंस चेकिंग रन करें
+        }
+
+        // लाइव पेंडिंग बैलेंस मैचिंग इंडिकेटर इंजन
+        function trackLiveSplitBalance() {
+            const totalAmount = parseFloat(document.getElementById('dep-amount').value) || 0;
+            let currentSum = 0;
+
+            document.querySelectorAll('.sch-row-input').forEach(input => {
+                const val = parseFloat(input.value) || 0;
+                
+                // 🛑 RBI सुरक्षा गार्ड: किसी भी बॉक्स में ₹25,000 से ज्यादा रकम भरने से रोकें
+                if (val > 25000) {
+                    input.value = 25000;
+                }
+                currentSum += parseFloat(input.value) || 0;
+            });
+
+            const diff = totalAmount - currentSum;
+            const pendingLabel = document.getElementById('lbl-split-pending-rem');
+
+            if (diff === 0) {
+                pendingLabel.innerText = "₹0.00 (Perfect Match) ✅";
+                pendingLabel.style.color = "#27ae60";
+            } else if (diff > 0) {
+                pendingLabel.innerText = `₹${diff.toFixed(2)} Under Short ⚠️`;
+                pendingLabel.style.color = "#e67e22";
+            } else {
+                pendingLabel.innerText = `₹${Math.abs(diff).toFixed(2)} Exceeded ❌`;
+                pendingLabel.style.color = "#c5221f";
+            }
+        }
+
+        // ड्रॉपडाउन दिनों की संख्या बदलने पर री-रेंडर
+        const ddlDays = document.getElementById('ddl-split-days');
+        if (ddlDays) {
+            ddlDays.onchange = calculateAndRenderSplitRows;
+        }
+
+        // पॉपअप कैंसिल बटन
+        const btnSplitCancel = document.getElementById('btn-split-cancel');
+        if (btnSplitCancel) {
+            btnSplitCancel.onclick = function () {
+                document.getElementById('smart-split-modal').style.display = 'none';
+                activeSplitPayload = null;
+            };
+        }
+
+        // ========================================================
+        // 📈 [MASTER INTEGRATION]: LIVE LEDGER LOAD FROM CORE DB
+        // ========================================================
+        
         async function loadTodayTransactions() {
             const tbody = document.getElementById('today-tx-body');
             if (!tbody) return;
@@ -55,16 +302,9 @@ window.initDepositPage = async function (currentUser) {
 
                 data.forEach(tx => {
                     const time = new Date(tx.transaction_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                    
-                    // 📦 अगर बल्क आईडी है तो '📦 BLK-XXXX' दिखाएं, नहीं तो नॉर्मल अकाउंट नंबर
                     const identifier = tx.bulk_id ? `📦 ${tx.bulk_id}` : tx.account_number;
-                    
-                    // अगर बल्क आईडी है तो Depositor का नाम दिखाएं, नहीं तो कस्टमर का नाम
                     const displayName = tx.bulk_id ? `Depositor: ${tx.depositor_name || 'N/A'}` : tx.customer_name;
-                    
-                    // बल्क एंट्री के नीचे छोटा सा हिंट देने के लिए कि पैसा किस खाते में गया है
                     const txTypeHint = tx.bulk_id ? `<br><small style="color:#777;">To: ${tx.customer_name}</small>` : '';
-                    
                     const txStr = btoa(JSON.stringify(tx)); 
 
                     tbody.insertAdjacentHTML('beforeend', `
@@ -89,31 +329,23 @@ window.initDepositPage = async function (currentUser) {
             } catch (err) { console.error("Table Load Error:", err); }
         }
 
-        // [4] एडिट बटन क्लिक हैंडलर (मल्टी-मोड ड्युअल डिटेक्शन इंजन)
         function attachEditEventListeners() {
             document.querySelectorAll('.btn-edit-tx').forEach(btn => {
                 btn.onclick = function() {
                     try {
                         const txData = JSON.parse(atob(this.getAttribute('data-tx')));
                         
-                        // 📦 स्थिति A: यदि यह एक बल्क बैच ट्रांजैक्शन है
                         if (txData.bulk_id) {
                             const switchBtn = document.getElementById('btn-switch-deposit-mode');
                             if (switchBtn && switchBtn.getAttribute('data-current-mode') === 'single') {
-                                // ज़बरदस्ती यूआई लेआउट को बल्क मोड ग्रिड पर स्विच करें
                                 switchBtn.click();
                             }
-                            
-                            // बल्क इंजन को पूरा कंबाइन बैच लोड करने का निर्देश दें
                             if (typeof window.loadBulkBatchForEdit === 'function') {
                                 window.loadBulkBatchForEdit(txData);
-                            } else {
-                                console.error("loadBulkBatchForEdit function is missing in deposit-bulk.js");
                             }
                             return;
                         }
 
-                        // 👤 स्थिति B: यदि यह एक नॉर्मल सिंगल काउंटर ट्रांजैक्शन है
                         document.getElementById('dep-account-no').value = txData.account_number;
                         document.getElementById('dep-cust-name').value = txData.customer_name;
                         document.getElementById('dep-amount').value = txData.amount;
@@ -155,6 +387,7 @@ window.initDepositPage = async function (currentUser) {
         window.loadTodayTransactions = loadTodayTransactions;
         loadTodayTransactions();
 
+        // [🔍 CORE SEARCH CONTROLS]: सिंगल अकाउंट ऑटो-सर्च इंजन
         const accInput = document.getElementById('dep-account-no');
         const custNameInput = document.getElementById('dep-cust-name');
         const amountInput = document.getElementById('dep-amount');
@@ -335,6 +568,172 @@ window.initDepositPage = async function (currentUser) {
                 }
             }
         });
+
+        // 🔗 बाहरी इंटरफ़ेस के लिए इसे window पर बाइंड करें (ताकि सेव इंजन इस विंडो को कॉल कर सके)
+        window.triggerSmartSplitModal = function(payload) {
+            activeSplitPayload = payload;
+            document.getElementById('lbl-split-total-deposit').innerText = `₹${payload.amount.toLocaleString('en-IN')}`;
+            document.getElementById('ddl-split-days').value = "2"; // डिफ़ॉल्ट रूप से 2 दिन चुनें
+            
+            document.getElementById('smart-split-modal').style.setProperty('display', 'flex', 'important');
+            calculateAndRenderSplitRows(); // पंक्तियाँ बनाएं
+        };
+
+        // 🟢 [CORE ACTION]: 'Confirm & Lock Split' बटन दबाने का अंतिम सबमिशन लॉजिक
+        const btnSplitConfirm = document.getElementById('btn-split-confirm');
+        if (btnSplitConfirm) {
+            btnSplitConfirm.onclick = async function() {
+                const totalAmount = parseFloat(document.getElementById('dep-amount').value) || 0;
+                let currentSum = 0;
+                let splitSchedules = [];
+
+                document.querySelectorAll('.sch-row-input').forEach(input => {
+                    const amt = parseFloat(input.value) || 0;
+                    const sDate = input.getAttribute('data-date');
+                    currentSum += amt;
+                    splitSchedules.push({ date: sDate, amount: amt });
+                });
+
+                if (Math.abs(totalAmount - currentSum) > 0.01) {
+                    window.showSystemAlert("विभाजित राशियों का योग कुल जमा राशि से मेल खाना अनिवार्य है!", "Balance Mismatch", "❌");
+                    return;
+                }
+
+                btnSplitConfirm.textContent = "Locking Threads...";
+                btnSplitConfirm.disabled = true;
+
+                try {
+                    // १. बाहरी ग्लोबल कस्टम सेव ट्रिगर इवेंट फायर करें जो सीधा 'deposit-save.js' को आदेश देगा
+                    // यह केवल आज (Day 1) के हिस्से को मेन लेज़र में पास करेगा और पूरे कैश नोट को आज ही वॉल्ट में डाल देगा!
+                    const event = new CustomEvent('execute-split-today-save', {
+                        detail: {
+                            basePayload: activeSplitPayload,
+                            todayAmount: splitSchedules[0].amount
+                        }
+                    });
+                    window.dispatchEvent(event);
+
+                    // २. बचे हुए भविष्य के दिनों (Day 2, 3, 4..) को scheduled_deposits टेबल में डंप करें
+                    let futureInsertPayload = [];
+                    for(let i = 1; i < splitSchedules.length; i++) {
+                        futureInsertPayload.push({
+                            account_number: activeSplitPayload.account_number,
+                            customer_name: activeSplitPayload.customer_name,
+                            amount: splitSchedules[i].amount,
+                            scheduled_date: splitSchedules[i].date,
+                            ko_code: currentUser.ko_code,
+                            status: 'PENDING'
+                        });
+                    }
+
+                    if (futureInsertPayload.length > 0) {
+                        const { error: schedErr } = await window.supabaseClient
+                            .from('scheduled_deposits')
+                            .insert(futureInsertPayload);
+                        if (schedErr) throw schedErr;
+                    }
+
+                    // सफलता की घोषणा!
+                    document.getElementById('smart-split-modal').style.display = 'none';
+                    masterFormClear();
+                    
+                    // लाइव डेटा रीयल-टाइम री-सिंक करें
+                    await checkAndSyncScheduledDeposits();
+                    if (typeof loadTodayTransactions === 'function') loadTodayTransactions();
+
+                } catch (err) {
+                    console.error("Split Execution Fail:", err);
+                    window.showSystemAlert("स्प्लिटिंग थ्रेड लॉकिंग विफल: " + err.message, "System Error", "❌");
+                } finally {
+                    btnSplitConfirm.textContent = "Confirm & Lock Split";
+                    btnSplitConfirm.disabled = false;
+                }
+            };
+        }
+
+        // 🚀 [MORNING RELEASE]: चुने गए लंबित खातों को रिलीज करके आज की मुख्य तालिका में धकेलना
+        const btnProcessMorning = document.getElementById('btn-process-morning-releases');
+        if (btnProcessMorning) {
+            btnProcessMorning.onclick = async function() {
+                let selectedIds = [];
+                document.querySelectorAll('.chk-morning-release-item:checked').forEach(chk => {
+                    selectedIds.push(parseInt(chk.getAttribute('data-id')));
+                });
+
+                if (selectedIds.length === 0) {
+                    window.showSystemAlert("कृपया रिलीज करने के लिए कम से कम एक खाता चुनें!", "Validation Error", "⚠️");
+                    return;
+                }
+
+                btnProcessMorning.textContent = "Releasing Funds...";
+                btnProcessMorning.disabled = true;
+
+                try {
+                    // १. लोकल कॉपी से उन चुने हुए रिकॉर्ड्स को फिल्टर करें जिन्हें पास करना है
+                    const recordsToRelease = globalTodayPendingRecords.filter(r => selectedIds.includes(r.id));
+                    let settlementDebitTotal = 0;
+                    let mainTxPayload = [];
+
+                    recordsToRelease.forEach(r => {
+                        settlementDebitTotal += parseFloat(r.amount);
+                        let comm = Math.min(r.amount * 0.004, 50);
+                        
+                        // ध्यान दें: डिनॉमिनेशन यहाँ खाली (0) रहेगा, क्योंकि कैश पहले दिन ही जमा हो चुका है!
+                        mainTxPayload.push({
+                            account_number: r.account_number,
+                            customer_name: r.customer_name,
+                            amount: r.amount,
+                            ko_code: currentUser.ko_code,
+                            remarks: `RELEASED FROM SCHEDULED ID #${r.id}`,
+                            commission: comm
+                        });
+                    });
+
+                    // २. मुख्य deposit_transactions तालिका में आज की डेट में इंसर्ट करें
+                    const { error: insertErr } = await window.supabaseClient
+                        .from('deposit_transactions')
+                        .insert(mainTxPayload);
+                    if (insertErr) throw insertErr;
+
+                    // ३. scheduled_deposits में उन रिकॉर्ड्स का स्टेटस 'RELEASED' और समय दर्ज करें
+                    const todayTimeStr = new Date().toISOString();
+                    const { error: updateSchedErr } = await window.supabaseClient
+                        .from('scheduled_deposits')
+                        .update({ status: 'RELEASED', released_at: todayTimeStr })
+                        .in('id', selectedIds);
+                    if (updateSchedErr) throw updateSchedErr;
+
+                    // ४. सेटलमेंट बैलेंस में से आज का हिस्सा डेबिट करें (वॉल्ट कैश टच नहीं होगा, वो डे 1 पर बढ़ चुका है)
+                    const nextSettlementBal = (parseFloat(window.currentUser.settlement_balance) || 0) - settlementDebitTotal;
+                    
+                    const { error: userUpdateErr } = await window.supabaseClient
+                        .from('user_roles')
+                        .update({ settlement_balance: nextSettlementBal })
+                        .eq('id', window.currentUser.id);
+                    if (userUpdateErr) throw userUpdateErr;
+
+                    window.currentUser.settlement_balance = nextSettlementBal;
+
+                    window.showSystemAlert(`🎉 ${selectedIds.length} लंबित खाते सफलतापूर्वक आज की मुख्य लेज़र में क्रेडिट कर दिए गए हैं!`, "Releases Successful", "✅");
+                    
+                    // बोर्ड छुपाएं और दोबारा डेटा फेच करें
+                    document.getElementById('morning-release-modal').style.display = 'none';
+                    await checkAndSyncScheduledDeposits();
+                    loadTodayTransactions();
+
+                } catch (err) {
+                    console.error("Morning Release Error:", err);
+                    window.showSystemAlert("रिलीज विफलता: " + err.message, "System Error", "❌");
+                } finally {
+                    btnProcessMorning.textContent = "Process Selected Entries";
+                    btnProcessMorning.disabled = false;
+                }
+            };
+        }
+
+
+        // 💥 [ENGINE IGNITION]: काउंटर शुरू होते ही शेड्यूलिंग डेटाबेस सिंक फायर करें
+        await checkAndSyncScheduledDeposits();
 
         document.onkeydown = function(e) {
             const switchBtn = document.getElementById('btn-switch-deposit-mode');
