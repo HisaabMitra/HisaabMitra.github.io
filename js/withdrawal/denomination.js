@@ -90,7 +90,8 @@ window.WitDenominationComponent = {
     attachListeners: function() {
         document.querySelectorAll('.wit-denom-in, .wit-denom-out').forEach(input => {
             input.addEventListener('input', () => this.calculate());
-            input.addEventListener('wheel', (e) => e.preventDefault());
+            // ⚡ विथड्रॉल वाले काउंटर में भी व्हील लॉक को पैसिव फॉल्स किया
+            input.addEventListener('wheel', (e) => e.preventDefault(), { passive: false });
         });
     },
 
