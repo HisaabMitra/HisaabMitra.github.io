@@ -156,7 +156,7 @@ window.initDepositPage = async function (currentUser) {
             };
         }
 
-        // मास्टर चेकबॉक्स 'Check All' नियंत्रण
+        // Master Checkbox 'Check All' Control
         const masterChkBox = document.getElementById('chk-release-all-master');
         if (masterChkBox) {
             masterChkBox.onchange = function () {
@@ -168,10 +168,10 @@ window.initDepositPage = async function (currentUser) {
 
 
         // ========================================================
-        // 🚀 [MODULE B]: LIVE MULTI-DAY AUTO-SPLIT ENGINE LOGIC
+        // 🚀 [UPGRADED MODULE B]: LIVE MULTI-DAY AUTO-BALANCING SPLIT ENGINE
         // ========================================================
         
-        let activeSplitPayload = null; // स्प्लिटिंग के समय कोर कस्टमर इन्फो होल्ड करने के लिए
+        let activeSplitPayload = null; 
 
         // यह फंक्शन चुने गए दिनों के आधार पर पॉपअप में लाइव तारीखें और इनपुट बॉक्स बिछाएगा
         function calculateAndRenderSplitRows() {
@@ -186,7 +186,7 @@ window.initDepositPage = async function (currentUser) {
             let baseShare = Math.floor(totalAmount / daysToSpread);
             let shareAmounts = Array(daysToSpread).fill(baseShare);
             
-            // अगर डिवाइड करने के बाद कुछ पैसे बच जाते हैं, तो उन्हें पहले दिन (आज) में जोड़ दें
+            // अगर डिवाइड करने के बाद कुछ पैसे बच जाते हैं, तो उन्हें पहले दिन (आज) में जोड़ दें
             let remainder = totalAmount - (baseShare * daysToSpread);
             shareAmounts[0] += remainder;
 
@@ -202,16 +202,15 @@ window.initDepositPage = async function (currentUser) {
                 for (let i = 1; i < daysToSpread; i++) {
                     shareAmounts[i] += extraPerDay;
                 }
-                shareAmounts[1] += extraRemainder; // अतिरिक्त बचा पैसा दूसरे दिन में जमा
+                shareAmounts[1] += extraRemainder; 
             }
 
-            // तारीखों का लाइव स्प्रेडर चक्र
             let currentDate = new Date();
 
             for (let i = 0; i < daysToSpread; i++) {
-                if (i > 0) currentDate.setDate(currentDate.getDate() + 1); // हर चक्र पर १ दिन आगे बढ़ाएं
+                if (i > 0) currentDate.setDate(currentDate.getDate() + 1); 
                 const dateStr = currentDate.toISOString().split('T')[0];
-                const displayDate = dateStr.split('-').reverse().join('-'); // DD-MM-YYYY यूज़र डिस्प्ले
+                const displayDate = dateStr.split('-').reverse().join('-'); 
 
                 container.insertAdjacentHTML('beforeend', `
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; background:#fafafa; padding:6px 12px; border-radius:6px; border:1px solid #f1f1f1;">
@@ -221,12 +220,67 @@ window.initDepositPage = async function (currentUser) {
                 `);
             }
 
-            // इनपुट बॉक्स में बदलाव होते ही लाइव शेष राशि ट्रैक करने के लिए इवेंट लिसनर हुक
+            // 🌟 [स्मार्ट रिपल]: इनपुट बॉक्स में बदलाव होते ही ऑटो-बैलेंसिंग मैकेनिज्म ट्रिगर करें
             container.querySelectorAll('.sch-row-input').forEach(input => {
-                input.addEventListener('input', trackLiveSplitBalance);
+                input.addEventListener('input', (e) => {
+                    handleRowAmountRipple(e.target);
+                });
             });
 
-            trackLiveSplitBalance(); // शुरुआती बैलेंस चेकिंग रन करें
+            trackLiveSplitBalance(); 
+        }
+
+        // 🌟 [AUTO-BALANCING RIPPLE LOGIC]: यह फंक्शन बदला हुआ पैसा अगली रो में ऑटो-ट्रांसफर करेगा!
+        function handleRowAmountRipple(changedInput) {
+            const totalAmount = parseFloat(document.getElementById('dep-amount').value) || 0;
+            const changedIndex = parseInt(changedInput.getAttribute('data-index'));
+            let changedValue = parseFloat(changedInput.value) || 0;
+
+            // 🛑 RBI सुरक्षा गार्ड: किसी भी बॉक्स में ₹25,000 से ऊपर टाइप न होने दें
+            if (changedValue > 25000) {
+                changedInput.value = 25000;
+                changedValue = 25000;
+            }
+
+            const allInputs = Array.from(document.querySelectorAll('.sch-row-input'));
+            
+            // १. जिस रो को बदला गया है, उससे पहले की सभी रोज़ का टोटल सम निकालें
+            let sumBefore = 0;
+            for (let i = 0; i < changedIndex; i++) {
+                sumBefore += parseFloat(allInputs[i].value) || 0;
+            }
+
+            // २. अब कुल अमाउंट में से (पहले की रोज़ + वर्तमान बदली हुई रो) को घटाकर नया बचा हुआ बैलेंस निकालें
+            let remainingBalance = totalAmount - (sumBefore + changedValue);
+
+            // ३. यह बचा हुआ बैलेंस आगे आने वाले (Next Days) के इनपुट बॉक्सेस में स्वतः री-डिस्ट्रीब्यूट कर दें
+            const remainingDays = allInputs.length - (changedIndex + 1);
+
+            if (remainingDays > 0) {
+                let targetShare = Math.floor(remainingBalance / remainingDays);
+                if (targetShare < 0) targetShare = 0;
+
+                for (let i = changedIndex + 1; i < allInputs.length; i++) {
+                    allInputs[i].value = targetShare;
+                }
+
+                // बची हुई फुटकर राशि अंतिम कतार में एडजस्ट कर दें
+                let finalSum = 0;
+                allInputs.forEach((input, idx) => {
+                    if (idx < allInputs.length - 1) finalSum += parseFloat(input.value) || 0;
+                });
+                
+                let finalRemainder = totalAmount - finalSum;
+                if (finalRemainder >= 0 && finalRemainder <= 25000) {
+                    allInputs[allInputs.length - 1].value = finalRemainder;
+                } else if (finalRemainder > 25000) {
+                    allInputs[allInputs.length - 1].value = 25000;
+                } else {
+                    allInputs[allInputs.length - 1].value = 0;
+                }
+            }
+
+            trackLiveSplitBalance();
         }
 
         // लाइव पेंडिंग बैलेंस मैचिंग इंडिकेटर इंजन
@@ -235,19 +289,13 @@ window.initDepositPage = async function (currentUser) {
             let currentSum = 0;
 
             document.querySelectorAll('.sch-row-input').forEach(input => {
-                const val = parseFloat(input.value) || 0;
-                
-                // 🛑 RBI सुरक्षा गार्ड: किसी भी बॉक्स में ₹25,000 से ज्यादा रकम भरने से रोकें
-                if (val > 25000) {
-                    input.value = 25000;
-                }
                 currentSum += parseFloat(input.value) || 0;
             });
 
             const diff = totalAmount - currentSum;
             const pendingLabel = document.getElementById('lbl-split-pending-rem');
 
-            if (diff === 0) {
+            if (Math.abs(diff) < 0.01) {
                 pendingLabel.innerText = "₹0.00 (Perfect Match) ✅";
                 pendingLabel.style.color = "#27ae60";
             } else if (diff > 0) {
@@ -573,13 +621,13 @@ window.initDepositPage = async function (currentUser) {
         window.triggerSmartSplitModal = function(payload) {
             activeSplitPayload = payload;
             document.getElementById('lbl-split-total-deposit').innerText = `₹${payload.amount.toLocaleString('en-IN')}`;
-            document.getElementById('ddl-split-days').value = "2"; // डिफ़ॉल्ट रूप से 2 दिन चुनें
+            document.getElementById('ddl-split-days').value = "2"; 
             
             document.getElementById('smart-split-modal').style.setProperty('display', 'flex', 'important');
-            calculateAndRenderSplitRows(); // पंक्तियाँ बनाएं
+            calculateAndRenderSplitRows(); 
         };
 
-        // 🟢 [CORE ACTION]: 'Confirm & Lock Split' बटन दबाने का अंतिम सबमिशन लॉजिक
+        // 🟢 [CORE ACTION]: 'Confirm & Lock Split' बटन सबमिशन लॉजिक
         const btnSplitConfirm = document.getElementById('btn-split-confirm');
         if (btnSplitConfirm) {
             btnSplitConfirm.onclick = async function() {
@@ -603,8 +651,7 @@ window.initDepositPage = async function (currentUser) {
                 btnSplitConfirm.disabled = true;
 
                 try {
-                    // १. बाहरी ग्लोबल कस्टम सेव ट्रिगर इवेंट फायर करें जो सीधा 'deposit-save.js' को आदेश देगा
-                    // यह केवल आज (Day 1) के हिस्से को मेन लेज़र में पास करेगा और पूरे कैश नोट को आज ही वॉल्ट में डाल देगा!
+                    // १. आज (Day 1) के हिस्से को मुख्य लेज़र में पास करें
                     const event = new CustomEvent('execute-split-today-save', {
                         detail: {
                             basePayload: activeSplitPayload,
@@ -633,11 +680,9 @@ window.initDepositPage = async function (currentUser) {
                         if (schedErr) throw schedErr;
                     }
 
-                    // सफलता की घोषणा!
                     document.getElementById('smart-split-modal').style.display = 'none';
                     masterFormClear();
                     
-                    // लाइव डेटा रीयल-टाइम री-सिंक करें
                     await checkAndSyncScheduledDeposits();
                     if (typeof loadTodayTransactions === 'function') loadTodayTransactions();
 
@@ -651,7 +696,7 @@ window.initDepositPage = async function (currentUser) {
             };
         }
 
-        // 🚀 [MORNING RELEASE]: चुने गए लंबित खातों को रिलीज करके आज की मुख्य तालिका में धकेलना
+        // 🚀 [MORNING RELEASE]: चुने गए लंबित खातों को रिलीज करना
         const btnProcessMorning = document.getElementById('btn-process-morning-releases');
         if (btnProcessMorning) {
             btnProcessMorning.onclick = async function() {
@@ -669,7 +714,6 @@ window.initDepositPage = async function (currentUser) {
                 btnProcessMorning.disabled = true;
 
                 try {
-                    // १. लोकल कॉपी से उन चुने हुए रिकॉर्ड्स को फिल्टर करें जिन्हें पास करना है
                     const recordsToRelease = globalTodayPendingRecords.filter(r => selectedIds.includes(r.id));
                     let settlementDebitTotal = 0;
                     let mainTxPayload = [];
@@ -678,7 +722,6 @@ window.initDepositPage = async function (currentUser) {
                         settlementDebitTotal += parseFloat(r.amount);
                         let comm = Math.min(r.amount * 0.004, 50);
                         
-                        // ध्यान दें: डिनॉमिनेशन यहाँ खाली (0) रहेगा, क्योंकि कैश पहले दिन ही जमा हो चुका है!
                         mainTxPayload.push({
                             account_number: r.account_number,
                             customer_name: r.customer_name,
@@ -689,13 +732,11 @@ window.initDepositPage = async function (currentUser) {
                         });
                     });
 
-                    // २. मुख्य deposit_transactions तालिका में आज की डेट में इंसर्ट करें
                     const { error: insertErr } = await window.supabaseClient
                         .from('deposit_transactions')
                         .insert(mainTxPayload);
                     if (insertErr) throw insertErr;
 
-                    // ३. scheduled_deposits में उन रिकॉर्ड्स का स्टेटस 'RELEASED' और समय दर्ज करें
                     const todayTimeStr = new Date().toISOString();
                     const { error: updateSchedErr } = await window.supabaseClient
                         .from('scheduled_deposits')
@@ -703,7 +744,6 @@ window.initDepositPage = async function (currentUser) {
                         .in('id', selectedIds);
                     if (updateSchedErr) throw updateSchedErr;
 
-                    // ४. सेटलमेंट बैलेंस में से आज का हिस्सा डेबिट करें (वॉल्ट कैश टच नहीं होगा, वो डे 1 पर बढ़ चुका है)
                     const nextSettlementBal = (parseFloat(window.currentUser.settlement_balance) || 0) - settlementDebitTotal;
                     
                     const { error: userUpdateErr } = await window.supabaseClient
@@ -716,7 +756,6 @@ window.initDepositPage = async function (currentUser) {
 
                     window.showSystemAlert(`🎉 ${selectedIds.length} लंबित खाते सफलतापूर्वक आज की मुख्य लेज़र में क्रेडिट कर दिए गए हैं!`, "Releases Successful", "✅");
                     
-                    // बोर्ड छुपाएं और दोबारा डेटा फेच करें
                     document.getElementById('morning-release-modal').style.display = 'none';
                     await checkAndSyncScheduledDeposits();
                     loadTodayTransactions();
@@ -730,7 +769,6 @@ window.initDepositPage = async function (currentUser) {
                 }
             };
         }
-
 
         // 💥 [ENGINE IGNITION]: काउंटर शुरू होते ही शेड्यूलिंग डेटाबेस सिंक फायर करें
         await checkAndSyncScheduledDeposits();
