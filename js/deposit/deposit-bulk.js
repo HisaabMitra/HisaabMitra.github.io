@@ -49,6 +49,15 @@ window.initBulkDepositPage = async function (currentUser) {
                     window.DenominationComponent.clear();
                 }
                 
+                // सेव बटन को वापस नॉर्मल मोड में लाएं
+                const bulkSaveBtn = document.getElementById('btn-bulk-dep-save');
+                if (bulkSaveBtn) {
+                    bulkSaveBtn.innerText = "💾 Save Bulk Transactions";
+                    bulkSaveBtn.style.background = "#7d0022";
+                    delete bulkSaveBtn.dataset.mode;
+                    delete bulkSaveBtn.dataset.editingBulkId;
+                }
+
                 window.addNewBulkRow();
                 console.log("Bulk Form Reset Done.");
             };
@@ -109,7 +118,7 @@ function formatBulkAccountNumber(inputAcc, solId) {
     return `${solId}${parts[0].padStart(2, '0')}${parts[1].padStart(8, '0')}`;
 }
 
-// [C] लाइव खाता वेरिफिकेशन और ऑटो-रजिस्ट्रेशन पॉपअप इंटरफेस
+// [C] लाइव खाता वेरिफिकेशन और ऑटो-रजिस्ट्रेशन पॉपअप链
 function attachBulkRowEvents(rowId) {
     const row = document.getElementById(rowId);
     if (!row) return;
@@ -120,12 +129,10 @@ function attachBulkRowEvents(rowId) {
 
     if (!accInput) return;
 
-    // अकाउंट नंबर बॉक्स से बाहर आते ही (Blur Event) लाइव सर्च
     accInput.addEventListener('blur', async () => {
         let accountNo = accInput.value.trim();
         if (!accountNo) return;
 
-        // १. PNB फॉर्मेट में कनवर्ट करें
         const userSolId = (globalCurrentUser && globalCurrentUser.sol_id) || '193000';
         const formattedAccountNo = formatBulkAccountNumber(accountNo, userSolId);
         
@@ -147,17 +154,14 @@ function attachBulkRowEvents(rowId) {
 
             if (customer) {
                 nameInput.value = customer.customer_name.toUpperCase();
-                // ⚡ [TAB FOCUS FIX]: पुराना ग्राहक मिलने पर सीधा कर्सर अमाउंट बॉक्स पर जाएगा!
                 amtInput.focus();
             } else {
                 nameInput.value = "NOT REGISTERED";
                 
-                // नया कस्टमर मिलने पर सुंदर पॉपअप ट्रिगर करें
                 if (typeof openRegistrationPrompt === 'function') {
                     openRegistrationPrompt(accountNo, (registeredName) => {
                         if (registeredName) {
                             nameInput.value = registeredName.toUpperCase();
-                            // पंजीकरण पूरा होने के बाद सीधा फोकस अमाउंट पर लॉक करें
                             setTimeout(() => { amtInput.focus(); }, 50);
                         } else {
                             nameInput.value = "";
@@ -173,7 +177,6 @@ function attachBulkRowEvents(rowId) {
         }
     });
 
-    // अमाउंट बॉक्स में टाइप करते ही ग्रैंड टोटल लाइव अपडेट करें
     amtInput.addEventListener('input', () => window.calculateBulkGrandTotal());
 }
 
@@ -255,3 +258,71 @@ function openRegistrationPrompt(accountNo, callback) {
         }
     };
 }
+
+// ========================================================
+// 🌟 [CRITICAL UPGRADE]: डेटाबेस से संपादन के लिए पूरा बल्क बैच लोड करना
+// ========================================================
+window.loadBulkBatchForEdit = async function(baseTxData) {
+    console.log("Loading bulk batch engine for ID:", baseTxData.bulk_id);
+    try {
+        const depositorNameInput = document.getElementById('bulk-depositor-name');
+        const depositorMobileInput = document.getElementById('bulk-depositor-mobile');
+        if (depositorNameInput) depositorNameInput.value = baseTxData.depositor_name || "";
+        if (depositorMobileInput) depositorMobileInput.value = baseTxData.depositor_mobile || "";
+
+        const { data: batchList, error } = await window.supabaseClient
+            .from('deposit_transactions')
+            .select('*')
+            .eq('bulk_id', baseTxData.bulk_id)
+            .order('transaction_date', { ascending: true });
+
+        if (error) throw error;
+
+        const tbody = document.getElementById('bulk-accounts-tbody');
+        if (!tbody) return;
+        tbody.innerHTML = ''; // ग्रिड साफ़ करें
+
+        batchList.forEach(tx => {
+            bulkRowCounter++;
+            const rowId = `bulk-row-${bulkRowCounter}`;
+            const trHtml = `
+                <tr id="${rowId}" style="border-bottom: 1px solid #eee;">
+                    <td><input type="text" class="bulk-input bulk-acc-input" value="${tx.account_number}" placeholder="Enter Account No." autocomplete="off"></td>
+                    <td><input type="text" class="bulk-input bulk-name-input" id="name-${rowId}" value="${tx.customer_name.toUpperCase()}" readonly tabindex="-1"></td>
+                    <td><input type="number" class="bulk-input bulk-amount-input" value="${tx.amount}" placeholder="Max 25000" min="1" max="25000"></td>
+                    <td style="text-align: center;"><button type="button" onclick="window.removeBulkRow('${rowId}')" style="background: #c5221f; color: white; border: none; padding: 7px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.9rem;">❌</button></td>
+                </tr>
+            `;
+            tbody.insertAdjacentHTML('beforeend', trHtml);
+            attachBulkRowEvents(rowId);
+        });
+
+        // साझा डिनॉमिनेशन सेटिंग्स री-पॉप्युलेट करें
+        const notes = [500, 200, 100, 50, 20, 10, 5];
+        notes.forEach(note => {
+            const inInput = document.querySelector(`.denom-in[data-note="${note}"]`);
+            const outInput = document.querySelector(`.denom-out[data-note="${note}"]`);
+            if (inInput) inInput.value = baseTxData[`denom_in_${note}`] || 0;
+            if (outInput) outInput.value = baseTxData[`denom_out_${note}`] || 0;
+        });
+        const coinsIn = document.querySelector('.denom-in[data-note="coins"]');
+        const coinsOut = document.querySelector('.denom-out[data-note="coins"]');
+        if (coinsIn) coinsIn.value = baseTxData[`denom_in_coins`] || 0;
+        if (coinsOut) coinsOut.value = baseTxData[`denom_out_coins`] || 0;
+
+        window.calculateBulkGrandTotal();
+        if (window.DenominationComponent) window.DenominationComponent.calculate();
+
+        // बल्क सेव बटन को अपडेट मोड में बदलें
+        const bulkSaveBtn = document.getElementById('btn-bulk-dep-save');
+        if (bulkSaveBtn) {
+            bulkSaveBtn.innerText = "🔄 Update Bulk Batch";
+            bulkSaveBtn.style.background = "#d35400";
+            bulkSaveBtn.dataset.mode = "edit";
+            bulkSaveBtn.dataset.editingBulkId = baseTxData.bulk_id;
+        }
+        window.showSystemAlert(`📦 बैच ${baseTxData.bulk_id} संपादन के लिए लोड हो गया है!`, "Batch Loaded", "ℹ️");
+    } catch (err) { 
+        console.error("Batch Loading Error:", err); 
+    }
+};
