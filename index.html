@@ -103,15 +103,29 @@
 
     <div id="main-dashboard" class="dashboard-container hidden">
         
-        <header class="top-banner">
-            <div class="banner-left">
-                <h2>FINANCIAL PORTAL SYSTEM</h2>
+    <!-- ========================================================
+         🔔 UPGRADED TOP BANNER WITH LIVE NOTIFICATION ENGINE
+         ======================================================== -->
+    <header class="top-banner" style="display: flex; justify-content: space-between; align-items: center; background: #7d0022; color: white; padding: 10px 20px;">
+        <div class="banner-left">
+            <h2 style="margin: 0; font-weight: 700; letter-spacing: 0.5px;">FINANCIAL PORTAL SYSTEM</h2>
+        </div>
+        <div class="banner-right" style="display: flex; align-items: center; gap: 20px;">
+            
+            <!-- 🔔 लाइव पेंडिंग शेड्यूल नोटिफिकेशन बटन -->
+            <div id="btn-trigger-pending-modal" style="position: relative; cursor: pointer; user-select: none; padding: 6px; display: flex; align-items: center;" title="Today's Pending Scheduled Releases">
+                <span style="font-size: 1.4rem; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));">🔔</span>
+                <!-- 🔴 लाइव पेंडing काउंट का चमकीला बैज -->
+                <span id="badge-pending-count" style="position: absolute; top: -2px; right: -4px; background: #c5221f; color: white; border-radius: 50%; padding: 2px 6px; font-size: 0.7rem; font-weight: bold; border: 1px solid white; display: none; box-shadow: 0 2px 5px rgba(0,0,0,0.3);">0</span>
             </div>
-            <div class="banner-right">
-                <span id="user-display">Welcome, User</span>
-                <button id="logout-btn" class="btn btn-secondary btn-sm">Logout</button>
-            </div>
-        </header>
+
+            <!-- यूज़र नेम डिस्प्ले -->
+            <span id="user-display" style="font-weight: 500; font-size: 0.95rem;">Welcome, User</span>
+            
+            <!-- लॉगआउट बटन -->
+            <button id="logout-btn" class="btn btn-secondary btn-sm">Logout</button>
+        </div>
+    </header>
 
         <div class="dashboard-body">
             <aside class="sidebar">
