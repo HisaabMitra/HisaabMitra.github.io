@@ -38,3 +38,10 @@ body {
 .hidden {
     display: none !important;
 }
+
+.brand .logo {
+    max-width: 60px; /* आप अपनी पसंद के अनुसार 50px या 70px भी कर सकते हैं */
+    height: auto;
+    object-fit: contain;
+}
+
