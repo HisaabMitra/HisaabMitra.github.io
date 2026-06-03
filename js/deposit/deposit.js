@@ -36,7 +36,7 @@ window.initDepositPage = async function (currentUser) {
         let globalTodayPendingRecords = []; // आज रिलीज होने वाले रिकॉर्ड्स की लोकल कॉपी
 
         async function checkAndSyncScheduledDeposits() {
-            console.log("Scanning Scheduled Deposits Ledger...");
+           
             const todayStr = new Date().toISOString().split('T')[0];
 
             try {
