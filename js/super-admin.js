@@ -1,20 +1,6 @@
-// js/super-admin.js
-
-
-
-
-// Function ke start mein ye lagayein
-async function debugSupabase() {
-    console.log("Testing connection...");
-    const { data, error } = await window.supabaseClient.from('user_roles').select('*').limit(1);
-    if (error) {
-        console.error("CONNECTION FAILED:", error.message);
-    } else {
-        console.log("CONNECTION SUCCESSFUL. Data found:", data);
-    }
-}
-debugSupabase()
-
+// ========================================================
+// 👑 ADMINISTRATIVE CONTROL & SUPER ADMIN PANEL ENGINE
+// ========================================================
 
 async function initSuperAdminModule() {
     const pendingTable = document.getElementById('sa-pending-table');
@@ -23,7 +9,7 @@ async function initSuperAdminModule() {
 
     if (!pendingTable) return;
 
-    // 1. पेंडिंग यूज़र्स लोड करना
+    // 1. ⏳ पेंडिंग यूज़र्स लोड करना
     async function loadPendingRequests() {
         try {
             const { data: users, error } = await window.supabaseClient
@@ -86,178 +72,88 @@ async function initSuperAdminModule() {
         });
     }
 
-    // 2. एक्टिव यूज़र्स मैनेज करना (Renew / Unauthorize / Reset Password)
-   async function loadActiveUsers() {
-    console.log("Loading Active Users with Address data...");
+    // 2. 🟢 एक्टिव यूज़र्स मैनेज करना (Renew / Unauthorize / Reset Password)
+    async function loadActiveUsers() {
+        try {
+            const { data: users, error } = await window.supabaseClient
+                .from('user_roles')
+                .select('*');
 
-    try {
-        const { data: users, error } = await window.supabaseClient
-            .from('user_roles')
-            .select('*');
+            if (error) throw error;
 
-        if (error) throw error;
+            const filtered = users.filter(
+                user => user.status !== 'pending' && user.role !== 'super_admin'
+            );
 
-        const filtered = users.filter(
-            user => user.status !== 'pending' && user.role !== 'super_admin'
-        );
-
-        if (!filtered || filtered.length === 0) {
-            activeTable.innerHTML = `
-                <tr>
-                    <td colspan="5" style="text-align:center;padding:15px;">
-                        Koi Approved User nahi mila.
-                    </td>
-                </tr>
-            `;
-            return;
-        }
-
-        activeTable.innerHTML = '';
-
-        filtered.forEach(user => {
-            let currentStatus = user.status || 'unknown';
-            let statusColor = '#137333';
-            let expiryString = user.expiry_date
-                ? new Date(user.expiry_date).toLocaleDateString('en-IN')
-                : 'N/A';
-
-            if (user.status === 'rejected') {
-                statusColor = '#c5221f';
-                expiryString = 'Access Suspended';
+            if (!filtered || filtered.length === 0) {
+                activeTable.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:15px;">Koi Approved User nahi mila.</td></tr>`;
+                return;
             }
 
-            const tr = document.createElement('tr');
+            activeTable.innerHTML = '';
 
-            tr.innerHTML = `
-                <td style="padding:12px;">
-                    <div style="display:flex;align-items:center;gap:6px;">
-                        <span>${user.full_name}</span>
+            filtered.forEach(user => {
+                let currentStatus = user.status || 'unknown';
+                let statusColor = '#137333';
+                let expiryString = user.expiry_date
+                    ? new Date(user.expiry_date).toLocaleDateString('en-IN')
+                    : 'N/A';
 
-                        <button
-                            class="view-details-btn"
-                            data-name="${user.full_name}"
-                            data-ko="${user.ko_code || 'N/A'}"
-                            data-mobile="${user.mobile_no || 'N/A'}"
-                            data-address="${user.address || 'NOT SPECIFIED'}"
-                            style="
-                                background:transparent;
-                                border:none;
-                                cursor:pointer;
-                                font-size:1rem;
-                            "
-                            title="View Kiosk Profile Details"
-                        >
-                            👁️
-                        </button>
-                    </div>
+                if (user.status === 'rejected') {
+                    statusColor = '#c5221f';
+                    expiryString = 'Access Suspended';
+                }
 
-                    <small style="color:#777;">
-                        ${user.email}
-                    </small>
-                </td>
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="padding:12px;">
+                        <div style="display:flex;align-items:center;gap:6px;">
+                            <span>${user.full_name}</span>
+                            <button
+                                class="view-details-btn"
+                                data-name="${user.full_name}"
+                                data-ko="${user.ko_code || 'N/A'}"
+                                data-mobile="${user.mobile_no || 'N/A'}"
+                                data-address="${user.address || 'NOT SPECIFIED'}"
+                                style="background:transparent; border:none; cursor:pointer; font-size:1rem;"
+                                title="View Kiosk Profile Details"
+                            >
+                                👁️
+                            </button>
+                        </div>
+                        <small style="color:#777;">${user.email}</small>
+                    </td>
+                    <td style="padding:12px;">
+                        <span style="background:#f0f0f0; padding:2px 6px; border-radius:4px; font-size:0.85rem;">
+                            ${user.role.toUpperCase()}
+                        </span>
+                    </td>
+                    <td style="padding:12px; color:${statusColor}; font-weight:bold;">
+                        ${currentStatus}
+                    </td>
+                    <td style="padding:12px; font-weight:600;">
+                        ${expiryString}
+                    </td>
+                    <td style="padding:12px; display:flex; gap:6px; flex-wrap:wrap; justify-content:center;">
+                        <button class="act-btn ren-btn" data-id="${user.id}" style="background:#137333; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer;">+6 Months</button>
+                        <button class="act-btn rst-btn" data-id="${user.id}" data-name="${user.full_name}" style="background:#f2994a; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer;">Reset Pass</button>
+                        <button class="act-btn blk-btn" data-id="${user.id}" style="background:#222; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer;">Unauthorize</button>
+                    </td>
+                `;
+                activeTable.appendChild(tr);
+            });
 
-                <td style="padding:12px;">
-                    <span style="
-                        background:#f0f0f0;
-                        padding:2px 6px;
-                        border-radius:4px;
-                        font-size:0.85rem;
-                    ">
-                        ${user.role.toUpperCase()}
-                    </span>
-                </td>
+            attachActiveControlListeners();
+            attachEyeButtonListeners();
 
-                <td style="
-                    padding:12px;
-                    color:${statusColor};
-                    font-weight:bold;
-                ">
-                    ${currentStatus}
-                </td>
-
-                <td style="padding:12px;font-weight:600;">
-                    ${expiryString}
-                </td>
-
-                <td style="
-                    padding:12px;
-                    display:flex;
-                    gap:6px;
-                    flex-wrap:wrap;
-                    justify-content:center;
-                ">
-                    <button
-                        class="act-btn ren-btn"
-                        data-id="${user.id}"
-                        style="
-                            background:#137333;
-                            color:white;
-                            border:none;
-                            padding:6px 10px;
-                            border-radius:4px;
-                            cursor:pointer;
-                        "
-                    >
-                        +6 Months
-                    </button>
-
-                    <button
-                        class="act-btn rst-btn"
-                        data-id="${user.id}"
-                        data-name="${user.full_name}"
-                        style="
-                            background:#f2994a;
-                            color:white;
-                            border:none;
-                            padding:6px 10px;
-                            border-radius:4px;
-                            cursor:pointer;
-                        "
-                    >
-                        Reset Pass
-                    </button>
-
-                    <button
-                        class="act-btn blk-btn"
-                        data-id="${user.id}"
-                        style="
-                            background:#222;
-                            color:white;
-                            border:none;
-                            padding:6px 10px;
-                            border-radius:4px;
-                            cursor:pointer;
-                        "
-                    >
-                        Unauthorize
-                    </button>
-                </td>
-            `;
-
-            activeTable.appendChild(tr);
-        });
-
-        attachActiveControlListeners();
-        attachEyeButtonListeners();
-
-    } catch (err) {
-        console.error("Active User Error:", err);
-
-        activeTable.innerHTML = `
-            <tr>
-                <td colspan="5" style="text-align:center;color:red;padding:15px;">
-                    Failed to compile terminal users.
-                </td>
-            </tr>
-        `;
+        } catch (err) {
+            console.error("Active User Error:", err);
+            activeTable.innerHTML = `<tr><td colspan="5" style="text-align:center;color:red;padding:15px;">Failed to compile terminal users.</td></tr>`;
+        }
     }
-}
 
-    
-
-    // आई-बटन क्लिक का स्वतंत्र फंक्शन (सिंटैक्स सेफ)
-  // js/super-admin.js में आई-बटन लिसनर को कस्टमाइज करना
-   function attachEyeButtonListeners() {
+    // 👀 आई-बटन क्लिक का स्वतंत्र फंक्शन
+    function attachEyeButtonListeners() {
         document.querySelectorAll('.view-details-btn').forEach(btn => {
             btn.onclick = function(e) {
                 const targetBtn = e.target.closest('.view-details-btn');
@@ -280,37 +176,33 @@ async function initSuperAdminModule() {
             btn.addEventListener('click', async (e) => {
                 const uid = e.target.getAttribute('data-id');
                 
-               if (e.target.classList.contains('rst-btn')) {
-    const userName = e.target.getAttribute('data-name');
-    
-    // पुराना prompt() हटाकर हमारा नया कस्टमाइज्ड प्रॉम्ट लगाया
-    const newPassword = await window.showSystemPrompt(`Set a fresh secure access key for ${userName}:`, "Administrative Password Reset");
-    
-    // अगर कैंसिल किया
-    if (newPassword === null) return; 
-    
-    // अगर बिना कुछ लिखे ओके किया
-    if (newPassword === "") {
-        await window.showSystemAlert("Password cannot be left blank!", "Validation Warning", "⚠️");
-        return;
-    }
+                if (e.target.classList.contains('rst-btn')) {
+                    const userName = e.target.getAttribute('data-name');
+                    
+                    // कस्टमाइज्ड सुरक्षित एडमिनिस्ट्रेटिव प्रॉम्ट
+                    const newPassword = await window.showSystemPrompt(`Set a fresh secure access key for ${userName}:`, "Administrative Password Reset");
+                    
+                    if (newPassword === null) return; 
+                    if (newPassword === "") {
+                        await window.showSystemAlert("Password cannot be left blank!", "Validation Warning", "⚠️");
+                        return;
+                    }
 
-    try {
-        const { error } = await window.supabaseClient
-            .from('user_roles')
-            .update({ password_text: newPassword })
-            .eq('id', uid);
+                    try {
+                        const { error } = await window.supabaseClient
+                            .from('user_roles')
+                            .update({ password_text: newPassword })
+                            .eq('id', uid);
 
-        if (error) throw error;
-        
-        // पुराने alert() को भी नए कस्टमाइज्ड अलर्ट से बदल दिया
-        await window.showSystemAlert(`Password for ${userName} has been successfully modified to: ${newPassword}`, "Action Completed", "✅");
-        refreshAllTables();
-    } catch (err) { 
-        await window.showSystemAlert(`Failed to reset password: ${err.message}`, "Database Error", "❌"); 
-    }
-    return;
-}
+                        if (error) throw error;
+                        
+                        await window.showSystemAlert(`Password for ${userName} has been successfully modified to: ${newPassword}`, "Action Completed", "✅");
+                        refreshAllTables();
+                    } catch (err) { 
+                        await window.showSystemAlert(`Failed to reset password: ${err.message}`, "Database Error", "❌"); 
+                    }
+                    return;
+                }
 
                 const isRenew = e.target.classList.contains('ren-btn');
                 let updateData = {};
@@ -332,7 +224,7 @@ async function initSuperAdminModule() {
         });
     }
 
-    // 3. एजेंट्स के बिजनेस का वॉल्यूम ट्रैक करना
+    // 📈 3. एजेंट्स के बिजनेस का वॉल्यूम ट्रैक करना
     async function loadBusinessPerformance() {
         try {
             const { data: deposits, error } = await window.supabaseClient.from('deposits').select('amount, created_by');
