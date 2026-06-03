@@ -304,8 +304,8 @@ window.initDepositPage = async function (currentUser) {
             };
         }
 
-        // ========================================================
-        // 📈 [MASTER INTEGRATION]: LIVE LEDGER LOAD FROM CORE DB
+       // ========================================================
+        // 📈 [MASTER INTEGRATION]: LIVE LEDGER LOAD FROM CORE DB (WITH SR NO & DELETE)
         // ========================================================
         
         async function loadTodayTransactions() {
@@ -326,19 +326,23 @@ window.initDepositPage = async function (currentUser) {
 
                 tbody.innerHTML = '';
                 if (!data || data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:15px; color:#777;">आज काउंटर पर कोई ट्रांजैक्शन नहीं मिला</td></tr>';
+                    // 🌟 कॉलम की संख्या 6 होने के कारण colspan="6" किया गया है
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:15px; color:#777;">आज काउंटर पर कोई ट्रांजैक्शन नहीं मिला</td></tr>';
                     return;
                 }
 
-                data.forEach(tx => {
+                // 🌟 रिवर्स क्रोनोलॉजी इंडेक्स के साथ प्रत्येक कतार को रेंडर करना
+                data.forEach((tx, index) => {
                     const time = new Date(tx.transaction_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                     const identifier = tx.bulk_id ? `📦 ${tx.bulk_id}` : tx.account_number;
                     const displayName = tx.bulk_id ? `Depositor: ${tx.depositor_name || 'N/A'}` : tx.customer_name;
                     const txTypeHint = tx.bulk_id ? `<br><small style="color:#777;">To: ${tx.customer_name}</small>` : '';
                     const txStr = btoa(JSON.stringify(tx)); 
+                    const srNo = data.length - index; // 🔢 विथड्रॉल की तरह परफेक्ट सीरियल नंबर मैपिंग
 
                     tbody.insertAdjacentHTML('beforeend', `
                         <tr style="border-bottom: 1px solid #eee;">
+                            <td style="padding:12px; font-weight: bold; color: #555; text-align:center;">${srNo}</td>
                             <td style="padding:12px; font-weight: 500;">${identifier}</td>
                             <td style="padding:12px; text-transform: uppercase;">${displayName}${txTypeHint}</td>
                             <td style="padding:12px; font-weight:bold; color:#27ae60;">₹${tx.amount}</td>
@@ -347,6 +351,7 @@ window.initDepositPage = async function (currentUser) {
                                 <div style="display:inline-flex; align-items:center; gap:15px; justify-content:center;">
                                     <span class="btn-edit-tx" data-tx="${txStr}" style="cursor:pointer; font-size:1.1rem; user-select:none;" title="Edit Transaction">✏️</span>
                                     <span class="btn-print-receipt" data-tx="${txStr}" style="cursor:pointer; font-size:1.2rem; user-select:none;" title="Print Slip">🖨️</span>
+                                    <span class="btn-delete-dep-tx" data-id="${tx.transaction_id}" data-tx="${txStr}" style="cursor:pointer; font-size:1.1rem; user-select:none;" title="Delete & Rollback Entry">🗑️</span>
                                 </div>
                             </td>
                         </tr>
