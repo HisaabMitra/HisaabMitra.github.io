@@ -1,1 +1,120 @@
+<!-- pages/withdrawal.html -->
+<style>
+    input[type=number]::-webkit-inner-spin-button, 
+    input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+    input[type=number] { -moz-appearance: textfield; }
+    .styled-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    .styled-table th, .styled-table td { padding: 12px; border-bottom: 1px solid #eee; text-align: left; }
+    .hidden-block { display: none !important; }
+</style>
 
+<!-- 🔄 टॉप बैनर -->
+<div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px; background: #fafafa; padding: 10px 15px; border-radius: 8px; border: 1px solid #eaeaea;">
+    <span style="font-size: 1.3rem;">💸</span>
+    <h3 style="margin: 0; color: #7d0022; font-weight: 700;">AEPS CASH WITHDRAWAL COUNTER</h3>
+</div>
+
+<div style="display: flex; gap: 25px; flex-wrap: wrap; width: 100%; box-sizing: border-box;">
+    
+    <!-- 🟢 वर्किंग विथड्रॉल काउंटर एरिया (70% चौड़ाई) -->
+    <div style="flex: 2; min-width: 450px;">
+        <div class="withdrawal-wrapper" style="padding: 24px; background: #fff; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h2 style="color: #7d0022; margin: 0; font-size: 1.5rem; font-weight: 700;">CASH WITHDRAWAL (AEPS)</h2>
+                <span style="background: #fff5f5; color: #c5221f; padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; border: 1px solid #fadbd8;">
+                    Max Daily Limit: <strong>₹10,000 / Day</strong>
+                </span>
+            </div>
+            <hr style="border: 0; border-top: 1px solid #eee; margin-bottom: 25px;">
+
+            <form id="withdrawal-core-form" onsubmit="return false;">
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label style="font-weight:600; color: #444; display:block; margin-bottom:6px; font-size:0.9rem;">Customer Aadhaar Number *</label>
+                    <input type="text" id="wit-aadhaar-no" placeholder="Enter 12 Digit Aadhaar Number" maxlength="12" style="width:100%; padding: 11px 14px; font-size:1.1rem; font-weight:bold; letter-spacing: 1px; border: 1px solid #dcdcdc; border-radius:6px; box-sizing: border-box;" autocomplete="off" required>
+                </div>
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label style="font-weight:600; color: #444; display:block; margin-bottom:6px; font-size:0.9rem;">Customer Name</label>
+                    <input type="text" id="wit-cust-name" placeholder="Name will auto-appear" readonly style="width:100%; padding: 11px 14px; background: #f8f9fa; border: 1px solid #e9ecef; border-radius:6px; font-weight: bold; color: #7d0022; box-sizing: border-box;">
+                </div>
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label style="font-weight:600; color: #444; display:block; margin-bottom:6px; font-size:0.9rem;">Amount to Withdraw (₹) *</label>
+                    <input type="number" id="wit-amount" placeholder="0.00" min="100" max="10000" style="width:100%; padding: 11px 14px; font-size:1.2rem; font-weight:bold; color: #c5221f; border: 1px solid #dcdcdc; border-radius:6px; box-sizing: border-box;" required>
+                </div>
+                <div style="background: #fafafa; padding: 12px 15px; border: 1px solid #eaeaea; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <div style="flex: 1; padding-right: 10px;">
+                        <span style="font-size: 0.75rem; color:#888; display:block; text-transform: uppercase; font-weight:700;">Amount in Words</span>
+                        <strong id="wit-amount-words" style="color: #2c3e50; font-size: 0.9rem; word-break: break-word;">Zero Rupees Only</strong>
+                    </div>
+                </div>
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label style="font-weight:600; color: #444; display:block; margin-bottom:6px; font-size:0.9rem;">Remarks</label>
+                    <input type="text" id="wit-remarks" placeholder="Optional notes" style="width:100%; padding: 11px 14px; border: 1px solid #dcdcdc; border-radius:6px; box-sizing: border-box;">
+                </div>
+                <div style="display: flex; gap: 10px; margin-top: 10px;">
+                    <button id="btn-wit-save" type="button" class="btn" style="flex: 1; background: #7d0022; color:white; padding: 12px 5px; font-weight:bold; border-radius:6px; border:none; cursor: pointer;">💸 Dispense Cash</button>
+                    <button id="btn-wit-clear" type="button" class="btn" style="flex: 0.9; background: #7f8c8d; color:white; padding: 12px 5px; font-weight:bold; border-radius:6px; border:none; cursor: pointer;">🧹 Clear</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 🔵 साझा मास्टर डिनॉमिनेशन कंटेनर (30% चौड़ाई - विथड्रॉल में नोट तिजोरी से माइनस होंगे) -->
+    <div style="flex: 0.9; min-width: 320px;">
+        <div id="master-shared-denomination-container" style="background: #fdfdfd; padding: 20px; border: 1px solid #eef0f2; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.02); min-height: 400px;">
+            <!-- डिनॉमिनेशन कंपोनेंट इसके अंदर लाइव इंजेक्ट होगा -->
+        </div>
+    </div>
+</div>
+
+<!-- लाइव विथड्रॉल लेज़र तालिका -->
+<div class="transaction-container" style="margin-top: 25px; padding: 24px; background: #fff; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
+    <h3 style="color: #7d0022; margin-bottom: 15px; border-bottom: 2px solid #f4f6f8; padding-bottom: 8px;">📊 Today's Aadhaar Withdrawal Logs</h3>
+    <table class="styled-table">
+        <thead>
+            <tr style="background-color: #7d0022; color: white;">
+                <th style="padding: 12px;">Aadhaar Number</th>
+                <th style="padding: 12px;">Customer Name</th>
+                <th style="padding: 12px;">Amount</th>
+                <th style="padding: 12px;">Time</th>
+                <th style="padding: 12px; text-align: center;">Slip</th>
+            </tr>
+        </thead>
+        <tbody id="today-wit-body"></tbody>
+    </table>
+</div>
+
+<!-- 📦 UPGRADED MULTI-USE CUSTOMER POPUP MODAL (Aadhaar + Account Ready) -->
+<div id="new-cust-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.55); backdrop-filter: blur(3px); z-index: 99999; align-items: center; justify-content: center;">
+    <div style="background: white; padding: 25px 30px; border-radius: 10px; max-width: 420px; width: 90%; text-align: left; box-shadow: 0 10px 30px rgba(0,0,0,0.2); border-top: 6px solid #7d0022;">
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom: 8px;">
+            <span style="font-size: 1.5rem;">🔍</span>
+            <h3 style="color:#7d0022; margin:0; font-size:1.3rem; font-weight:700;">New Customer Registration</h3>
+        </div>
+        <p style="font-size:0.85rem; color:#666; margin-bottom:15px; line-height:1.4;">सिस्टम में ग्राहक का रिकॉर्ड नहीं मिला। आगे बढ़ने के लिए विवरण पूरा करें:</p>
+        
+        <div style="margin-bottom:12px;">
+            <label style="font-size:0.8rem; font-weight:600; color:#555; display:block; margin-bottom:4px;">Aadhaar Number</label>
+            <input type="text" id="nc-aadhaar-no" maxlength="12" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:6px; box-sizing:border-box; font-size:0.9rem; font-weight: bold;">
+        </div>
+        <div style="margin-bottom:12px;">
+            <label style="font-size:0.8rem; font-weight:600; color:#555; display:block; margin-bottom:4px;">Account Number</label>
+            <input type="text" id="nc-account-no" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:6px; box-sizing:border-box; font-size:0.9rem; font-weight: bold;">
+        </div>
+        <div style="margin-bottom:12px;">
+            <label style="font-size:0.8rem; font-weight:600; color:#555; display:block; margin-bottom:4px;">Customer Full Name *</label>
+            <input type="text" id="nc-name" placeholder="Enter full name" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:6px; box-sizing:border-box; font-size:0.9rem;">
+        </div>
+        <div style="margin-bottom:12px;">
+            <label style="font-size:0.8rem; font-weight:600; color:#555; display:block; margin-bottom:4px;">Mobile Number *</label>
+            <input type="tel" id="nc-mobile" placeholder="10-digit mobile number" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:6px; box-sizing:border-box; font-size:0.9rem;">
+        </div>
+        <div style="margin-bottom:18px;">
+            <label style="font-size:0.8rem; font-weight:600; color:#555; display:block; margin-bottom:4px;">Address</label>
+            <input type="text" id="nc-address" placeholder="City / Branch Area" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:6px; box-sizing:border-box; font-size:0.9rem;">
+        </div>
+        <div style="display: flex; gap:12px; justify-content: flex-end;">
+            <button id="btn-nc-cancel" style="padding:10px 16px; background:#f4f6f8; border:1px solid #ddd; color:#555; cursor:pointer; border-radius:6px; font-weight:600; font-size:0.85rem;">Cancel</button>
+            <button id="btn-nc-continue" style="padding:10px 20px; background:#7d0022; color:white; border:none; cursor:pointer; border-radius:6px; font-weight:700; font-size:0.85rem;">Register & Continue</button>
+        </div>
+    </div>
+</div>
