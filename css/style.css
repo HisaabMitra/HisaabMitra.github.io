@@ -40,7 +40,7 @@ body {
 }
 
 .brand .logo {
-    max-width: 60px; /* आप अपनी पसंद के अनुसार 50px या 70px भी कर सकते हैं */
+    max-width: 140px; /* आप अपनी पसंद के अनुसार 50px या 70px भी कर सकते हैं */
     height: auto;
     object-fit: contain;
 }
