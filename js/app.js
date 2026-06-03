@@ -1,7 +1,9 @@
 // js/app.js
+// 🚀 CORE APP GATEWAY & ROUTING LAUNCHER
 
 document.addEventListener('DOMContentLoaded', () => {
     let currentLoggedInUser = null; 
+    
     // --- UI Panels Elements ---
     const loginPanel = document.getElementById('login-panel');
     const registerPanel = document.getElementById('register-panel');
@@ -10,8 +12,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const workspace = document.getElementById('workspace');
 
     // --- Buttons & Forms ---
-    const loginForm = document.getElementById('login-form');
-    const registerForm = document.getElementById('register-form');
     const logoutBtn = document.getElementById('logout-btn');
     const goToRegister = document.getElementById('go-to-register');
     const goToLogin = document.getElementById('go-to-login');
@@ -32,213 +32,17 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ==========================================
-    // 2. USER REGISTRATION & RE-SUBMISSION
-    // ==========================================
-    if (registerForm) {
-       registerForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const name = document.getElementById('reg-name').value.trim().toUpperCase(); 
-            const email = document.getElementById('reg-email').value.trim();
-            const password = document.getElementById('reg-password').value;
-            const role = document.getElementById('reg-role').value;
-            const koCode = document.getElementById('reg-ko-code').value.trim(); 
-            const mobile = document.getElementById('reg-mobile').value.trim(); 
-            const settlementAcc = document.getElementById('reg-settlement-acc').value.trim();
-            const solId = document.getElementById('reg-sol-id').value.trim();
-            const address = document.getElementById('reg-address').value.trim().toUpperCase(); 
-            const submitBtn = registerForm.querySelector('button[type="submit"]');
-
-            submitBtn.textContent = "Processing Request...";
-            submitBtn.disabled = true;
-
-            try {
-                const { data: existingUser, error: checkError } = await window.supabaseClient
-                    .from('user_roles')
-                    .select('*')
-                    .eq('email', email);
-
-                if (checkError) throw checkError;
-
-                const payload = {
-                    full_name: name,
-                    password_text: password,
-                    role: role,
-                    ko_code: koCode,    
-                    mobile_no: mobile,  
-                    settlement_account: settlementAcc,
-                    sol_id: solId,                     
-                    address: address, 
-                    status: 'pending',
-                    objection_remark: null
-                };
-
-                if (existingUser && existingUser.length > 0 && existingUser[0].status === 'rejected') {
-                    const { error: updateError } = await window.supabaseClient
-                        .from('user_roles')
-                        .update(payload)
-                        .eq('email', email);
-
-                    if (updateError) throw updateError;
-                    window.showSystemAlert("🔄 Request Re-Submitted Successfully with updated Bank Credentials!");
-                } else {
-                    const { error: insertError = null } = await window.supabaseClient
-                        .from('user_roles')
-                        .insert([{ email: email, ...payload }]);
-
-                    if (insertError) throw insertError;
-                    window.showSystemAlert("✅ Registration Request Submitted with SOL ID & Settlement Account!");
+    // 🔌 INITIALIZE EXTERNAL ENGINE: ऑथ मॉड्यूल को एक्टिवेट करें
+    if (typeof window.initAuthEngine === 'function') {
+        window.initAuthEngine(
+            () => currentLoggedInUser,
+            (user) => { currentLoggedInUser = user; window.currentUser = user; },
+            (user) => {
+                if (window.DashboardController) {
+                    window.DashboardController.showDashboard(user, proceedToDashboard);
                 }
-
-                registerForm.reset();
-                registerPanel.classList.add('hidden');
-                loginPanel.classList.remove('hidden');
-
-            } catch (err) {
-                window.showSystemAlert(`❌ Request Failed: ${err.message}`);
-            } finally {
-                submitBtn.textContent = "Submit Registration";
-                submitBtn.disabled = false;
             }
-        });
-    }
-
-    // ==========================================
-    // 3. CUSTOM DATABASE LOGIN & STATUS CHECK
-    // ==========================================
-    if (loginForm) {
-        loginForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const email = document.getElementById('username').value.trim();
-            const password = document.getElementById('password').value;
-            const submitBtn = loginForm.querySelector('button[type="submit"]');
-
-            submitBtn.textContent = "Verifying...";
-            submitBtn.disabled = true;
-
-            try {
-                const { data: users, error } = await window.supabaseClient
-                    .from('user_roles')
-                    .select('*')
-                    .eq('email', email)
-                    .eq('password_text', password);
-
-                if (error) throw error;
-
-                if (!users || users.length === 0) {
-                    window.showSystemAlert("❌ Invalid Email or Password. Please try again.");
-                    return;
-                }
-
-                const user = users[0];
-
-                if (user.status === 'rejected') {
-                    const reason = user.objection_remark || "Reason not specified by Admin.";
-                    window.showSystemAlert(`⚠️ Objection Raised!\n\nReason: "${reason}"\n\nPlease correct details and re-submit.`);
-                    
-                    document.getElementById('reg-name').value = user.full_name;
-                    document.getElementById('reg-email').value = user.email;
-                    document.getElementById('reg-email').readOnly = true; 
-                    document.getElementById('reg-ko-code').value = user.ko_code || "";
-                    document.getElementById('reg-mobile').value = user.mobile_no || "";
-                    if(document.getElementById('reg-settlement-acc')) document.getElementById('reg-settlement-acc').value = user.settlement_account || "";
-                    if(document.getElementById('reg-sol-id')) document.getElementById('reg-sol-id').value = user.sol_id || "";
-                    document.getElementById('reg-password').value = user.password_text;
-                    document.getElementById('reg-role').value = user.role;
-                    
-                    loginPanel.classList.add('hidden');
-                    registerPanel.classList.remove('hidden');
-                    return;
-                }
-
-                if (user.status === 'pending') {
-                    window.showSystemAlert(`⏳ Access Pending: Your account is awaiting clearance from Super Admin.`);
-                    return;
-                }
-
-                showDashboard(user);
-
-            } catch (err) {
-               window.showSystemAlert(`❌ Auth Error: ${err.message}`);
-            } finally {
-                submitBtn.textContent = "Sign In";
-                submitBtn.disabled = false;
-            }
-        });
-    }
-
-    // ==========================================
-    // 4. PROFILE INTEGRITY CHECK (WITH ADDRESS SYNC)
-    // ==========================================
-    async function showDashboard(user) {
-        if (user.role === 'super_admin') {
-            proceedToDashboard(user);
-            return;
-        }
-
-        const isKoMissing = !user.ko_code || user.ko_code.trim() === "";
-        const isMobileMissing = !user.mobile_no || user.mobile_no.trim() === "";
-        const isNameMissing = !user.full_name || user.full_name.trim() === "";
-        const isSettlementMissing = !user.settlement_account || user.settlement_account.trim() === "";
-        const isSolMissing = !user.sol_id || user.sol_id.trim() === "";
-        const isAddressMissing = !user.address || user.address.trim() === ""; 
-
-        if (isKoMissing || isMobileMissing || isNameMissing || isSettlementMissing || isSolMissing || isAddressMissing) {
-            const mdModal = document.getElementById('missing-detail-modal');
-            const mdForm = document.getElementById('missing-detail-form');
-            
-            if(document.getElementById('md-ko-block')) document.getElementById('md-ko-block').style.display = isKoMissing ? 'block' : 'none';
-            if(document.getElementById('md-mobile-block')) document.getElementById('md-mobile-block').style.display = isMobileMissing ? 'block' : 'none';
-            if(document.getElementById('md-name-block')) document.getElementById('md-name-block').style.display = isNameMissing ? 'block' : 'none';
-            if(document.getElementById('md-settlement-block')) document.getElementById('md-settlement-block').style.display = isSettlementMissing ? 'block' : 'none';
-            if(document.getElementById('md-sol-block')) document.getElementById('md-sol-block').style.display = isSolMissing ? 'block' : 'none';
-            if(document.getElementById('md-address-block')) document.getElementById('md-address-block').style.display = isAddressMissing ? 'block' : 'none'; 
-
-            if (mdModal) mdModal.style.setProperty('display', 'flex', 'important');
-
-            mdForm.onsubmit = async (e) => {
-                e.preventDefault();
-                const updatedKo = isKoMissing ? document.getElementById('md-ko-input').value.trim() : user.ko_code;
-                const updatedMobile = isMobileMissing ? document.getElementById('md-mobile-input').value.trim() : user.mobile_no;
-                const updatedName = isNameMissing ? document.getElementById('md-name-input').value.trim().toUpperCase() : user.full_name;
-                const updatedSettlement = isSettlementMissing ? document.getElementById('md-settlement-input').value.trim() : user.settlement_account;
-                const updatedSol = isSolMissing ? document.getElementById('md-sol-input').value.trim() : user.sol_id;
-                const updatedAddress = isAddressMissing ? document.getElementById('md-address-input').value.trim().toUpperCase() : user.address; 
-
-                try {
-                    const { error } = await window.supabaseClient
-                        .from('user_roles')
-                        .update({
-                            ko_code: updatedKo,
-                            mobile_no: updatedMobile,
-                            full_name: updatedName,
-                            settlement_account: updatedSettlement, 
-                            sol_id: updatedSol,
-                            address: updatedAddress 
-                        })
-                        .eq('id', user.id);
-
-                    if (error) throw error;
-
-                    user.ko_code = updatedKo;
-                    user.mobile_no = updatedMobile;
-                    user.full_name = updatedName;
-                    user.settlement_account = updatedSettlement;
-                    user.sol_id = updatedSol;
-                    user.address = updatedAddress; 
-
-                    mdModal.style.display = 'none';
-                    await window.showSystemAlert("Your comprehensive banking logs have been updated in Database. Workspace unlocked!", "Verification Success", "✅");
-                    proceedToDashboard(user);
-
-                } catch (err) {
-                    window.showSystemAlert(`Failed to patch credentials: ${err.message}`, "Security Error", "❌");
-                }
-            };
-        } else {
-            document.getElementById('missing-detail-modal').style.display = 'none';
-            proceedToDashboard(user);
-        }
+        );
     }
 
     function proceedToDashboard(user) {
@@ -248,28 +52,9 @@ document.addEventListener('DOMContentLoaded', () => {
         mainDashboard.classList.remove('hidden');
         document.getElementById('user-display').textContent = `${user.full_name} (${user.role.toUpperCase()})`;
         
-        applyMenuPermissions(user.role); 
+        if (window.DashboardController) window.DashboardController.applyMenuPermissions(user.role); 
         
-        if (user.role === 'super_admin') {
-            loadPage('super-admin');
-        } else {
-            loadPage('home');
-        }
-    }
-
-    function applyMenuPermissions(role) {
-        const allMenuButtons = document.querySelectorAll('[data-page]');
-        allMenuButtons.forEach(btn => {
-            const page = btn.getAttribute('data-page');
-            if (role === 'agent') {
-                const allowed = ['home', 'deposit', 'withdrawal', 'search'];
-                btn.style.setProperty('display', allowed.includes(page) ? 'block' : 'none', 'important');
-            } else if (role === 'admin') {
-                btn.style.setProperty('display', page === 'super-admin' ? 'none' : 'block', 'important');
-            } else if (role === 'super_admin') {
-                btn.style.setProperty('display', page === 'super-admin' ? 'block' : 'none', 'important');
-            }
-        });
+        loadPage(user.role === 'super_admin' ? 'super-admin' : 'home');
     }
 
     navButtons.forEach(button => {
@@ -278,11 +63,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!btnTarget) return;
 
             const pageName = btnTarget.getAttribute('data-page');
-            
             document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
-            if (btnTarget.classList.contains('nav-btn')) {
-                btnTarget.classList.add('active');
-            }
+            if (btnTarget.classList.contains('nav-btn')) btnTarget.classList.add('active');
+            
             loadPage(pageName);
         });
     });
@@ -293,10 +76,9 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const cacheBreaker = Date.now();
             const response = await fetch(`./pages/${pageName}.html?v=${cacheBreaker}`);
-            
             if (!response.ok) throw new Error(`Page lookup error (${response.status})`);
-            const htmlContent = await response.text();
-            workspace.innerHTML = htmlContent;
+            
+            workspace.innerHTML = await response.text();
             initializePageModules(pageName);
         } catch (error) {
             workspace.innerHTML = `<div style="padding: 20px; color: var(--color-maroon-main); text-align: center;"><h3>⚠️ Component Failure</h3></div>`;
@@ -305,8 +87,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 🌟 [CRITICAL SYNCHRONIZATION HUB] 🌟
     function initializePageModules(pageName) {
-        if (pageName === 'home') {
-            initHomepageModule();
+        if (pageName === 'home' && typeof window.initHomepageModule === 'function') {
+            window.initHomepageModule(currentLoggedInUser, (updatedUser) => {
+                currentLoggedInUser = updatedUser;
+                window.currentUser = updatedUser;
+            });
         }
 
         if (pageName === 'deposit') {
@@ -317,7 +102,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // 💸 विथड्रॉल काउंटर के लिए मॉड्यूल लॉन्चर + न्यू डेडिकेटेड डिनॉमिनेशन रेंडर लिंक फिक्स
         if (pageName === 'withdrawal') {
             if (typeof window.initWithdrawalPage === 'function') {
                 window.initWithdrawalPage(currentLoggedInUser);
@@ -325,152 +109,28 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error("initWithdrawalPage function missing in withdrawal.js");
             }
 
-            // 🌟 [FORCE DEDICATED WITHDRAWAL DENOMINATION RENDER]: नए पैनल को डायरेक्ट बलपूर्वक रेंडर करेगा
             if (window.WitDenominationComponent) {
                 setTimeout(() => {
-                    console.log("Forcing Withdrawal Denomination Render from Core Launcher...");
                     window.WitDenominationComponent.clear();
                     window.WitDenominationComponent.render('master-shared-denomination-container');
-                }, 100); // 100ms का सुरक्षित डिले ताकि डोम रेंडर पूरा हो सके
-            } else {
-                console.error("WitDenominationComponent is missing in global window scope!");
+                }, 100);
             }
         }
 
-        if (pageName === 'search') {
-            if (typeof initSearchModule === 'function') {
-                initSearchModule();
-            }
-        }
-
-        if (pageName === 'super-admin') {
-            if (typeof initSuperAdminModule === 'function') {
-                initSuperAdminModule();
-            }
-        }
-    }
-
-    // ==========================================
-    // 7. MULTI-TENANT KO-CODE LIVE BALANCE LOGIC WITH DUAL COMMISSION
-    // ==========================================
-    async function initHomepageModule() {
-        if (!currentLoggedInUser || !currentLoggedInUser.ko_code) return;
-
-        const koCode = currentLoggedInUser.ko_code;
-        const koDisplay = document.getElementById('hp-ko-display');
-        const balanceDisplay = document.getElementById('hp-settlement-balance');
-        const cashInHandDisplay = document.getElementById('hp-cash-in-hand');
-        const commissionDisplay = document.getElementById('hp-today-commission');
-        const toggleCommBtn = document.getElementById('btn-toggle-commission'); 
-
-        if (koDisplay) koDisplay.textContent = `KO CODE: ${koCode}`;
-
-        try {
-            const { data: userUpdate, error: fetchErr } = await window.supabaseClient
-                .from('user_roles')
-                .select('*')
-                .eq('id', currentLoggedInUser.id)
-                .single();
-
-            if (!fetchErr && userUpdate) {
-                currentLoggedInUser = userUpdate; 
-            }
-
-            if (balanceDisplay) {
-                const sBal = parseFloat(currentLoggedInUser.settlement_balance) || 0;
-                balanceDisplay.textContent = `₹ ${sBal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
-            }
-
-            const n500 = parseInt(currentLoggedInUser.cash_500) || 0;
-            const n200 = parseInt(currentLoggedInUser.cash_200) || 0;
-            const n100 = parseInt(currentLoggedInUser.cash_100) || 0;
-            const n50  = parseInt(currentLoggedInUser.cash_50)  || 0;
-            const n20  = parseInt(currentLoggedInUser.cash_20)  || 0;
-            const n10  = parseInt(currentLoggedInUser.cash_10)  || 0;
-            const n5   = parseInt(currentLoggedInUser.cash_5)   || 0;
-            const cCoins = parseInt(currentLoggedInUser.cash_coins) || 0; 
-
-            const finalCashInHand = (n500 * 500) + (n200 * 200) + (n100 * 100) + (n50 * 50) + (n20 * 20) + (n10 * 10) + (n5 * 5) + cCoins;
-
-            if (cashInHandDisplay) {
-                cashInHandDisplay.textContent = `₹ ${finalCashInHand.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
-            }
-
-            if(document.getElementById('note-count-500')) document.getElementById('note-count-500').textContent = n500;
-            if(document.getElementById('note-count-200')) document.getElementById('note-count-200').textContent = n200;
-            if(document.getElementById('note-count-100')) document.getElementById('note-count-100').textContent = n100;
-            if(document.getElementById('note-count-50')) document.getElementById('note-count-50').textContent = n50;
-            if(document.getElementById('note-count-20')) document.getElementById('note-count-20').textContent = n20;
-            if(document.getElementById('note-count-10')) document.getElementById('note-count-10').textContent = n10;
-            if(document.getElementById('note-count-5')) document.getElementById('note-count-5').textContent = n5;
-            if(document.getElementById('coin-total-count')) document.getElementById('coin-total-count').textContent = `₹ ${cCoins}`;
-
-            // 🌟 [DUAL COMMISSION SYNCHRONIZATION ENGINE] 🌟
-            if (commissionDisplay && toggleCommBtn) {
-                const todayStr = new Date().toISOString().split('T')[0]; 
-
-                // १. आज का पूरा डिपॉजिट कमीशन निकालें
-                const { data: depList, error: depErr } = await window.supabaseClient
-                    .from('deposit_transactions')
-                    .select('commission')
-                    .eq('ko_code', koCode)
-                    .gte('transaction_date', `${todayStr}T00:00:00`);
-
-                if (depErr) throw depErr;
-
-                // २. आज का पूरा विथड्रॉल कमीशन निकालें
-                const { data: witList, error: witErr } = await window.supabaseClient
-                    .from('withdrawal_transactions')
-                    .select('commission')
-                    .eq('ko_code', koCode)
-                    .gte('transaction_date', `${todayStr}T00:00:00`);
-
-                if (witErr) throw witErr;
-
-                let totalTodayCommission = 0;
-                
-                // दोनों सूचियों का कमीशन जोड़ें
-                if (depList && depList.length > 0) {
-                    totalTodayCommission += depList.reduce((sum, tx) => sum + (parseFloat(tx.commission) || 0), 0);
-                }
-                if (witList && witList.length > 0) {
-                    totalTodayCommission += witList.reduce((sum, tx) => sum + (parseFloat(tx.commission) || 0), 0);
-                }
-
-                const formattedCommission = `₹ ${totalTodayCommission.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
-                const maskedCommission = "₹ ••••••";
-
-                commissionDisplay.textContent = maskedCommission;
-                toggleCommBtn.textContent = "👁️";
-                toggleCommBtn.onclick = null;
-
-                let isHidden = true;
-                toggleCommBtn.onclick = function() {
-                    if (isHidden) {
-                        commissionDisplay.textContent = formattedCommission; 
-                        toggleCommBtn.textContent = "🙈"; 
-                        isHidden = false;
-                    } else {
-                        commissionDisplay.textContent = maskedCommission; 
-                        toggleCommBtn.textContent = "👁️"; 
-                        isHidden = true;
-                    }
-                };
-            }
-
-        } catch (err) {
-            console.error("Homepage Module Sync Error:", err);
-        }
+        if (pageName === 'search' && typeof initSearchModule === 'function') initSearchModule();
+        if (pageName === 'super-admin' && typeof initSuperAdminModule === 'function') initSuperAdminModule();
     }
     
     if (logoutBtn) {
         logoutBtn.addEventListener('click', () => {
             currentLoggedInUser = null;
+            window.currentUser = null;
             mainDashboard.classList.add('hidden');
             authScreen.classList.remove('hidden');
             loginPanel.classList.remove('hidden');
             registerPanel.classList.add('hidden');
-            if(loginForm) loginForm.reset();
+            const lForm = document.getElementById('login-form');
+            if(lForm) lForm.reset();
         });
     }
 });
