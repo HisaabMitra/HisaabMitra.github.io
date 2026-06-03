@@ -163,7 +163,7 @@ window.initWithdrawalPage = async function (currentUser) {
             });
         }
 
-        // 🔢 [LIVE TRANSLATOR]: लाइव हिंदी नंबर्स-टू-वर्ड्स कनवर्टर (utils.js सिंक)
+      // 🔢 [LIVE TRANSLATOR]: लाइव हिंदी नंबर्स-टू-वर्ड्स कनवर्टर (utils.js सिंक)
         if (witAmountInput) {
             witAmountInput.addEventListener('input', () => {
                 const amt = parseInt(witAmountInput.value) || 0;
@@ -177,9 +177,10 @@ window.initWithdrawalPage = async function (currentUser) {
                     }
                 }
             });
-            witAmountInput.addEventListener('wheel', e => e.preventDefault()); // माउस व्हील स्क्रॉल ब्लॉक गार्ड
+            
+            // ⚡ [VIOLATION FIX]: क्रोम की पीली स्क्रॉल वार्निंग हटाने के लिए passive: false हुक जोड़ा
+            witAmountInput.addEventListener('wheel', e => e.preventDefault(), { passive: false }); 
         }
-
         // ✏️ [EDIT MODULE]: एडिट निकासी प्रविष्टि लिसनर (With New WitDenomination Engine Alignment)
         function attachWithdrawalEditListeners() {
             document.querySelectorAll('.btn-edit-wit-tx').forEach(btn => {
