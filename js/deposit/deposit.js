@@ -67,7 +67,7 @@ window.initDepositPage = async function (currentUser) {
                 // ४. मॉर्निंग क्लियरेंस बोर्ड की दोनों तालिकाओं (Tables) को पॉप्युलेट करें
                 renderMorningClearanceBoard(globalTodayPendingRecords, futurePendingRecords);
 
-                // ५. ऑटो-ट्रिगर: यदि सुबह-सुबह काउंटर खुला है और आज की तारीख के रिकॉर्ड्स पेंडिंग हैं, तो पॉपअप फ्लैश करें
+                // ५. ऑटो-ट्रिगर: पॉपअप फ्लैश लॉजिक
                 if (globalTodayPendingRecords.length > 0) {
                     const morningModal = document.getElementById('morning-release-modal');
                     if (morningModal && morningModal.style.display !== 'flex') {
@@ -113,7 +113,6 @@ window.initDepositPage = async function (currentUser) {
                     futureTbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:#888;">भविष्य की कतार में कोई रिकॉर्ड लॉक नहीं है।</td></tr>';
                 } else {
                     futureRecords.forEach(r => {
-                        // ब्रिटिश फॉर्मेट डेट को रीडेबल बनाएं
                         const dateParts = r.scheduled_date.split('-');
                         const formattedDate = `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`;
 
@@ -156,7 +155,7 @@ window.initDepositPage = async function (currentUser) {
             };
         }
 
-        // Master Checkbox 'Check All' Control
+        // Master Checkbox Control
         const masterChkBox = document.getElementById('chk-release-all-master');
         if (masterChkBox) {
             masterChkBox.onchange = function () {
@@ -166,14 +165,12 @@ window.initDepositPage = async function (currentUser) {
             };
         }
 
-
         // ========================================================
-        // 🚀 [UPGRADED MODULE B]: LIVE MULTI-DAY AUTO-BALANCING SPLIT ENGINE
+        // 🚀 [MODULE B]: LIVE MULTI-DAY AUTO-BALANCING SPLIT ENGINE
         // ========================================================
         
         let activeSplitPayload = null; 
 
-        // यह फंक्शन चुने गए दिनों के आधार पर पॉपअप में लाइव तारीखें और इनपुट बॉक्स बिछाएगा
         function calculateAndRenderSplitRows() {
             const totalAmount = parseFloat(document.getElementById('dep-amount').value) || 0;
             const daysToSpread = parseInt(document.getElementById('ddl-split-days').value) || 2;
@@ -182,20 +179,16 @@ window.initDepositPage = async function (currentUser) {
             if (!container) return;
             container.innerHTML = '';
 
-            // प्रतिदिन का डिफ़ॉल्ट औसत हिस्सा निकालें
             let baseShare = Math.floor(totalAmount / daysToSpread);
             let shareAmounts = Array(daysToSpread).fill(baseShare);
             
-            // अगर डिवाइड करने के बाद कुछ पैसे बच जाते हैं, तो उन्हें पहले दिन (आज) में जोड़ दें
             let remainder = totalAmount - (baseShare * daysToSpread);
             shareAmounts[0] += remainder;
 
-            // यदि पहले दिन का हिस्सा 25,000 की सीमा लांघ रहा है, तो उसे 25,000 पर लॉक करें और बाकी आगे शिफ्ट करें
             if (shareAmounts[0] > 25000) {
                 let overflow = shareAmounts[0] - 25000;
                 shareAmounts[0] = 25000;
                 
-                // बचे हुए दिनों में ओवरफ्लो बराबर बांट दें
                 let extraPerDay = Math.floor(overflow / (daysToSpread - 1));
                 let extraRemainder = overflow - (extraPerDay * (daysToSpread - 1));
 
@@ -220,7 +213,6 @@ window.initDepositPage = async function (currentUser) {
                 `);
             }
 
-            // 🌟 [स्मार्ट रिपल]: इनपुट बॉक्स में बदलाव होते ही ऑटो-बैलेंसिंग मैकेनिज्म ट्रिगर करें
             container.querySelectorAll('.sch-row-input').forEach(input => {
                 input.addEventListener('input', (e) => {
                     handleRowAmountRipple(e.target);
@@ -230,13 +222,11 @@ window.initDepositPage = async function (currentUser) {
             trackLiveSplitBalance(); 
         }
 
-        // 🌟 [AUTO-BALANCING RIPPLE LOGIC]: यह फंक्शन बदला हुआ पैसा अगली रो में ऑटो-ट्रांसफर करेगा!
         function handleRowAmountRipple(changedInput) {
             const totalAmount = parseFloat(document.getElementById('dep-amount').value) || 0;
             const changedIndex = parseInt(changedInput.getAttribute('data-index'));
             let changedValue = parseFloat(changedInput.value) || 0;
 
-            // 🛑 RBI सुरक्षा गार्ड: किसी भी बॉक्स में ₹25,000 से ऊपर टाइप न होने दें
             if (changedValue > 25000) {
                 changedInput.value = 25000;
                 changedValue = 25000;
@@ -244,16 +234,12 @@ window.initDepositPage = async function (currentUser) {
 
             const allInputs = Array.from(document.querySelectorAll('.sch-row-input'));
             
-            // १. जिस रो को बदला गया है, उससे पहले की सभी रोज़ का टोटल सम निकालें
             let sumBefore = 0;
             for (let i = 0; i < changedIndex; i++) {
                 sumBefore += parseFloat(allInputs[i].value) || 0;
             }
 
-            // २. अब कुल अमाउंट में से (पहले की रोज़ + वर्तमान बदली हुई रो) को घटाकर नया बचा हुआ बैलेंस निकालें
             let remainingBalance = totalAmount - (sumBefore + changedValue);
-
-            // ३. यह बचा हुआ बैलेंस आगे आने वाले (Next Days) के इनपुट बॉक्सेस में स्वतः री-डिस्ट्रीब्यूट कर दें
             const remainingDays = allInputs.length - (changedIndex + 1);
 
             if (remainingDays > 0) {
@@ -264,7 +250,6 @@ window.initDepositPage = async function (currentUser) {
                     allInputs[i].value = targetShare;
                 }
 
-                // बची हुई फुटकर राशि अंतिम कतार में एडजस्ट कर दें
                 let finalSum = 0;
                 allInputs.forEach((input, idx) => {
                     if (idx < allInputs.length - 1) finalSum += parseFloat(input.value) || 0;
@@ -283,7 +268,6 @@ window.initDepositPage = async function (currentUser) {
             trackLiveSplitBalance();
         }
 
-        // लाइव पेंडिंग बैलेंस मैचिंग इंडिकेटर इंजन
         function trackLiveSplitBalance() {
             const totalAmount = parseFloat(document.getElementById('dep-amount').value) || 0;
             let currentSum = 0;
@@ -294,6 +278,8 @@ window.initDepositPage = async function (currentUser) {
 
             const diff = totalAmount - currentSum;
             const pendingLabel = document.getElementById('lbl-split-pending-rem');
+
+            if (!pendingLabel) return;
 
             if (Math.abs(diff) < 0.01) {
                 pendingLabel.innerText = "₹0.00 (Perfect Match) ✅";
@@ -307,13 +293,9 @@ window.initDepositPage = async function (currentUser) {
             }
         }
 
-        // ड्रॉपडाउन दिनों की संख्या बदलने पर री-रेंडर
         const ddlDays = document.getElementById('ddl-split-days');
-        if (ddlDays) {
-            ddlDays.onchange = calculateAndRenderSplitRows;
-        }
+        if (ddlDays) ddlDays.onchange = calculateAndRenderSplitRows;
 
-        // पॉपअप कैंसिल बटन
         const btnSplitCancel = document.getElementById('btn-split-cancel');
         if (btnSplitCancel) {
             btnSplitCancel.onclick = function () {
@@ -377,16 +359,23 @@ window.initDepositPage = async function (currentUser) {
             } catch (err) { console.error("Table Load Error:", err); }
         }
 
+        // 🌟 [JARVIS MASTER CLASH FIX]: सिंगल और बल्क ऑटो-फ्लिप टैब रिडायरेक्शन मैकेनिज्म
         function attachEditEventListeners() {
             document.querySelectorAll('.btn-edit-tx').forEach(btn => {
-                btn.onclick = function() {
+                btn.onclick = async function() {
                     try {
                         const txData = JSON.parse(atob(this.getAttribute('data-tx')));
-                        
+                        console.log("✏️ Edit Triggered for Entry:", txData);
+
+                        const switchBtn = document.getElementById('btn-switch-deposit-mode');
+                        const currentMode = switchBtn ? switchBtn.getAttribute('data-current-mode') : 'single';
+
+                        // अ. यदि रो बल्क है और स्क्रीन पर सिंगल खुला हुआ है -> फ्लिप टू बल्क
                         if (txData.bulk_id) {
-                            const switchBtn = document.getElementById('btn-switch-deposit-mode');
-                            if (switchBtn && switchBtn.getAttribute('data-current-mode') === 'single') {
+                            if (switchBtn && currentMode === 'single') {
+                                console.log("🔄 Auto-Flipped UI Context to Bulk Panel Engine.");
                                 switchBtn.click();
+                                await new Promise(resolve => setTimeout(resolve, 50)); // DOM रेंडर होने का इंतज़ार
                             }
                             if (typeof window.loadBulkBatchForEdit === 'function') {
                                 window.loadBulkBatchForEdit(txData);
@@ -394,9 +383,17 @@ window.initDepositPage = async function (currentUser) {
                             return;
                         }
 
-                        document.getElementById('dep-account-no').value = txData.account_number;
-                        document.getElementById('dep-cust-name').value = txData.customer_name;
-                        document.getElementById('dep-amount').value = txData.amount;
+                        // ब. यदि रो सिंगल है और स्क्रीन पर बल्क खुला हुआ है -> फ्लिप टू सिंगल
+                        if (!txData.bulk_id && switchBtn && currentMode === 'bulk') {
+                            console.log("🔄 Auto-Flipped UI Context to Single Counter Panel.");
+                            switchBtn.click();
+                            await new Promise(resolve => setTimeout(resolve, 50));
+                        }
+
+                        // ३. सिंगल फॉर्म में डेटा लाइव इंजेक्ट करना
+                        document.getElementById('dep-account-no').value = txData.account_number || "";
+                        document.getElementById('dep-cust-name').value = txData.customer_name || "";
+                        document.getElementById('dep-amount').value = txData.amount || 0;
                         document.getElementById('dep-remarks').value = txData.remarks || "";
                         
                         if (wordsDisplay) {
@@ -446,9 +443,12 @@ window.initDepositPage = async function (currentUser) {
         if (amountInput) {
             amountInput.addEventListener('input', () => {
                 const amt = parseInt(amountInput.value) || 0;
-                wordsDisplay.innerText = amt === 0 ? "Zero Rupees Only" : `${window.numberToHindiWords(amt)} रुपए मात्र`;
+                if (wordsDisplay) {
+                    wordsDisplay.innerText = amt === 0 ? "Zero Rupees Only" : `${window.numberToHindiWords(amt)} रुपए मात्र`;
+                }
             });
-            amountInput.addEventListener('wheel', e => e.preventDefault());
+            // ⚡ [VIOLATION FIX]: क्रोम स्क्रॉल-ब्लॉकिंग पीली वार्निंग फिक्स हुक
+            amountInput.addEventListener('wheel', e => e.preventDefault(), { passive: false });
         }
 
         if (speakBtn) {
@@ -617,7 +617,7 @@ window.initDepositPage = async function (currentUser) {
             }
         });
 
-        // 🔗 बाहरी इंटरफ़ेस के लिए इसे window पर बाइंड करें (ताकि सेव इंजन इस विंडो को कॉल कर सके)
+        // 🔗 बाहरी इंटरफ़ेस के लिए विंडो बाइंडिंग
         window.triggerSmartSplitModal = function(payload) {
             activeSplitPayload = payload;
             document.getElementById('lbl-split-total-deposit').innerText = `₹${payload.amount.toLocaleString('en-IN')}`;
@@ -651,7 +651,6 @@ window.initDepositPage = async function (currentUser) {
                 btnSplitConfirm.disabled = true;
 
                 try {
-                    // १. आज (Day 1) के हिस्से को मुख्य लेज़र में पास करें
                     const event = new CustomEvent('execute-split-today-save', {
                         detail: {
                             basePayload: activeSplitPayload,
@@ -660,7 +659,6 @@ window.initDepositPage = async function (currentUser) {
                     });
                     window.dispatchEvent(event);
 
-                    // २. बचे हुए भविष्य के दिनों (Day 2, 3, 4..) को scheduled_deposits टेबल में डंप करें
                     let futureInsertPayload = [];
                     for(let i = 1; i < splitSchedules.length; i++) {
                         futureInsertPayload.push({
