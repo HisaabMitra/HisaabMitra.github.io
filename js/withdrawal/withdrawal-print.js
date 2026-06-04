@@ -1,5 +1,5 @@
 // ========================================================
-// 🖨️ DOT-MATRIX PLQ-20 STYLE A4 LINE-BY-LINE PRINT ENGINE (UPDATED TIMER & ADDR)
+// 🖨️ DOT-MATRIX PLQ-20 STYLE A4 LINE-BY-LINE PRINT ENGINE (VERTICAL STRETCH & AUTO PAGE NO)
 // ========================================================
 
 window.executeWithdrawalPassbookPrint = function(encodedTx, srNo) {
@@ -8,27 +8,33 @@ window.executeWithdrawalPassbookPrint = function(encodedTx, srNo) {
         console.log("🖨️ Matrix Passbook Thread Triggered for SrNo:", srNo, txData);
 
         const koCode = window.currentUser?.ko_code || "--";
-        
-        // 🎯 सुधार: एड्रेस अब सीधे लॉगिन यूजर के डेटाबेस फ़ील्ड (.address) से डायनेमिकली लोड होगा
         const userAddress = window.currentUser?.address || "KIOSK CENTER, INDIA";
         const todayDate = new Date().toISOString().split('T')[0];
 
-        // 1. ट्रैक करें कि प्रिंटर अभी किस लाइन पर है (0 से 14 तक कुल 15 कतारें)
+        // 1. 🔍 ट्रैक करें कि प्रिंटर अभी किस लाइन पर है (0 से 14 तक कुल 15 कतारें)
         let lastPrintedLine = parseInt(localStorage.getItem('passbook_last_line')) || 0;
         let lastPrintedDate = localStorage.getItem('passbook_last_date') || "";
+        
+        // 📄 पेज नंबरिंग इंजन काउंटर लोड करें
+        let currentPageNo = parseInt(localStorage.getItem('passbook_page_counter')) || 1;
 
-        // नियम: यदि आज नई तारीख है और पुरानी तारीख से अलग है, तो पेज पर दोबारा हेडर प्रिंट होगा
+        // 🎯 नियम: यदि आज नई तारीख है, तो पेज नंबर दोबारा 1 से शुरू होगा और हेडर फोर्स रीप्रिंट होगा
         let forceHeaderReprint = false;
         if (lastPrintedDate !== todayDate) {
             forceHeaderReprint = true;
+            currentPageNo = 1; // तारीख बदलते ही पेज नंबर वापस 1 पर रीसेट
+            localStorage.setItem('passbook_page_counter', 1);
             if (lastPrintedLine >= 15) lastPrintedLine = 0; 
         }
 
-        // 2. गणना करें कि इस एंट्री को टॉप से कितने वर्टिकल स्पेस (Margin-Top) के बाद छपना है
-        // नैरो मार्जिन के हिसाब से कोऑर्डिनेट्स को री-मैप किया गया है
-        const rowHeight = 35; 
-        const baseHeaderOffset = 110; // हेडर का वर्टिकल स्पेस
+        // 🚀 सुधार: 15 एंट्री को पूरे A4 पेज के अंत तक फैलाने के लिए रो-हाइट और बेस ऑफसेट को बढ़ाया
+        const rowHeight = 52;         // ⚡ प्रत्येक एंट्री के बीच अंगूठे/हस्ताक्षर के लिए बड़ा और पर्याप्त वर्टिकल स्पेस
+        const baseHeaderOffset = 130;  // हेडर और टेबल थ्रेड का शुरुआती टॉप मार्जिन
         const dynamicTopMargin = baseHeaderOffset + (lastPrintedLine * rowHeight);
+
+        // तारीख को प्रिंट डिस्प्ले के लिए DD-MM-YYYY फॉर्मेट करें
+        const dateParts = todayDate.split('-');
+        const displayDate = `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`;
 
         // 3. प्रिंटर के लिए छुपा हुआ Iframe तैयार करें
         let printFrame = document.getElementById('matrix-print-iframe');
@@ -47,32 +53,38 @@ window.executeWithdrawalPassbookPrint = function(encodedTx, srNo) {
         const frameDoc = printFrame.contentWindow || printFrame.contentDocument;
         const doc = frameDoc.document || frameDoc;
 
-        // 📊 PLQ-20 के लिए बिल्कुल संकीर्ण (Narrow Margin) और ज़ीरो-गैप HTML लेआउट
+        // 📊 PLQ-20 के लिए बिल्कुल संकीर्ण (Narrow Margin) और वर्टिकली स्ट्रेच्ड HTML लेआउट
         let htmlContent = `
         <!DOCTYPE html>
         <html>
         <head>
             <meta charset="UTF-8">
             <style>
-                /* 🎯 पेज मार्जिन को बिल्कुल संकीर्ण (Narrow - 5mm) लॉक कर दिया गया है */
-                @page { size: A4 portrait; margin: 5mm; }
+                @page { size: A4 portrait; margin: 8mm 6mm; }
                 body {
                     margin: 0;
                     padding: 0;
                     font-family: 'Courier New', Courier, monospace;
                     font-size: 12px;
-                    line-height: 1.1;
+                    line-height: 1.2;
                     color: #000;
                 }
                 .header-block {
                     text-align: center;
                     width: 100%;
-                    margin-bottom: 10px;
+                    margin-bottom: 5px;
                 }
                 .header-title { font-size: 16px; font-weight: bold; text-transform: uppercase; }
                 .header-address { font-size: 10px; text-transform: uppercase; margin-top: 1px; }
                 
-                /* 🎛️ नैरो ग्रिड टेबल स्ट्रक्चर */
+                /* 📅 डेट और डायनेमिक पेज नंबर लाइन जो सेंटर में रहेगी */
+                .meta-line {
+                    font-size: 11px;
+                    font-weight: bold;
+                    text-align: center;
+                    margin: 4px 0;
+                }
+                
                 .matrix-table { width: 100%; border-collapse: collapse; margin-top: 2px; }
                 .matrix-table th {
                     border-bottom: 1px dashed #000;
@@ -82,20 +94,22 @@ window.executeWithdrawalPassbookPrint = function(encodedTx, srNo) {
                     font-weight: bold;
                     font-size: 11px;
                 }
-                .matrix-table td { padding: 8px 2px; font-size: 11px; }
-                .sig-line { width: 80px; border-bottom: 1px dashed #000; display: inline-block; height: 10px; }
+                .matrix-table td { padding: 12px 2px; font-size: 11px; }
+                .sig-line { width: 85px; border-bottom: 1px dashed #000; display: inline-block; height: 12px; }
             </style>
         </head>
         <body>
         `;
 
-        // अगर पहली लाइन है (0) या तारीख बदल गई है, तो हेडर कॉलम प्रिंट करें
+        // अगर पहली लाइन है (0) या तारीख बदल गई है, तो हेडर कॉलम और लाइव पेज नंबर प्रिंट करें
         if (lastPrintedLine === 0 || forceHeaderReprint) {
             htmlContent += `
                 <div class="header-block">
                     <div class="header-title">Kiosk Banking System</div>
                     <div class="header-address">${userAddress}</div>
                 </div>
+                <div class="meta-line">Date: ${displayDate} | Page No: ${currentPageNo}</div>
+                
                 <table class="matrix-table">
                     <thead>
                         <tr>
@@ -104,16 +118,16 @@ window.executeWithdrawalPassbookPrint = function(encodedTx, srNo) {
                             <th style="width: 22%;">Aadhar Number</th>
                             <th style="width: 25%;">Name</th>
                             <th style="width: 15%;">Amount</th>
-                            <th style="width: 18%; text-align:center;">Signature</th>
+                            <th style="width: 18%; text-align:center;">Signature/Thumb</th>
                         </tr>
                     </thead>
                 </table>
             `;
         }
 
-        // 🎯 एब्सोल्यूट कोऑर्डिनेट कतार जो ठीक उसी पुरानी छोड़ी हुई जगह पर छपेगी
+        // एब्सोल्यूट कोऑर्डिनेट कतार जो ठीक उसी पुरानी छोड़ी हुई जगह पर छपेगी
         const inlineStyle = (lastPrintedLine === 0 || forceHeaderReprint) 
-            ? `margin-top: 2px;` 
+            ? `margin-top: 4px;` 
             : `position: absolute; top: ${dynamicTopMargin}px; left: 0; width: 100%;`;
 
         htmlContent += `
@@ -131,8 +145,8 @@ window.executeWithdrawalPassbookPrint = function(encodedTx, srNo) {
             </table>
             
             ${(lastPrintedLine === 14) ? `
-                <div style="position: absolute; bottom: 5mm; left: 0; width: 100%; text-align: center; font-size: 10px; font-weight: bold; border-top: 1px dashed #000; padding-top: 4px;">
-                    This is a computer generated receipt hence no need of signature.
+                <div style="position: absolute; bottom: 10mm; left: 0; width: 100%; text-align: center; font-size: 11px; font-weight: bold; letter-spacing: 1px; color:#000;">
+                    ---- page is end ----
                 </div>
             ` : ''}
         </body>
@@ -149,7 +163,7 @@ window.executeWithdrawalPassbookPrint = function(encodedTx, srNo) {
             printFrame.contentWindow.print();
             
             // 5. प्रिंट खत्म होते ही 10-सेकंड ऑटो प्रॉम्ट चालू करें
-            launchPassbookVerificationFlow(lastPrintedLine, todayDate);
+            launchPassbookVerificationFlow(lastPrintedLine, todayDate, currentPageNo);
         }, 200);
 
     } catch (err) {
@@ -157,15 +171,15 @@ window.executeWithdrawalPassbookPrint = function(encodedTx, srNo) {
     }
 };
 
-// ⏱️ सुधरा हुआ परफेक्ट 10-सेकंड ऑटोमैटिक यस/नो वेरिफिकेशन सिस्टम
-function launchPassbookVerificationFlow(currentLine, todayDate) {
+// ⏱️ परफेक्ट 10-सेकंड ऑटोमैटिक यस/नो वेरिफिकेशन सिस्टम
+function launchPassbookVerificationFlow(currentLine, todayDate, currentPageNo) {
     let timerDuration = 10;
     
     window.showSystemConfirm(
         `क्या विथड्रॉल प्रविष्टि पासबुक पेज पर सही जगह और साफ़ प्रिंट हो गई है?\n\n(यदि आप कुछ नहीं चुनते, तो ${timerDuration} सेकंड में यह स्वतः 'YES' मान लिया जाएगा)`, 
         "Print Alignment Verification", 
         function() {
-            saveNextPassbookLinePointer(currentLine + 1, todayDate);
+            saveNextPassbookLinePointer(currentLine + 1, todayDate, currentPageNo);
         }
     );
 
@@ -174,24 +188,22 @@ function launchPassbookVerificationFlow(currentLine, todayDate) {
     
     if (submitBtn) submitBtn.innerText = `Yes, Clear Line (${timerDuration}s)`;
 
-    // ⚡ टाइमर फिक्स: अब यह परफेक्ट 1 सेकंड के अंतराल (1000ms) पर टिक-टिक करेगा
     const autoYesTimer = setInterval(() => {
         timerDuration--;
         if (submitBtn && document.getElementById('custom-prompt-modal').style.display === 'flex') {
             submitBtn.innerText = `Yes, Clear Line (${timerDuration}s)`;
         }
 
-        // ⏳ समय समाप्त होने पर ऑटो-सबमिट
         if (timerDuration <= 0) {
             clearInterval(autoYesTimer);
             const modal = document.getElementById('custom-prompt-modal');
             if (modal && modal.style.display === 'flex') {
                 modal.style.display = 'none';
-                saveNextPassbookLinePointer(currentLine + 1, todayDate);
+                saveNextPassbookLinePointer(currentLine + 1, todayDate, currentPageNo);
                 window.showSystemAlert("समय समाप्त! एंट्री को सफल मानकर कतार लाइन आगे बढ़ा दी गई है।", "Auto Acknowledged", "✅");
             }
         }
-    }, 1000); // 🌟 यहाँ 1000ms कर दिया गया है जिससे अब पूरा 10 सेकंड टिकेगा!
+    }, 1000);
 
     submitBtn.addEventListener('click', () => clearInterval(autoYesTimer));
     cancelBtn.addEventListener('click', () => {
@@ -200,10 +212,12 @@ function launchPassbookVerificationFlow(currentLine, todayDate) {
     });
 }
 
-function saveNextPassbookLinePointer(nextLine, todayDate) {
+function saveNextPassbookLinePointer(nextLine, todayDate, currentPageNo) {
     if (nextLine >= 15) {
+        // 🌟 15 लाइन पूरी होते ही पेज भर गया: लाइन वापस 0 करें और पेज नंबर काउंटर को 1 प्लस बढ़ाएं
         localStorage.setItem('passbook_last_line', 0);
-        window.showSystemAlert("📄 इस पेज की सभी 15 कतारें भर चुकी हैं! कृपया प्रिंटर में नया A4 पेज लोड करें।", "Page Full", "ℹ️");
+        localStorage.setItem('passbook_page_counter', currentPageNo + 1);
+        window.showSystemAlert(`📄 इस पेज की सभी 15 कतारें भर चुकी हैं!\n\nअगला प्रिंट 'Page No: ${currentPageNo + 1}' के नए फ्रेश A4 पेज पर शुरू होगा। कृपया नया पेज लगाएं।`, "Page Full", "ℹ️");
     } else {
         localStorage.setItem('passbook_last_line', nextLine);
     }
