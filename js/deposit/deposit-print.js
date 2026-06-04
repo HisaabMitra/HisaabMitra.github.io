@@ -1,12 +1,12 @@
 // ========================================================
-// 🖨️ 58MM POS THERMAL PRINT ENGINE FOR DEPOSIT RECEIPTS
+// 🖨️ ULTRA-COMPACT 58MM POS THERMAL PRINT ENGINE (DEPOSIT)
 // ========================================================
 
 window.executeDepositPrintReceipt = function(encodedTx) {
     try {
         // १. बेस 64 डेटा को डिकोड करें
         const txData = JSON.parse(atob(encodedTx));
-        console.log("🖨️ Initializing POS Print for Transaction:", txData);
+        console.log("🖨️ Initializing Ultra-Compact POS Print:", txData);
 
         // २. तारीख को DD-MM-YYYY फॉर्मेट में बदलें
         const txDate = new Date(txData.transaction_date);
@@ -15,13 +15,13 @@ window.executeDepositPrintReceipt = function(encodedTx) {
         const year = txDate.getFullYear();
         const formattedDate = `${day}-${month}-${year}`;
 
-        // ३. यूजर का एड्रेस डेटाबेस/ग्लोबल मेमोरी से उठाएं
-        const userAddress = window.currentUser?.customer_address || "BRANCH AREA, INDIA";
+        // 🎯 ३. लॉगिन यूज़र का लाइव एड्रेस डेटाबेस (currentUser) से उठाएं
+        const userAddress = window.currentUser?.customer_address || "KIOSK CENTER, INDIA";
         
-        // ⚠️ अमाउंट इन वर्ड्स (यदि पहले से नहीं है, तो कनवर्टर का उपयोग करें)
+        // अमाउंट इन वर्ड्स ( utils.js हिन्दी कनवर्टर सिंक )
         const amountInWords = window.numberToHindiWords ? `${window.numberToHindiWords(parseInt(txData.amount))} रुपए मात्र` : "Rupees Only";
 
-        // ४. प्रिंट के लिए एक छुपा हुआ Iframe बनाएँ ताकि मुख्य पेज की डिजाइन न बिगड़े
+        // ४. प्रिंट के लिए हिडन Iframe हुक मैकेनिज्म
         let printFrame = document.getElementById('pos-print-iframe');
         if (!printFrame) {
             printFrame = document.createElement('iframe');
@@ -38,7 +38,7 @@ window.executeDepositPrintReceipt = function(encodedTx) {
         const frameDoc = printFrame.contentWindow || printFrame.contentDocument;
         const doc = frameDoc.document || frameDoc;
 
-        // 📊 58mm थर्मल प्रिंटर के लिए सटीक HTML और CSS लेआउट
+        // 📊 58mm थर्मल प्रिंटर के लिए ज़ीरो-गैप और बॉर्डर-लेस HTML लेआउट
         const receiptHTML = `
             <!DOCTYPE html>
             <html>
@@ -47,48 +47,45 @@ window.executeDepositPrintReceipt = function(encodedTx) {
                 <style>
                     @page { size: 58mm auto; margin: 0; }
                     body {
-                        width: 48mm; /* 58mm पेपर पर मार्जिन छोड़कर सेफ वर्किंग एरिया */
+                        width: 48mm; /* 58mm पेपर पर सेफ प्रिंटिंग विड्थ */
                         margin: 0 auto;
-                        padding: 5px 0;
-                        font-family: 'Courier New', Courier, monospace; /* थर्मल प्रिंटर के लिए बेस्ट फॉन्ट */
+                        padding: 2px 0;
+                        font-family: 'Courier New', Courier, monospace;
                         font-size: 11px;
-                        line-height: 1.3;
+                        line-height: 1.1; /* ⚡ लाइनों के बीच का गैप न्यूनतम किया */
                         color: #000;
                         text-align: center;
                     }
                     .header {
                         font-weight: bold;
-                        font-size: 13px;
-                        margin-bottom: 2px;
+                        font-size: 12px;
+                        margin: 0;
+                        padding: 0;
                         text-transform: uppercase;
                     }
                     .address {
                         font-size: 9px;
-                        margin-bottom: 5px;
+                        margin: 1px 0 3px 0;
+                        padding-bottom: 3px;
                         border-bottom: 1px dashed #000;
-                        padding-bottom: 5px;
                         text-transform: uppercase;
                     }
+                    /* 📅 डेट को बिल्कुल सेंटर में अलाइन किया */
                     .date-line {
-                        text-align: left;
-                        margin-bottom: 8px;
+                        text-align: center;
+                        margin: 2px 0 5px 0;
                         font-weight: bold;
                     }
-                    /* 📦 मुख्य डेटा बॉक्स */
-                    .info-box {
-                        border: 1px solid #000;
-                        padding: 6px;
-                        text-align: left;
-                        margin-bottom: 8px;
-                        border-radius: 4px;
+                    /* 🚫 मुख्य डेटा कंटेनर - बॉर्डर पूरी तरह गायब */
+                    .info-container {
+                        text-align: center;
+                        margin: 4px 0;
+                        padding: 0;
                     }
                     .info-row {
                         display: flex;
                         justify-content: space-between;
-                        margin-bottom: 4px;
-                    }
-                    .info-row:last-child {
-                        margin-bottom: 0;
+                        margin-bottom: 2px; /* न्यूनतम वर्टिकल स्पेस */
                     }
                     .label {
                         font-weight: bold;
@@ -97,26 +94,27 @@ window.executeDepositPrintReceipt = function(encodedTx) {
                         text-align: right;
                         text-transform: uppercase;
                     }
+                    /* अमाउंट हाइलाइट बिना किसी बॉक्स बॉर्डर के */
                     .amount-highlight {
-                        font-size: 13px;
+                        font-size: 12px;
                         font-weight: bold;
                         border-top: 1px dashed #000;
-                        margin-top: 4px;
-                        padding-top: 4px;
+                        margin-top: 3px;
+                        padding-top: 3px;
                     }
                     .words-section {
                         text-align: left;
-                        font-size: 10px;
+                        font-size: 9px;
                         font-style: italic;
-                        margin-bottom: 10px;
+                        margin: 4px 0;
                         border-bottom: 1px dashed #000;
-                        padding-bottom: 5px;
+                        padding-bottom: 3px;
                     }
                     .footer {
                         font-size: 8px;
                         font-weight: bold;
-                        margin-top: 5px;
-                        line-height: 1.2;
+                        margin-top: 3px;
+                        line-height: 1.1;
                     }
                 </style>
             </head>
@@ -126,7 +124,7 @@ window.executeDepositPrintReceipt = function(encodedTx) {
                 
                 <div class="date-line">Date: ${formattedDate}</div>
                 
-                <div class="info-box">
+                <div class="info-container">
                     <div class="info-row">
                         <span class="label">A/c No:</span>
                         <span class="value">${txData.account_number}</span>
@@ -159,7 +157,6 @@ window.executeDepositPrintReceipt = function(encodedTx) {
         doc.write(receiptHTML);
         doc.close();
 
-        // प्रिंटिंग हुक (थोड़ा सा टाइमआउट ताकि CSS पूरी तरह लोड हो सके)
         setTimeout(() => {
             printFrame.contentWindow.focus();
             printFrame.contentWindow.print();
