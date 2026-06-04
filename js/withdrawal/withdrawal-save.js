@@ -15,11 +15,9 @@ async function executeWithdrawalSaveProcess(targetButton) {
     const withdrawalAmount = parseFloat(amountInput.value) || 0;
     const remarks = remarksInput ? remarksInput.value.trim() : "";
 
-    // 🌟 [CRITICAL SCOPE FIX]: स्कोप एरर रोकने के लिए मोड वेरिएबल्स को सबसे ऊपर डिक्लेयर किया
     const isEditMode = targetButton.dataset.mode === "edit";
     const editingWitId = targetButton.dataset.editingWitId;
 
-    // 💸 [NEW COMPONENT SYNC]: आपके नए स्वतंत्र विथड्रॉल डिनॉमिनेशन काउंटर से कैश डेटा उठाएं
     let netCash = 0;
     let denomValues = {};
     if (window.WitDenominationComponent) {
@@ -29,7 +27,7 @@ async function executeWithdrawalSaveProcess(targetButton) {
         console.error("WitDenominationComponent is missing in current session flow!");
     }
 
-    // १. बुनियादी डेटा वैधीकरण (कस्टम अलर्ट सिस्टम के साथ सिंक)
+    // १. बुनियादी डेटा वैधीकरण
     if (!aadhaarNo || aadhaarNo.length !== 12 || isNaN(aadhaarNo)) {
         window.showSystemAlert("कृपया एक वैध 12-अंकीय आधार संख्या दर्ज करें!", "Validation Error", "⚠️");
         return;
@@ -43,38 +41,39 @@ async function executeWithdrawalSaveProcess(targetButton) {
         return;
     }
 
-   // ========================================================
-    // २. 🛡️ डिनॉमिनेशन सुरक्षा गार्ड (Strict Cash Match Rule & Custom Alert Validation)
+    // ========================================================
+    // २. 🛡️ डिनॉमिनेशन सुरक्षा गार्ड (Strict Upgraded Callback Validation)
     // ========================================================
     if (netCash === 0) {
-        // 🌟 पुराने साधारण confirm() को हटाकर कस्टमाइज्ड प्रॉम्ट इंजन लगाया
-        const proceedWithoutCash = await window.showSystemPrompt(
-            "चेतावनी: आपने डिनॉमिनेशन (नोटों का विवरण) नहीं भरा है।\nक्या आप इस जमा राशि को बिना नोट मिलान के प्रोसेस करना चाहते हैं?\n\nआगे बढ़ने के लिए 'YES' टाइप करें:", 
+        // 🌟 पासवर्ड बॉक्स वाले Prompt को हटाकर सही Yes/No Confirm इंजन को वायर किया
+        window.showSystemConfirm(
+            "चेतावनी: आपने डिनॉमिनेशन (नोटों का विवरण) नहीं भरा है। क्या आप इस निकासी को बिना नोट मिलान के प्रोसेस करना चाहते हैं?", 
             "Vault Security Validation", 
-            "⚠️"
-        );
-
-        // यदि ऑपरेटर ने कैंसिल किया या 'YES' नहीं लिखा, तो ट्रांजैक्शन रोक दें
-        if (proceedWithoutCash === null || proceedWithoutCash.trim().toUpperCase() !== 'YES') {
-            if (proceedWithoutCash !== null) {
-                await window.showSystemAlert("सुरक्षा कारणों से ट्रांजैक्शन रोक दिया गया है। कृपया पहले नोटों का विवरण भरें!", "Validation Stopped", "⚠️");
+            async function() {
+                // 🟢 ऑपरेटर द्वारा 'Yes, Proceed' क्लिक करने पर कोर ट्रांजैक्शन इंजन यहाँ से आगे बढ़ेगा
+                console.log("⚡ Action Authorized. Initiating database insertion thread...");
+                await proceedWithWithdrawalDatabaseOperation(targetButton, aadhaarNo, customerName, withdrawalAmount, remarks, isEditMode, editingWitId, denomValues);
             }
-            return; // थ्रेड यहीं ब्रेक हो जाएगा
-        }
-    } // 👈 🌟 यहाँ सिर्फ एक ब्रैकेट आएगा, जिससे पहला 'if' सही तरीके से बंद होगा
+        );
+        return; // मुख्य थ्रेड को यहाँ ब्रेक करें, आगे की कमान ऊपर का कॉलबैक संभालेगा
+    } 
     else if (Math.abs(netCash - withdrawalAmount) > 0.01) {
-        // अगर डिनॉमिनेशन भरा गया है और वह मैच नहीं है, तो सीधा TXN FAIL एरर फेंकें
-        await window.showSystemAlert(`Txn Fail: डिनॉमिनेशन टोटल (₹${netCash}) और निकासी राशि (₹${withdrawalAmount}) मैच नहीं कर रहे हैं!`, "Cash Mismatch", "❌");
+        window.showSystemAlert(`Txn Fail: डिनॉमिनेशन टोटल (₹${netCash}) और निकासी राशि (₹${withdrawalAmount}) मैच नहीं कर रहे हैं!`, "Cash Mismatch", "❌");
         return;
     }
 
+    // यदि नोट भरे गए हैं और मैचिंग परफेक्ट है, तो सीधे डेटाबेस प्रोसेस रन करें
+    await proceedWithWithdrawalDatabaseOperation(targetButton, aadhaarNo, customerName, withdrawalAmount, remarks, isEditMode, editingWitId, denomValues);
+}
+
+// 💾 कोर डेटाबेस और वॉल्ट सिंकिंग इंजन (Isolated Function for Safety)
+async function proceedWithWithdrawalDatabaseOperation(targetButton, aadhaarNo, customerName, withdrawalAmount, remarks, isEditMode, editingWitId, denomValues) {
     targetButton.textContent = "Verifying Transaction...";
     targetButton.disabled = true;
 
     try {
         const todayStr = new Date().toISOString().split('T')[0];
 
-        // 🚨 [CRITICAL LIMIT GUARD]: ₹10,000 डेली लिमिट वेरिफिकेशन चेक (केवल न्यू एंट्री मोड में)
         if (!isEditMode) {
             const { data: todayTxs, error: limitErr } = await window.supabaseClient
                 .from('withdrawal_transactions')
@@ -100,7 +99,6 @@ async function executeWithdrawalSaveProcess(targetButton) {
         let currentSettlementBalance = parseFloat(window.currentUser.settlement_balance) || 0;
         let finalVaultData = { ...window.currentUser };
 
-        // 💥 [REVERSE PHASE - केवल विथड्रॉल एडिट/अपडेट मोड के लिए]
         if (isEditMode && editingWitId) {
             console.log("Reversing old withdrawal effect for ID:", editingWitId);
             
@@ -113,10 +111,8 @@ async function executeWithdrawalSaveProcess(targetButton) {
             if (fetchOldErr) throw fetchOldErr;
 
             if (oldTx) {
-                // पुराना विथड्रॉल पैसा सेटलमेंट से वापस घटाएं
                 currentSettlementBalance -= parseFloat(oldTx.amount) || 0;
 
-                // पुराने काउंटर से बाहर गए नोटों का असर तिजोरी (Vault) में वापस प्लस करें
                 const notes = [500, 200, 100, 50, 20, 10, 5];
                 notes.forEach(n => {
                     finalVaultData[`cash_${n}`] = (parseInt(finalVaultData[`cash_${n}`]) || 0) + (parseInt(oldTx[`denom_out_${n}`]) || 0) - (parseInt(oldTx[`denom_in_${n}`]) || 0);
@@ -125,7 +121,6 @@ async function executeWithdrawalSaveProcess(targetButton) {
             }
         }
 
-        // ३. कमीशन की गणना (डिपॉजिट रूल्स की तरह ही सेम रहेगा सर)
         let commission = Math.min(withdrawalAmount * 0.004, 50);
 
         const mainWithdrawalPayload = {
@@ -135,10 +130,9 @@ async function executeWithdrawalSaveProcess(targetButton) {
             remarks: remarks,
             ko_code: window.currentUser.ko_code,
             commission: commission,
-            ...denomValues // नए कंपोनेंट से नोटों का सटीक इन/आउट डेटा
+            ...denomValues
         };
 
-        // ४. Supabase डेटाबेस ऑपरेशन (UPDATE या INSERT)
         if (isEditMode && editingWitId) {
             const { error: updateErr } = await window.supabaseClient
                 .from('withdrawal_transactions')
@@ -152,8 +146,6 @@ async function executeWithdrawalSaveProcess(targetButton) {
             if (insertErr) throw insertErr;
         }
 
-        // ५. 📈 सेटलमेंट बैलेंस और तिजोरी (Vault) अपडेट गणना (विथड्रॉल का रिवर्स नियम)
-        // आपके निर्देशानुसार विथड्रॉल अमाउंट सेटलमेंट में प्लस होगा और काउंटर कैश (Vault) से माइनस होगा!
         const updatedSettlementBalance = currentSettlementBalance + withdrawalAmount;
 
         const nextVaultData = {
@@ -175,17 +167,14 @@ async function executeWithdrawalSaveProcess(targetButton) {
 
         if (userUpdateError) throw userUpdateError;
 
-        // ग्लोबल एक्टिव यूज़र मेमोरी में नया डेटा तुरंत सिंक करें
         Object.assign(window.currentUser, nextVaultData);
 
-        // 🌟 कस्टमाइज्ड डोम अलर्ट ट्रिगर बिना किसी वेरिएबल एरर के
         window.showSystemAlert(
             isEditMode ? "🔄 विथड्रॉल ट्रांजैक्शन सफलतापूर्वक अपडेट हुआ!" : "🎉 कैश विथड्रॉल सफल! कृपया ग्राहक को नकद भुगतान करें।", 
             "AEPS Success", 
             "✅"
         );
 
-        // लाइव यूआई लेज़र रिफ्रेश और क्लियरेंस इंजन कॉल
         if (typeof window.loadTodayWithdrawals === 'function') window.loadTodayWithdrawals();
         if (typeof window.masterWithdrawalClear === 'function') window.masterWithdrawalClear();
 
