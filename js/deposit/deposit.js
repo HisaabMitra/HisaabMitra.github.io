@@ -502,63 +502,28 @@ window.initDepositPage = async function (currentUser) {
                 } else {
                     custNameInput.value = "NOT REGISTERED";
                     
-                    const modal = document.getElementById('new-cust-modal');
-                    if (modal) {
-                        document.getElementById('nc-account-no').value = accountNo;
-                        document.getElementById('nc-name').value = "";
-                        document.getElementById('nc-mobile').value = "";
-                        document.getElementById('nc-address').value = "";
-                        
-                        modal.style.setProperty('display', 'flex', 'important');
-                        document.getElementById('nc-name').focus();
-
-                        const btnContinue = document.getElementById('btn-nc-continue');
-                        const btnCancel = document.getElementById('btn-nc-cancel');
-
-                        btnCancel.onclick = function() {
-                            modal.style.display = 'none';
-                            custNameInput.value = ""; accInput.value = ""; accInput.focus();
-                        };
-
-                        btnContinue.onclick = async function() {
-                            const fullName = document.getElementById('nc-name').value.trim().toUpperCase();
-                            const mobile = document.getElementById('nc-mobile').value.trim();
-                            const address = document.getElementById('nc-address').value.trim().toUpperCase();
-
-                            if (!fullName || !mobile) {
-                                window.showSystemAlert("नाम और मोबाइल नंबर आवश्यक है!", "Error", "❌");
-                                return;
-                            }
-
-                            btnContinue.textContent = "Processing...";
-                            btnContinue.disabled = true;
-
-                            try {
-                                const { error: insertErr } = await window.supabaseClient
-                                    .from('banking_customers')
-                                    .insert([{
-                                        account_number: accountNo, customer_name: fullName, mobile_number: mobile, customer_address: address
-                                    }]);
-
-                                if (insertErr) throw insertErr;
-
-                                modal.style.display = 'none';
-                                window.showSystemAlert(`🎉 खाता ${accountNo} सफलतापूर्वक पंजीकृत हुआ!`, "Success", "✅");
-                                custNameInput.value = fullName;
-                                amountInput.focus();
-                            } catch (e) { 
-                                window.showSystemAlert("पंजीकरण विफल: " + e.message, "Error", "❌");
-                            } finally {
-                                btnContinue.textContent = "Register & Continue";
-                                btnContinue.disabled = false;
-                            }
-                        };
-                    }
+                        window.showDynamicNewCustomerModal({
+                        source: 'deposit',
+                        account_number: accountNo
+                    }).then(regResult => {
+                        if (regResult && regResult.success) {
+                            // पंजीकरण सफल होने पर नाम स्क्रीन पर लाएं और सीधा अमाउंट पर फोकस करें
+                            custNameInput.value = regResult.customer_name;
+                            amountInput.focus();
+                        } else if (regResult && regResult.cancelled) {
+                            // ऑपरेटर द्वारा कैंसिल करने पर इनपुट्स क्लियर करके दोबारा फोकस डालें
+                            custNameInput.value = ""; 
+                            accInput.value = ""; 
+                            accInput.focus();
+                        }
+                    }).catch(err => {
+                        console.error("Global Modal Promise Framework Error:", err);
+                        custNameInput.value = "";
+                    });
                 }
             } catch (err) { custNameInput.value = ""; }
         }
         if (accInput) accInput.addEventListener('blur', searchCustomer);
-
         function masterFormClear() {
             if (accInput) accInput.value = ""; 
             if (custNameInput) custNameInput.value = ""; 
