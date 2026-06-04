@@ -101,61 +101,29 @@ window.initWithdrawalPage = async function (currentUser) {
                     if (customer) {
                         if (witNameInput) witNameInput.value = customer.customer_name.toUpperCase();
                         if (witAmountInput) witAmountInput.focus(); // ⚡ फोकस लॉक सीधा अमाउंट इनपुट पर!
-                    } else {
+                   } else {
                         if (witNameInput) witNameInput.value = "NOT REGISTERED";
                         
-                        // नया कस्टमर पंजीकरण पॉपअप ट्रिगर
-                        const modal = document.getElementById('new-cust-modal');
-                        if (modal) {
-                            document.getElementById('nc-aadhaar-no').value = aadhaarNo;
-                            document.getElementById('nc-account-no').value = "";
-                            document.getElementById('nc-name').value = "";
-                            document.getElementById('nc-mobile').value = "";
-                            document.getElementById('nc-address').value = "";
-
-                            modal.style.setProperty('display', 'flex', 'important');
-                            document.getElementById('nc-name').focus();
-
-                            document.getElementById('btn-nc-cancel').onclick = function() {
-                                modal.style.display = 'none';
+                        // 🌟 [UTILS.JS INTEGRATION]: पुराने बड़े लोकल कोड को हटाकर ग्लोबल इंजन को कॉल किया
+                        // विथड्रॉल पेज के लिए आधार नंबर अनिवार्य (Mandatory) रहेगा और A/C नंबर वैकल्पिक (Optional)
+                        window.showDynamicNewCustomerModal({
+                            source: 'withdrawal',
+                            aadhaar_number: aadhaarNo
+                        }).then(regResult => {
+                            if (regResult && regResult.success) {
+                                // पंजीकरण सफल होने पर नाम स्क्रीन पर लाएं और सीधा अमाउंट इनपुट पर फोकस लॉक करें
+                                if (witNameInput) witNameInput.value = regResult.customer_name;
+                                if (witAmountInput) witAmountInput.focus();
+                            } else if (regResult && regResult.cancelled) {
+                                // ऑपरेटर द्वारा कैंसिल करने पर आधार फ़ील्ड खाली करके दोबारा फोकस डालें
                                 if (witNameInput) witNameInput.value = "";
                                 witAadhaarInput.value = ""; 
                                 witAadhaarInput.focus();
-                            };
-
-                            document.getElementById('btn-nc-continue').onclick = async function() {
-                                const fullName = document.getElementById('nc-name').value.trim().toUpperCase();
-                                const mobile = document.getElementById('nc-mobile').value.trim();
-                                const address = document.getElementById('nc-address').value.trim().toUpperCase();
-                                const accNo = document.getElementById('nc-account-no').value.trim();
-
-                                if (!fullName || !mobile) {
-                                    window.showSystemAlert("नाम और मोबाइल नंबर आवश्यक है!", "Validation Error", "❌");
-                                    return;
-                                }
-
-                                try {
-                                    const { error: insErr } = await window.supabaseClient
-                                        .from('banking_customers')
-                                        .insert([{
-                                            aadhaar_number: aadhaarNo,
-                                            account_number: accNo || null, // विथड्रॉल में वैकल्पिक खाता नंबर लिंकिंग
-                                            customer_name: fullName,
-                                            mobile_number: mobile,
-                                            customer_address: address
-                                        }]);
-
-                                    if (insErr) throw insErr;
-
-                                    modal.style.display = 'none';
-                                    window.showSystemAlert("🎉 नया ग्राहक आधार के साथ पंजीकृत हुआ!", "Success", "✅");
-                                    if (witNameInput) witNameInput.value = fullName;
-                                    if (witAmountInput) witAmountInput.focus();
-                                } catch (e) {
-                                    window.showSystemAlert("पंजीकरण विफल: " + e.message, "Error", "❌");
-                                }
-                            };
-                        }
+                            }
+                        }).catch(err => {
+                            console.error("Global Modal Promise Framework Error in Withdrawal:", err);
+                            if (witNameInput) witNameInput.value = "";
+                        });
                     }
                 } catch (err) { 
                     console.error("Aadhaar Search Error:", err); 
