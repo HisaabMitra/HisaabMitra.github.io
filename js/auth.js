@@ -1,5 +1,5 @@
 // js/auth.js
-// 🔐 DEDICATED AUTHENTICATION & REGISTRATION ENGINE
+// 🔐 DEDICATED AUTHENTICATION & REGISTRATION ENGINE (WITH STORAGE LOCK SYNC)
 
 window.initAuthEngine = function(getLoggedUser, setLoggedUser, showDashboardCallback) {
     const loginForm = document.getElementById('login-form');
@@ -53,14 +53,14 @@ window.initAuthEngine = function(getLoggedUser, setLoggedUser, showDashboardCall
                         .eq('email', email);
 
                     if (updateError) throw updateError;
-                    window.showSystemAlert("🔄 Request Re-Submitted Successfully with updated Bank Credentials!");
+                    window.showSystemAlert("🔄 Request Re-Submitted Successfully with updated Bank Credentials!", "Re-Submission", "🔄");
                 } else {
                     const { error: insertError = null } = await window.supabaseClient
                         .from('user_roles')
                         .insert([{ email: email, ...payload }]);
 
                     if (insertError) throw insertError;
-                    window.showSystemAlert("✅ Registration Request Submitted with SOL ID & Settlement Account!");
+                    window.showSystemAlert("✅ Registration Request Submitted with SOL ID & Settlement Account!", "Registered", "✅");
                 }
 
                 registerForm.reset();
@@ -68,7 +68,7 @@ window.initAuthEngine = function(getLoggedUser, setLoggedUser, showDashboardCall
                 loginPanel.classList.remove('hidden');
 
             } catch (err) {
-                window.showSystemAlert(`❌ Request Failed: ${err.message}`);
+                window.showSystemAlert(`❌ Request Failed: ${err.message}`, "Error", "❌");
             } finally {
                 submitBtn.textContent = "Submit Registration";
                 submitBtn.disabled = false;
@@ -97,7 +97,7 @@ window.initAuthEngine = function(getLoggedUser, setLoggedUser, showDashboardCall
                 if (error) throw error;
 
                 if (!users || users.length === 0) {
-                    window.showSystemAlert("❌ Invalid Email or Password. Please try again.");
+                    window.showSystemAlert("❌ Invalid Email or Password. Please try again.", "Auth Failure", "❌");
                     return;
                 }
 
@@ -105,7 +105,7 @@ window.initAuthEngine = function(getLoggedUser, setLoggedUser, showDashboardCall
 
                 if (user.status === 'rejected') {
                     const reason = user.objection_remark || "Reason not specified by Admin.";
-                    window.showSystemAlert(`⚠️ Objection Raised!\n\nReason: "${reason}"\n\nPlease correct details and re-submit.`);
+                    window.showSystemAlert(`⚠️ Objection Raised!\n\nReason: "${reason}"\n\nPlease correct details and re-submit.`, "Registration Rejected", "⚠️");
                     
                     document.getElementById('reg-name').value = user.full_name;
                     document.getElementById('reg-email').value = user.email;
@@ -123,14 +123,21 @@ window.initAuthEngine = function(getLoggedUser, setLoggedUser, showDashboardCall
                 }
 
                 if (user.status === 'pending') {
-                    window.showSystemAlert(`⏳ Access Pending: Your account is awaiting clearance from Super Admin.`);
+                    window.showSystemAlert(`⏳ Access Pending: Your account is awaiting clearance from Super Admin.`, "Approval Pending", "⏳");
                     return;
                 }
 
+                // 💾 🌟 [JARVIS MASTER LOCK]: एक्टिव ऑपरेटर क्रेडेंशियल को ब्राउज़र स्टोरेज में राइट करें
+                sessionStorage.setItem('loggedInUser', JSON.stringify(user));
+                
+                // ग्लोबल स्टेट वैरिएबल्स असाइन करें
+                setLoggedUser(user);
+
+                // ऐप गेटवे को कमांड ट्रांसफर करें
                 showDashboardCallback(user);
 
             } catch (err) {
-               window.showSystemAlert(`❌ Auth Error: ${err.message}`);
+               window.showSystemAlert(`❌ Auth Error: ${err.message}`, "System Crash", "❌");
             } finally {
                 submitBtn.textContent = "Sign In";
                 submitBtn.disabled = false;
