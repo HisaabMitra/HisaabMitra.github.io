@@ -1,5 +1,5 @@
 // ========================================================
-// 💸 AEPS CASH WITHDRAWAL CORE CONTROL ENGINE
+// 💸 AEPS CASH WITHDRAWAL CORE CONTROL ENGINE (WITH SHORTCUTS & DELETE)
 // ========================================================
 
 window.initWithdrawalPage = async function (currentUser) {
@@ -12,7 +12,7 @@ window.initWithdrawalPage = async function (currentUser) {
     const witWordsDisplay = document.getElementById('wit-amount-words');
 
     try {
-        // 🚀 [DEDICATED INJECTION]: आते ही नए स्वतंत्र विथड्रॉल डिनॉमिनेशन कॉम्पोनेन्ट को रेंडर करें
+        // 🚀 आते ही नए स्वतंत्र विथड्रॉल डिनॉमिनेशन कॉम्पोनेन्ट को रेंडर करें
         if (window.WitDenominationComponent) {
             setTimeout(() => {
                 console.log("Initializing Dedicated Withdrawal Denomination Panel...");
@@ -23,7 +23,7 @@ window.initWithdrawalPage = async function (currentUser) {
             console.error("WitDenominationComponent structure not found in window stack!");
         }
 
-        // 📊 [LEDGER SYSTEM]: आज की लाइव निकासी (Withdrawal) लेज़र तालिका लोड करें
+        // 📊 [LEDGER SYSTEM]: आज की लाइव निकासी लेज़र तालिका लोड करें
         window.loadTodayWithdrawals = async function() {
             const tbody = document.getElementById('today-wit-body');
             if (!tbody) return;
@@ -46,7 +46,7 @@ window.initWithdrawalPage = async function (currentUser) {
                     return;
                 }
 
-                // कतारों को क्रम संख्या (Sr. No.) के साथ लाइव रेंडर करना
+                // कतारों को क्रम संख्या (Sr. No.) और 🗑️ डिलीट बटन के साथ लाइव रेंडर करना
                 data.forEach((tx, index) => {
                     const timeStr = new Date(tx.transaction_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                     const txStr = btoa(JSON.stringify(tx));
@@ -63,6 +63,8 @@ window.initWithdrawalPage = async function (currentUser) {
                                 <div style="display:inline-flex; align-items:center; gap:15px; justify-content:center;">
                                     <span class="btn-edit-wit-tx" data-tx="${txStr}" style="cursor:pointer; font-size:1.1rem; user-select:none;" title="Edit Withdrawal">✏️</span>
                                     <span class="btn-print-wit-receipt" data-tx="${txStr}" style="cursor:pointer; font-size:1.2rem; user-select:none;" title="Print Slip">🖨️</span>
+                                    <!-- 🗑️ नया समर्पित विथड्रॉल डिलीट ट्रिगर बटन -->
+                                    <span class="btn-delete-wit-tx" data-id="${tx.id}" data-tx="${txStr}" style="cursor:pointer; font-size:1.1rem; user-select:none;" title="Delete & Rollback Withdrawal">🗑️</span>
                                 </div>
                             </td>
                         </tr>
@@ -76,7 +78,7 @@ window.initWithdrawalPage = async function (currentUser) {
             }
         };
 
-        // 🔍 [RADAR SEARCH]: आधार नंबर ब्लर होते ही लाइव सर्च इंजन (Strict 12 Digit Rules)
+        // 🔍 [RADAR SEARCH]: आधार नंबर सर्च इंजन
         if (witAadhaarInput) {
             witAadhaarInput.addEventListener('blur', async () => {
                 const aadhaarNo = witAadhaarInput.value.trim();
@@ -100,22 +102,19 @@ window.initWithdrawalPage = async function (currentUser) {
 
                     if (customer) {
                         if (witNameInput) witNameInput.value = customer.customer_name.toUpperCase();
-                        if (witAmountInput) witAmountInput.focus(); // ⚡ फोकस लॉक सीधा अमाउंट इनपुट पर!
-                   } else {
+                        if (witAmountInput) witAmountInput.focus(); 
+                    } else {
                         if (witNameInput) witNameInput.value = "NOT REGISTERED";
                         
-                        // 🌟 [UTILS.JS INTEGRATION]: पुराने बड़े लोकल कोड को हटाकर ग्लोबल इंजन को कॉल किया
-                        // विथड्रॉल पेज के लिए आधार नंबर अनिवार्य (Mandatory) रहेगा और A/C नंबर वैकल्पिक (Optional)
+                        // 🌟 [UTILS.JS INTEGRATION]: ग्लोबल इंजन कॉल
                         window.showDynamicNewCustomerModal({
                             source: 'withdrawal',
                             aadhaar_number: aadhaarNo
                         }).then(regResult => {
                             if (regResult && regResult.success) {
-                                // पंजीकरण सफल होने पर नाम स्क्रीन पर लाएं और सीधा अमाउंट इनपुट पर फोकस लॉक करें
                                 if (witNameInput) witNameInput.value = regResult.customer_name;
                                 if (witAmountInput) witAmountInput.focus();
                             } else if (regResult && regResult.cancelled) {
-                                // ऑपरेटर द्वारा कैंसिल करने पर आधार फ़ील्ड खाली करके दोबारा फोकस डालें
                                 if (witNameInput) witNameInput.value = "";
                                 witAadhaarInput.value = ""; 
                                 witAadhaarInput.focus();
@@ -131,7 +130,7 @@ window.initWithdrawalPage = async function (currentUser) {
             });
         }
 
-      // 🔢 [LIVE TRANSLATOR]: लाइव हिंदी नंबर्स-टू-वर्ड्स कनवर्टर (utils.js सिंक)
+        // 🔢 [LIVE TRANSLATOR]: लाइव हिंदी Numbers-to-Words कनवर्टर
         if (witAmountInput) {
             witAmountInput.addEventListener('input', () => {
                 const amt = parseInt(witAmountInput.value) || 0;
@@ -146,10 +145,10 @@ window.initWithdrawalPage = async function (currentUser) {
                 }
             });
             
-            // ⚡ [VIOLATION FIX]: क्रोम की पीली स्क्रॉल वार्निंग हटाने के लिए passive: false हुक जोड़ा
             witAmountInput.addEventListener('wheel', e => e.preventDefault(), { passive: false }); 
         }
-        // ✏️ [EDIT MODULE]: एडिट निकासी प्रविष्टि लिसनर (With New WitDenomination Engine Alignment)
+
+        // ✏️ [EDIT MODULE]: एडिट निकासी प्रविष्टि लिसनर
         function attachWithdrawalEditListeners() {
             document.querySelectorAll('.btn-edit-wit-tx').forEach(btn => {
                 btn.onclick = function() {
@@ -165,7 +164,6 @@ window.initWithdrawalPage = async function (currentUser) {
                             witWordsDisplay.innerText = `${window.numberToHindiWords(parseInt(txData.amount))} रुपए मात्र`;
                         }
 
-                        // 💥 [RE-POPULATE COUNTER]: पुराने नोटों की संख्या को नए विथड्रॉल कॉम्पोनेन्ट में लोड करना
                         const notes = [500, 200, 100, 50, 20, 10, 5];
                         notes.forEach(note => {
                             const inInput = document.querySelector(`.wit-denom-in[data-note="${note}"]`);
@@ -179,10 +177,8 @@ window.initWithdrawalPage = async function (currentUser) {
                         if (coinIn) coinIn.value = txData[`denom_in_coins`] || 0;
                         if (coinOut) coinOut.value = txData[`denom_out_coins`] || 0;
 
-                        // लाइव कैलकुलेटर को तुरंत ट्रिगर करें
                         if (window.WitDenominationComponent) window.WitDenominationComponent.calculate();
 
-                        // बटन को अपडेट मोड में सेट करें
                         const saveBtn = document.getElementById('btn-wit-save');
                         if (saveBtn) {
                             saveBtn.innerText = "🔄 Update Withdrawal";
@@ -207,10 +203,8 @@ window.initWithdrawalPage = async function (currentUser) {
             if (document.getElementById('wit-remarks')) document.getElementById('wit-remarks').value = "";
             if (witWordsDisplay) witWordsDisplay.innerText = "Zero Rupees Only";
             
-            // नए समर्पित कॉम्पोनेन्ट को रीसेट करें
             if (window.WitDenominationComponent) window.WitDenominationComponent.clear();
 
-            // बटन को वापस ओरिजिनल स्टेट में लाएं
             const saveBtn = document.getElementById('btn-wit-save');
             if (saveBtn) {
                 saveBtn.innerText = "💸 Dispense Cash";
@@ -222,6 +216,19 @@ window.initWithdrawalPage = async function (currentUser) {
 
         const clearBtn = document.getElementById('btn-wit-clear');
         if (clearBtn) clearBtn.onclick = window.masterWithdrawalClear;
+
+        // ⌨️ [JARVIS SHORTCUT HOOKS]: विथड्रॉल पेज के लिए जादुई कीबोर्ड इंजन
+        document.onkeydown = function(e) {
+            // १. Ctrl + S या Meta + S से ऑटो-सेव डिस्पेंस
+            if ((e.key === 's' || e.key === 'S') && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault(); 
+                document.getElementById('btn-wit-save')?.click();
+            }
+            // २. Escape की (Key) दबाने पर मास्टर फॉर्म साफ़
+            if (e.key === 'Escape' || e.key === 'Esc') {
+                window.masterWithdrawalClear();
+            }
+        };
 
         // इंजन लोड होते ही तालिका डेटा सिंक करें
         window.loadTodayWithdrawals();
