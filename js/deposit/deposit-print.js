@@ -45,78 +45,95 @@ window.executeDepositPrintReceipt = function(encodedTx) {
             <head>
                 <meta charset="UTF-8">
                 <style>
-                    @page { size: 58mm auto; margin: 0; }
-                    body {
-                        width: 48mm; /* 58mm पेपर पर सेफ प्रिंटिंग विड्थ */
-                        margin: 0 auto;
-                        padding: 2px 0;
-                        font-family: 'Courier New', Courier, monospace;
-                        font-size: 11px;
-                        line-height: 1.1; /* ⚡ लाइनों के बीच का गैप न्यूनतम किया */
-                        color: #000;
-                        text-align: center;
-                    }
-                    .header {
-                        font-weight: bold;
-                        font-size: 12px;
-                        margin: 0;
-                        padding: 0;
-                        text-transform: uppercase;
-                    }
-                    .address {
-                        font-size: 9px;
-                        margin: 1px 0 3px 0;
-                        padding-bottom: 3px;
-                        border-bottom: 1px dashed #000;
-                        text-transform: uppercase;
-                    }
-                    /* 📅 डेट को बिल्कुल सेंटर में अलाइन किया */
-                    .date-line {
-                        text-align: center;
-                        margin: 2px 0 5px 0;
-                        font-weight: bold;
-                    }
-                    /* 🚫 मुख्य डेटा कंटेनर - बॉर्डर पूरी तरह गायब */
-                    .info-container {
-                        text-align: center;
-                        margin: 4px 0;
-                        padding: 0;
-                    }
-                    .info-row {
-                        display: flex;
-                        justify-content: space-between;
-                        margin-bottom: 2px; /* न्यूनतम वर्टिकल स्पेस */
-                    }
-                    .label {
-                        font-weight: bold;
-                    }
-                    .value {
-                        text-align: right;
-                        text-transform: uppercase;
-                    }
-                    /* अमाउंट हाइलाइट बिना किसी बॉक्स बॉर्डर के */
-                    .amount-highlight {
-                        font-size: 12px;
-                        font-weight: bold;
-                        border-top: 1px dashed #000;
-                        margin-top: 3px;
-                        padding-top: 3px;
-                    }
-                    .words-section {
-                        text-align: left;
-                        font-size: 9px;
-                        font-style: italic;
-                        margin: 4px 0;
-                        border-bottom: 1px dashed #000;
-                        padding-bottom: 3px;
-                    }
-                    .footer {
-                        font-size: 8px;
-                        font-weight: bold;
-                        margin-top: 3px;
-                        line-height: 1.1;
-                    }
-                </style>
+    /* 🚨 ब्राउज़र के प्रिंटर ड्राइवर को सीधे 58mm पेज पर लॉक करने का नियम */
+    @page { 
+        size: 58mm auto; /* पेज की चौड़ाई 58mm और लंबाई डेटा के हिसाब से ऑटो */
+        margin: 0;       /* ब्राउज़र के डिफ़ॉल्ट हेडर/फुटर (तारीख, URL) को हटाने के लिए */
+    }
+    
+    html, body {
+        margin: 0;
+        padding: 0;
+        width: 58mm;    /* पूरे HTML पेज की चौड़ाई ही 58mm फिक्स कर दी */
+        background: #fff;
+    }
+
+    body {
+        padding: 4px 2mm; /* दाएं-बाएं से 2mm का सेफ मार्जिन ताकि टेक्स्ट कटे नहीं */
+        box-sizing: border-box;
+        font-family: 'Courier New', Courier, monospace;
+        font-size: 11px;
+        line-height: 1.1;
+        color: #000;
+    }
+
+    .header {
+        font-weight: bold;
+        font-size: 12px;
+        margin: 0;
+        text-align: center;
+        text-transform: uppercase;
+    }
+
+    .address {
+        font-size: 9px;
+        margin: 2px 0;
+        padding-bottom: 3px;
+        border-bottom: 1px dashed #000;
+        text-align: center;
+        text-transform: uppercase;
+    }
+
+    .date-line {
+        text-align: center;
+        margin: 3px 0;
+        font-weight: bold;
+    }
+
+    .info-container {
+        margin: 4px 0;
+    }
+
+    .info-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 2px;
+    }
+
+    .label {
+        font-weight: bold;
+    }
+
+    .value {
+        text-align: right;
+        text-transform: uppercase;
+    }
+
+    .amount-highlight {
+        font-size: 12px;
+        font-weight: bold;
+        border-top: 1px dashed #000;
+        margin-top: 3px;
+        padding-top: 3px;
+    }
+
+    .words-section {
+        text-align: left;
+        font-size: 9px;
+        font-style: italic;
+        margin: 4px 0;
+        border-bottom: 1px dashed #000;
+        padding-bottom: 3px;
+    }
+
+    .footer {
+        font-size: 8px;
+        font-weight: bold;
+        margin-top: 3px;
+        line-height: 1.1;
+        text-align: center;
+    }
+</style>
             </head>
             <body>
                 <div class="header">Kiosk Banking System</div>
