@@ -1,5 +1,5 @@
 // js/app.js
-// 🚀 CORE APP GATEWAY & ROUTING LAUNCHER
+// 🚀 CORE APP GATEWAY & ROUTING LAUNCHER (WITH SESSION STORAGE RESTORE FLIP)
 
 document.addEventListener('DOMContentLoaded', () => {
     let currentLoggedInUser = null; 
@@ -32,11 +32,37 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // ========================================================
+    // 🛡️ [JARVIS AUTO-RESTORE ENGINE]: रिफ्रेश होने पर लॉगआउट रोकना
+    // ========================================================
+    const savedSession = sessionStorage.getItem('loggedInUser');
+    if (savedSession) {
+        try {
+            const parsedUser = JSON.parse(savedSession);
+            console.log(`🛡️ Session Restored for KO Code: ${parsedUser.ko_code}`);
+            
+            // सीधे मुख्य वेरिएबल और ग्लोबल विंडो में डेटा वापस डालें
+            currentLoggedInUser = parsedUser;
+            window.currentUser = parsedUser;
+
+            // बिना लॉगिन स्क्रीन दिखाए सीधे काउंटर डैशबोर्ड पर फ्लिप करें
+            proceedToDashboard(parsedUser);
+        } catch (e) {
+            console.error("Session corrupt, clear vault:", e);
+            sessionStorage.removeItem('loggedInUser');
+        }
+    }
+
     // 🔌 INITIALIZE EXTERNAL ENGINE: ऑथ मॉड्यूल को एक्टिवेट करें
     if (typeof window.initAuthEngine === 'function') {
         window.initAuthEngine(
             () => currentLoggedInUser,
-            (user) => { currentLoggedInUser = user; window.currentUser = user; },
+            (user) => { 
+                currentLoggedInUser = user; 
+                window.currentUser = user;
+                // 💾 सफल लॉगिन होने पर तुरंत ब्राउज़र की पक्की तिजोरी में डेटा सेव करें
+                sessionStorage.setItem('loggedInUser', JSON.stringify(user));
+            },
             (user) => {
                 if (window.DashboardController) {
                     window.DashboardController.showDashboard(user, proceedToDashboard);
@@ -48,9 +74,14 @@ document.addEventListener('DOMContentLoaded', () => {
     function proceedToDashboard(user) {
         currentLoggedInUser = user; 
         window.currentUser = user;
-        authScreen.classList.add('hidden');
-        mainDashboard.classList.remove('hidden');
-        document.getElementById('user-display').textContent = `${user.full_name} (${user.role.toUpperCase()})`;
+        
+        if (authScreen) authScreen.classList.add('hidden');
+        if (mainDashboard) mainDashboard.classList.remove('hidden');
+        
+        const userDisplay = document.getElementById('user-display');
+        if (userDisplay) {
+            userDisplay.textContent = `${user.full_name} (${user.role.toUpperCase()})`;
+        }
         
         if (window.DashboardController) window.DashboardController.applyMenuPermissions(user.role); 
         
@@ -72,6 +103,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 🌟 [MASTER CASH-BREAKER CORE LOADER ENGINE] 🌟
     async function loadPage(pageName) {
+        if (!workspace) return;
         workspace.innerHTML = `<div class="loading">Loading component...</div>`;
         try {
             const cacheBreaker = Date.now();
@@ -91,6 +123,8 @@ document.addEventListener('DOMContentLoaded', () => {
             window.initHomepageModule(currentLoggedInUser, (updatedUser) => {
                 currentLoggedInUser = updatedUser;
                 window.currentUser = updatedUser;
+                // कमीशन या बैलेंस लाइव चेंज होने पर भी तिजोरी को रिफ्रेश करें
+                sessionStorage.setItem('loggedInUser', JSON.stringify(updatedUser));
             });
         }
 
@@ -123,12 +157,17 @@ document.addEventListener('DOMContentLoaded', () => {
     
     if (logoutBtn) {
         logoutBtn.addEventListener('click', () => {
+            // 🗑️ लॉगआउट करने पर ब्राउज़र की तिजोरी को साफ़ करें ताकि अनधिकृत एक्सेस ब्लॉक हो सके
+            sessionStorage.removeItem('loggedInUser');
+
             currentLoggedInUser = null;
             window.currentUser = null;
-            mainDashboard.classList.add('hidden');
-            authScreen.classList.remove('hidden');
-            loginPanel.classList.remove('hidden');
-            registerPanel.classList.add('hidden');
+            
+            if (mainDashboard) mainDashboard.classList.add('hidden');
+            if (authScreen) authScreen.classList.remove('hidden');
+            if (loginPanel) loginPanel.classList.remove('hidden');
+            if (registerPanel) registerPanel.classList.add('hidden');
+            
             const lForm = document.getElementById('login-form');
             if(lForm) lForm.reset();
         });
