@@ -53,12 +53,33 @@ async function executeSingleSaveProcess(targetButton, splitOverrideAmount = null
         return; 
     }
 
-    // कैश मिलान वैलिडेशन Check (यदि डिनॉमिनेशन भरा गया हो)
-    if (netCash > 0 && Math.abs(netCash - originalAmount) > 0.01) {
+    // ========================================================
+    // २. 🛡️ डिनॉमिनेशन सुरक्षा गार्ड (Strict Upgraded Callback Validation)
+    // ========================================================
+    if (netCash === 0) {
+        // 🌟 पासवर्ड इनपुट बॉक्स वाले Prompt को हटाकर सही Yes/No Confirm इंजन प्लग किया
+        window.showSystemConfirm(
+            "चेतावनी: आपने डिनॉमिनेशन (नोटों का विवरण) नहीं भरा है। क्या आप इस जमा राशि को बिना नोट मिलान के प्रोसेस करना चाहते हैं?", 
+            "Vault Security Validation", 
+            async function() {
+                // 🟢 ऑपरेटर द्वारा 'Yes, Proceed' क्लिक करने पर कोर डिपॉजिट थ्रेड यहाँ से आगे बढ़ेगा
+                console.log("⚡ Action Authorized. Initiating core database deposit thread...");
+                await proceedWithDepositDatabaseOperation(targetButton, accountNo, customerName, originalAmount, remarks, splitOverrideAmount, netCash, denomValues);
+            }
+        );
+        return; // मुख्य थ्रेड को यहाँ ब्रेक करें, आगे की कमान ऊपर का कॉलबैक संभालेगा
+    } 
+    else if (Math.abs(netCash - originalAmount) > 0.01) {
         window.showSystemAlert(`डिनॉमिनेशन टोटल (₹${netCash}) और जमा राशि (₹${originalAmount}) मैच नहीं कर रहा है!`, "Cash Mismatch", "❌");
         return;
     }
 
+    // यदि नोट भरे गए हैं और मैचिंग परफेक्ट है, तो सीधे डेटाबेस प्रोसेस रन करें
+    await proceedWithDepositDatabaseOperation(targetButton, accountNo, customerName, originalAmount, remarks, splitOverrideAmount, netCash, denomValues);
+}
+
+// 💾 कोर डेटाबेस और वॉल्ट सिंकिंग इंजन (Isolated Function for Safety)
+async function proceedWithDepositDatabaseOperation(targetButton, accountNo, customerName, originalAmount, remarks, splitOverrideAmount, netCash, denomValues) {
     // 🎯 फाइनल ट्रांजैक्शन अमाउंट तय करें (नॉर्मल मोड में मूल राशि, स्प्लिट मोड में सिर्फ आज का हिस्सा)
     const finalTxAmount = splitOverrideAmount !== null ? parseFloat(splitOverrideAmount) : originalAmount;
 
@@ -77,7 +98,6 @@ async function executeSingleSaveProcess(targetButton, splitOverrideAmount = null
         if (isEditMode && editingTxId) {
             console.log("Reversing old single transaction effect for ID:", editingTxId);
             
-            // १. डेटाबेस से पुराने ट्रांजैक्शन का डेटा निकालें ताकि उसका असर उल्टा किया जा सके
             const { data: oldTx, error: fetchOldErr } = await window.supabaseClient
                 .from('deposit_transactions')
                 .select('*')
@@ -87,10 +107,8 @@ async function executeSingleSaveProcess(targetButton, splitOverrideAmount = null
             if (fetchOldErr) throw fetchOldErr;
 
             if (oldTx) {
-                // पुराना पैसा बैलेंस में वापस जोड़ें (Reverse Effect)
                 currentSettlementBalance += parseFloat(oldTx.amount) || 0;
 
-                // पुराने नोटों का असर तिजोरी से घटाएं
                 const notes = [500, 200, 100, 50, 20, 10, 5];
                 notes.forEach(n => {
                     finalVaultData[`cash_${n}`] = (parseInt(finalVaultData[`cash_${n}`]) || 0) - (parseInt(oldTx[`denom_in_${n}`]) || 0) + (parseInt(oldTx[`denom_out_${n}`]) || 0);
@@ -99,7 +117,6 @@ async function executeSingleSaveProcess(targetButton, splitOverrideAmount = null
             }
         }
 
-        // २. मुख्य पेलोड तैयार करें (अगर स्प्लिट मोड है तो रिमार्क्स में थ्रेड ट्रैक इन्फो डाल दें)
         let commission = Math.min(finalTxAmount * 0.004, 50);
         const finalRemarks = splitOverrideAmount !== null ? `${remarks} (SPLIT DAY-1 MAIN)`.trim() : remarks;
 
@@ -110,10 +127,9 @@ async function executeSingleSaveProcess(targetButton, splitOverrideAmount = null
             remarks: finalRemarks,
             ko_code: window.currentUser.ko_code,
             commission: commission,
-            ...denomValues // 💵 पूरे नोटों का डेटा इसमें अटैच रहेगा
+            ...denomValues
         };
 
-        // ३. Supabase ऑपरेशन (एडिट मोड में UPDATE, नॉर्मल में INSERT)
         if (isEditMode && editingTxId) {
             const { error: updateErr } = await window.supabaseClient
                 .from('deposit_transactions')
@@ -127,8 +143,6 @@ async function executeSingleSaveProcess(targetButton, splitOverrideAmount = null
             if (insertErr) throw insertErr;
         }
 
-        // ४. सेटलमेंट बैलेंस और तिजोरी (Vault) अपडेट गणना
-        // ⚡ ध्यान दें: सेटलमेंट से सिर्फ आज पास होने वाली रकम (finalTxAmount) कटेगी, लेकिन वॉल्ट में पूरे नोट प्लस होंगे!
         const updatedSettlementBalance = currentSettlementBalance - finalTxAmount;
 
         const nextVaultData = {
@@ -150,17 +164,14 @@ async function executeSingleSaveProcess(targetButton, splitOverrideAmount = null
 
         if (userUpdateError) throw userUpdateError;
 
-        // ग्लोबल यूज़र ऑब्जेक्ट सिंक करें
         Object.assign(window.currentUser, nextVaultData);
 
-        // सफलता की प्रणाली अलर्ट
         if (splitOverrideAmount !== null) {
             window.showSystemAlert(`🎉 स्प्लिट ट्रांजैक्शन चरण-1 सफल!\n\nआज का हिस्सा ₹${finalTxAmount.toLocaleString('en-IN')} मुख्य लेज़र में पास कर दिया गया है। शेष लंबित राशि सुरक्षित रूप से आगामी तारीखों के लिए लॉक कर दी गई है।`, "Thread Split Success", "✅");
         } else {
             window.showSystemAlert(isEditMode ? "🔄 सिंगल ट्रांजैक्शन सफलतापूर्वक अपडेट हुआ!" : "💾 सिंगल कैश डिपॉजिट ट्रांजैक्शन सफल!", "Success", "✅");
         }
 
-        // फॉर्म री-सिंक करें और डेटा साफ़ करें
         if (typeof window.loadTodayTransactions === 'function') window.loadTodayTransactions();
         document.getElementById('btn-dep-clear')?.click();
 
@@ -190,7 +201,6 @@ window.addEventListener('execute-split-today-save', function(e) {
         console.log("Jarvis Event Caught: Executing Split Day-1 Save Thread...");
         const saveBtn = document.getElementById('btn-dep-save');
         if (saveBtn) {
-            // पूरे कैश नोट के साथ सिर्फ आज का हिस्सा (todayAmount) पास करें
             executeSingleSaveProcess(saveBtn, e.detail.todayAmount);
         }
     }
