@@ -16,7 +16,7 @@ window.executeDepositPrintReceipt = function(encodedTx) {
         const formattedDate = `${day}-${month}-${year}`;
 
         // 🎯 ३. लॉगिन यूज़र का लाइव एड्रेस डेटाबेस (currentUser) से उठाएं
-        const userAddress = window.currentUser?.customer_address || "KIOSK CENTER, INDIA";
+        const userAddress = window.currentUser?.address || "KIOSK CENTER, INDIA";
         
         // अमाउंट इन वर्ड्स ( utils.js हिन्दी कनवर्टर सिंक )
         const amountInWords = window.numberToHindiWords ? `${window.numberToHindiWords(parseInt(txData.amount))} रुपए मात्र` : "Rupees Only";
