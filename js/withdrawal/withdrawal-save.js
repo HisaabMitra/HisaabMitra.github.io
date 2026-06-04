@@ -1,5 +1,5 @@
 // ========================================================
-// 💾 AEPS CASH WITHDRAWAL CORE SAVE & SECURITY ENGINE
+// 💾 AEPS CASH WITHDRAWAL CORE SAVE & SECURITY ENGINE (WITH AUTO-PRINT HOOK)
 // ========================================================
 
 async function executeWithdrawalSaveProcess(targetButton) {
@@ -45,24 +45,21 @@ async function executeWithdrawalSaveProcess(targetButton) {
     // २. 🛡️ डिनॉमिनेशन सुरक्षा गार्ड (Strict Upgraded Callback Validation)
     // ========================================================
     if (netCash === 0) {
-        // 🌟 पासवर्ड बॉक्स वाले Prompt को हटाकर सही Yes/No Confirm इंजन को वायर किया
         window.showSystemConfirm(
-            "चेतावनी: आपने डिनॉमिनेशन (नोटों का विवरण) नहीं भरा है। क्या आप इस निकासी को बिना नोट मिलान के प्रोसेस करना चाहते हैं?", 
+            "चेतावनी: आपने डिनॉमिनेशन (नोटों का विवरण) नहीं भरा है। क्या आप इस निकासी को बिना note मिलान के प्रोसेस करना चाहते हैं?", 
             "Vault Security Validation", 
             async function() {
-                // 🟢 ऑपरेटर द्वारा 'Yes, Proceed' क्लिक करने पर कोर ट्रांजैक्शन इंजन यहाँ से आगे बढ़ेगा
                 console.log("⚡ Action Authorized. Initiating database insertion thread...");
                 await proceedWithWithdrawalDatabaseOperation(targetButton, aadhaarNo, customerName, withdrawalAmount, remarks, isEditMode, editingWitId, denomValues);
             }
         );
-        return; // मुख्य थ्रेड को यहाँ ब्रेक करें, आगे की कमान ऊपर का कॉलबैक संभालेगा
+        return; 
     } 
     else if (Math.abs(netCash - withdrawalAmount) > 0.01) {
         window.showSystemAlert(`Txn Fail: डिनॉमिनेशन टोटल (₹${netCash}) और निकासी राशि (₹${withdrawalAmount}) मैच नहीं कर रहे हैं!`, "Cash Mismatch", "❌");
         return;
     }
 
-    // यदि नोट भरे गए हैं और मैचिंग परफेक्ट है, तो सीधे डेटाबेस प्रोसेस रन करें
     await proceedWithWithdrawalDatabaseOperation(targetButton, aadhaarNo, customerName, withdrawalAmount, remarks, isEditMode, editingWitId, denomValues);
 }
 
@@ -167,15 +164,42 @@ async function proceedWithWithdrawalDatabaseOperation(targetButton, aadhaarNo, c
 
         if (userUpdateError) throw userUpdateError;
 
+        // ग्लोबल एक्टिव यूज़र मेमोरी ऑब्जेक्ट अपडेट करें
         Object.assign(window.currentUser, nextVaultData);
 
-        window.showSystemAlert(
-            isEditMode ? "🔄 विथड्रॉल ट्रांजैक्शन सफलतापूर्वक अपडेट हुआ!" : "🎉 कैश विथड्रॉल सफल! कृपया ग्राहक को नकद भुगतान करें।", 
-            "AEPS Success", 
-            "✅"
-        );
+        // 🌟 [JARVIS AUTO-PRINT ENCODER]: वर्तमान लाइव पेलोड को प्रिंटर फ्रेंडली स्ट्रक्चर में बदलें
+        const autoPrintPayload = btoa(JSON.stringify({
+            aadhaar_number: aadhaarNo,
+            customer_name: customerName,
+            amount: withdrawalAmount,
+            ...denomValues
+        }));
 
-        if (typeof window.loadTodayWithdrawals === 'function') window.loadTodayWithdrawals();
+        // लाइव यूआई लेज़र रिफ्रेश और ऑटोमेशन प्रिंट हुक ट्रिगर
+        if (typeof window.loadTodayWithdrawals === 'function') {
+            // पहले टेबल ग्रिड को रीलोड करें
+            await window.loadTodayWithdrawals();
+            
+            // यदि यह सामान्य नया ट्रांजैक्शन है (एडिट मोड नहीं है), तो सीधे पासबुक प्रिंट इंजन फ़ायर करें
+            if (!isEditMode) {
+                setTimeout(() => {
+                    const tbody = document.getElementById('today-wit-body');
+                    // नई रीलोड हुई टेबल की सबसे पहली कतार (लेटेस्ट एंट्री) से लाइव क्रोनोलॉजिकल Sr. No. निकालें
+                    const currentLatestSrNo = (tbody && tbody.rows.length > 0 && tbody.rows[0].cells[0].innerText !== "आज") 
+                        ? tbody.rows[0].cells[0].innerText 
+                        : "1";
+
+                    console.log(`🚀 New Withdrawal Logged! Firing Automatic PLQ-20 Engine for SrNo: ${currentLatestSrNo}`);
+                    
+                    if (typeof window.executeWithdrawalPassbookPrint === 'function') {
+                        window.executeWithdrawalPassbookPrint(autoPrintPayload, currentLatestSrNo);
+                    }
+                }, 400); // 400ms का सुरक्षित टाइमआउट ताकि DOM पूरी तरह रिफ्रेश हो जाए
+            } else {
+                window.showSystemAlert("🔄 विथड्रॉल ट्रांजैक्शन सफलतापूर्वक अपडेट हुआ!", "AEPS Success", "✅");
+            }
+        }
+        
         if (typeof window.masterWithdrawalClear === 'function') window.masterWithdrawalClear();
 
     } catch (err) {
