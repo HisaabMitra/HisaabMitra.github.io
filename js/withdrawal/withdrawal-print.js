@@ -1,6 +1,6 @@
 // ========================================================
 // 🖨️ DOT-MATRIX PLQ-20 STYLE A4 LINE-BY-LINE PRINT ENGINE
-// ========================================================
+// =======================================================
 
 window.executeWithdrawalPassbookPrint = function(encodedTx, srNo) {
     try {
