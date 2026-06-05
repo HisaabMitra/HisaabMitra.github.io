@@ -1,5 +1,5 @@
 // ========================================================
-// ⚙️ JARVIS SETTINGS & MERGER ROUTING ENGINE (PRODUCTION READY)
+// ⚙️ JARVIS SETTINGS & MULTI-PRINTER ROUTING ENGINE
 // ========================================================
 
 window.initJarvisSettingsEngine = function() {
@@ -11,6 +11,18 @@ window.initJarvisSettingsEngine = function() {
         const address = document.getElementById('prof-address');
         const inputKo = document.getElementById('merger-target-ko');
 
+        // 🖨️ प्रिंटर कॉन्फ़िगरेशन एलिमेंट्स
+        const depositPrinterSelect = document.getElementById('cfg-deposit-printer');
+        const withdrawalPrinterSelect = document.getElementById('cfg-withdrawal-printer');
+
+        // १. अगर पहले से कोई प्रिंटर सेटिंग सेव है, तो उसे UI में लोड करें
+        const savedDepositPrinter = localStorage.getItem('jarvis_default_deposit_printer') || 'dialog';
+        const savedWithdrawalPrinter = localStorage.getItem('jarvis_default_withdrawal_printer') || 'dialog';
+
+        if (depositPrinterSelect) depositPrinterSelect.value = savedDepositPrinter;
+        if (withdrawalPrinterSelect) withdrawalPrinterSelect.value = savedWithdrawalPrinter;
+
+        // २. प्रोफाइल सेक्शन्स में करंट यूज़र का लाइव डेटा इंजेक्ट करें
         if (window.currentUser) {
             if (displayName) displayName.value = window.currentUser.full_name || "";
             if (koCode) koCode.value = window.currentUser.ko_code || "";
@@ -30,6 +42,25 @@ window.initJarvisSettingsEngine = function() {
 
     } catch (bootErr) {
         console.error("❌ Jarvis Settings Boot Engine Crashed:", bootErr);
+    }
+};
+
+// 🎯 🖨️ नया फंक्शन: प्रिंटर प्राथमिकताओं को सेव करना
+window.savePrinterPreferences = function() {
+    try {
+        const depositPrinter = document.getElementById('cfg-deposit-printer').value;
+        const withdrawalPrinter = document.getElementById('cfg-withdrawal-printer').value;
+
+        // ब्राउज़र के लोकल स्टोरेज में पक्का सेव करें
+        localStorage.setItem('jarvis_default_deposit_printer', depositPrinter);
+        localStorage.setItem('jarvis_default_withdrawal_printer', withdrawalPrinter);
+
+        // यूज़र को अलर्ट दिखाएं
+        if (window.showSystemAlert) {
+            window.showSystemAlert("🖨️ आपकी प्रिंटर प्राथमिकताएं सफलतापूर्वक सुरक्षित कर ली गई हैं!", "Saved Successfully", "✅");
+        }
+    } catch (err) {
+        console.error("Failed to save printer preferences:", err);
     }
 };
 
