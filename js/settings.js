@@ -1,5 +1,5 @@
 // ========================================================
-// ⚙️ JARVIS SETTINGS & MULTI-PRINTER ROUTING ENGINE (CLEAN MODE)
+// ⚙️ JARVIS SETTINGS & MULTI-PRINTER ROUTING ENGINE (ELECTRON DYNAMIC MODE)
 // ========================================================
 
 window.initJarvisSettingsEngine = function() {
@@ -11,13 +11,51 @@ window.initJarvisSettingsEngine = function() {
         const address = document.getElementById('prof-address');
         const inputKo = document.getElementById('merger-target-ko');
 
-        // 🖨️ मैनुअल प्रिंटर इनपुट एलिमेंट्स (HTML आईडी के साथ सिंक)
-        const depositInput = document.getElementById('cfg-deposit-printer-name');
-        const withdrawalInput = document.getElementById('cfg-withdrawal-printer-name');
+        // 🖨️ इलेक्ट्रॉन डिटेक्शन चेक
+        const isElectron = typeof window !== 'undefined' && window.process && window.process.type === 'renderer';
 
-        // १. अगर पहले से कोई प्रिंटर नाम सेव है, तो उसे बॉक्स में लोड करें
-        if (depositInput) depositInput.value = localStorage.getItem('jarvis_default_deposit_printer') || "";
-        if (withdrawalInput) withdrawalInput.value = localStorage.getItem('jarvis_default_withdrawal_printer') || "";
+        // 🖨️ ड्रॉपडाउन एलिमेंट्स (HTML में select टैग होने चाहिए)
+        const depositSelect = document.getElementById('cfg-deposit-printer-name');
+        const withdrawalSelect = document.getElementById('cfg-withdrawal-printer-name');
+
+        if (isElectron) {
+            const { ipcRenderer } = require('electron');
+
+            // इलेक्ट्रॉन से सभी लाइव हार्डवेयर प्रिंटर्स खींचना
+            ipcRenderer.invoke('get-printers').then((printers) => {
+                
+                // डिपॉजिट ड्रॉपडाउन भरना
+                if (depositSelect) {
+                    depositSelect.innerHTML = '<option value="">-- सिलेक्ट प्रिंटर --</option>';
+                    printers.forEach((p) => {
+                        let opt = document.createElement('option');
+                        opt.value = p.name;
+                        opt.text = p.name + (p.isDefault ? ' (Default)' : '');
+                        depositSelect.appendChild(opt);
+                    });
+                    // सेव की हुई वैल्यू रीलोड करना
+                    depositSelect.value = localStorage.getItem('jarvis_default_deposit_printer') || "";
+                }
+
+                // विड्रॉल ड्रॉपडाउन भरना
+                if (withdrawalSelect) {
+                    withdrawalSelect.innerHTML = '<option value="">-- सिलेक्ट प्रिंटर --</option>';
+                    printers.forEach((p) => {
+                        let opt = document.createElement('option');
+                        opt.value = p.name;
+                        opt.text = p.name + (p.isDefault ? ' (Default)' : '');
+                        withdrawalSelect.appendChild(opt);
+                    });
+                    // सेव की हुई वैल्यू रीलोड करना
+                    withdrawalSelect.value = localStorage.getItem('jarvis_default_withdrawal_printer') || "";
+                }
+            }).catch(err => console.error("❌ Failed to fetch hardware printers:", err));
+
+        } else {
+            // अगर नॉर्मल ब्राउज़र में खुला है, तो पुराना मैन्युअल इनपुट सिस्टम बैकअप की तरह काम करेगा
+            if (depositSelect) depositSelect.value = localStorage.getItem('jarvis_default_deposit_printer') || "";
+            if (withdrawalSelect) withdrawalSelect.value = localStorage.getItem('jarvis_default_withdrawal_printer') || "";
+        }
 
         // २. प्रोफाइल सेक्शन्स में करंट यूज़र का लाइव डेटा इंजेक्ट करें
         if (window.currentUser) {
@@ -42,7 +80,7 @@ window.initJarvisSettingsEngine = function() {
     }
 };
 
-// 🎯 🖨️ प्रिंटर प्राथमिकताओं (मैन्युअल नामों) को ब्राउज़र तिजोरी में सेव करना
+// 🎯 🖨️ प्रिंटर प्राथमिकताओं (ड्रॉपडाउन वैल्यूज) को ब्राउज़र तिजोरी में सेव करना
 window.savePrinterPreferences = function() {
     try {
         const depositPrinterName = document.getElementById('cfg-deposit-printer-name').value.trim();
@@ -154,7 +192,7 @@ window.submitMergerRequest = async function() {
     }
 };
 
-// 🎯 ३. करंट मर्जर और इनकमिंग रिक्वेस्ट स्टेटस चेक मैकेनिज्म (टू-वे सिंक)
+// 🎯 ३. करंट मर्जर और income रिक्वेस्ट स्टेटस चेक मैकेनिज्म
 window.checkCurrentMergerStatus = async function() {
     try {
         const alertBox = document.getElementById('merger-status-alert');
