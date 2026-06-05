@@ -1,65 +1,106 @@
-<!-- pages/super-admin.html -->
-<div class="page-header">
-    <h1 style="color: var(--color-maroon-main); margin-bottom: 5px;">Core Authority Console</h1>
-    <p style="color: var(--color-text-muted); font-size: 0.9rem;">Manage user lifecycles, configure access codes, expiry, and track counter volume.</p>
-    <hr style="border: 0; border-top: 2px solid var(--color-yellow-main); margin-bottom: 20px;">
+<div class="page-header" style="background: linear-gradient(135deg, #7d0022 0%, #4a0014 100%); padding: 25px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); margin-bottom: 25px; text-align: left; position: relative; overflow: hidden;">
+    <div style="position: absolute; top: -50px; right: -50px; width: 200px; height: 200px; background: rgba(255, 215, 0, 0.1); border-radius: 50%; filter: blur(40px);"></div>
+    
+    <h1 style="color: #ffd700; margin: 0 0 5px 0; font-size: 2rem; font-weight: 700; letter-spacing: 0.5px; display: flex; align-items: center; gap: 10px;">
+        🛡️ Core Authority Console
+    </h1>
+    <p style="color: #f8f9fa; font-size: 0.95rem; margin: 0; opacity: 0.9; font-weight: 300;">
+        Manage user lifecycles, configure access codes, expiry, and track counter volume across premises.
+    </p>
+    <div style="height: 3px; background: linear-gradient(90deg, #ffd700 0%, transparent 100%); margin-top: 15px; border-radius: 2px;"></div>
 </div>
 
-<div style="display: flex; flex-direction: column; gap: 30px; max-width: 1200px;">
+<div style="display: flex; flex-direction: column; gap: 30px; max-width: 1200px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
 
-    <!-- SECTION 1: PENDING REQUESTS WITH OBJECTION -->
-    <div style="background: white; padding: 22px; border-radius: 6px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
-        <h3 style="margin-bottom: 15px; color: var(--color-maroon-main); border-bottom: 2px solid #f0f0f0; padding-bottom: 10px;">⏳ Pending Registration Requests</h3>
-        <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.95rem;">
-            <thead>
-                <tr style="background-color: var(--color-maroon-dark); color: white;">
-                    <th style="padding: 12px;">Name</th>
-                    <th style="padding: 12px;">Email</th>
-                    <th style="padding: 12px;">Role</th>
-                    <th style="padding: 12px;">Objection Notes (Optional)</th>
-                    <th style="padding: 12px; text-align: center;">Actions</th>
-                </tr>
-            </thead>
-            <tbody id="sa-pending-table">
-                <tr><td colspan="5" style="padding: 15px; text-align: center;">Connecting to ledger...</td></tr>
-            </tbody>
-        </table>
+    <div style="background: #ffffff; padding: 24px; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); border-left: 6px solid #7d0022;">
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 18px; border-bottom: 2px solid #f3f4f6; padding-bottom: 12px; text-align: left;">
+            <span style="font-size: 1.5rem;">⏳</span>
+            <h3 style="margin: 0; color: #7d0022; font-size: 1.3rem; font-weight: 600;">Pending Registration Requests</h3>
+        </div>
+        <div style="overflow-x: auto; border-radius: 6px; box-shadow: inset 0 0 0 1px #e5e7eb;">
+            <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.95rem; background: #ffffff;">
+                <thead>
+                    <tr style="background: linear-gradient(90deg, #7d0022 0%, #9c1236 100%); color: #ffffff;">
+                        <th style="padding: 14px 16px; font-weight: 600;">Name</th>
+                        <th style="padding: 14px 16px; font-weight: 600;">Email</th>
+                        <th style="padding: 14px 16px; font-weight: 600;">Role</th>
+                        <th style="padding: 14px 16px; font-weight: 600;">Objection Notes (Optional)</th>
+                        <th style="padding: 14px 16px; font-weight: 600; text-align: center;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="sa-pending-table" style="color: #374151;">
+                    <tr style="background: #f9fafb;"><td colspan="5" style="padding: 20px; text-align: center; color: #6b7280; font-style: italic;">Connecting to secure ledger...</td></tr>
+                </tbody>
+            </table>
+        </div>
     </div>
 
-    <!-- SECTION 2: ADVANCED ACTIVE USERS MANAGEMENT -->
-    <div style="background: white; padding: 22px; border-radius: 6px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
-        <h3 style="margin-bottom: 15px; color: #137333; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px;">👥 Active Portal Users & Expiry Controls</h3>
-        <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.95rem;">
-            <thead>
-                <tr style="background-color: #137333; color: white;">
-                    <th style="padding: 12px;">User Description</th>
-                    <th style="padding: 12px;">Role</th>
-                    <th style="padding: 12px;">Access Status</th>
-                    <th style="padding: 12px;">Access Expiry Date</th>
-                    <th style="padding: 12px; text-align: center;">Control Actions</th>
-                </tr>
-            </thead>
-            <tbody id="sa-active-users-table">
-                <tr><td colspan="5" style="padding: 15px; text-align: center;">Compiling terminal users...</td></tr>
-            </tbody>
-        </table>
+    <div style="background: #ffffff; padding: 24px; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); border-left: 6px solid #137333;">
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 18px; border-bottom: 2px solid #f3f4f6; padding-bottom: 12px; text-align: left;">
+            <span style="font-size: 1.5rem;">👥</span>
+            <h3 style="margin: 0; color: #137333; font-size: 1.3rem; font-weight: 600;">Active Portal Users & Expiry Controls</h3>
+        </div>
+        <div style="overflow-x: auto; border-radius: 6px; box-shadow: inset 0 0 0 1px #e5e7eb;">
+            <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.95rem; background: #ffffff;">
+                <thead>
+                    <tr style="background: linear-gradient(90deg, #137333 0%, #1e8e45 100%); color: #ffffff;">
+                        <th style="padding: 14px 16px; font-weight: 600;">User Description</th>
+                        <th style="padding: 14px 16px; font-weight: 600;">Role</th>
+                        <th style="padding: 14px 16px; font-weight: 600;">Access Status</th>
+                        <th style="padding: 14px 16px; font-weight: 600;">Access Expiry Date</th>
+                        <th style="padding: 14px 16px; font-weight: 600; text-align: center;">Control Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="sa-active-users-table" style="color: #374151;">
+                    <tr style="background: #f9fafb;"><td colspan="5" style="padding: 20px; text-align: center; color: #6b7280; font-style: italic;">Compiling terminal users...</td></tr>
+                </tbody>
+            </table>
+        </div>
     </div>
 
-    <!-- SECTION 3: LIVE BUSINESS LOGS -->
-    <div style="background: white; padding: 22px; border-radius: 6px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
-        <h3 style="margin-bottom: 15px; color: #222; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px;">📊 Terminal Agent Performance</h3>
-        <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.95rem;">
-            <thead>
-                <tr style="background-color: #222; color: white;">
-                    <th style="padding: 12px;">Agent Code</th>
-                    <th style="padding: 12px;">Volume Count</th>
-                    <th style="padding: 12px;">Total Money Handled</th>
-                </tr>
-            </thead>
-            <tbody id="sa-performance-table">
-                <tr><td colspan="3" style="padding: 15px; text-align: center;">Loading system aggregates...</td></tr>
-            </tbody>
-        </table>
+    <div style="background: #ffffff; padding: 24px; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); border-left: 6px solid #b08200;">
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 18px; border-bottom: 2px solid #f3f4f6; padding-bottom: 12px; text-align: left;">
+            <span style="font-size: 1.5rem;">🔄</span>
+            <h3 style="margin: 0; color: #916a00; font-size: 1.3rem; font-weight: 600;">Live Printer Merger Requests</h3>
+        </div>
+        <p style="margin: -10px 0 15px 0; color: #666; font-size: 0.88rem; text-align: left;">यहाँ उन काउंटर्स की सूची है जो एक ही दुकान/परिसर में एक ही पासबुक प्रिंटर साझा (Share) करना चाहते हैं।</p>
+        <div style="overflow-x: auto; border-radius: 6px; box-shadow: inset 0 0 0 1px #e5e7eb;">
+            <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.95rem; background: #ffffff;">
+                <thead>
+                    <tr style="background: linear-gradient(90deg, #b08200 0%, #d4a317 100%); color: #ffffff;">
+                        <th style="padding: 14px 16px; font-weight: 600;">Requesting Operator</th>
+                        <th style="padding: 14px 16px; font-weight: 600;">Source KO Code</th>
+                        <th style="padding: 14px 16px; font-weight: 600;">Wants to Merge With (Target KO)</th>
+                        <th style="padding: 14px 16px; font-weight: 600;">Current Status</th>
+                        <th style="padding: 14px 16px; font-weight: 600; text-align: center;">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="admin-merger-table-body" style="color: #374151;">
+                    <tr style="background: #f9fafb;"><td colspan="5" style="padding: 20px; text-align: center; color: #6b7280; font-style: italic;">Loading pending merger threads...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div style="background: #ffffff; padding: 24px; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); border-left: 6px solid #374151;">
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 18px; border-bottom: 2px solid #f3f4f6; padding-bottom: 12px; text-align: left;">
+            <span style="font-size: 1.5rem;">📊</span>
+            <h3 style="margin: 0; color: #374151; font-size: 1.3rem; font-weight: 600;">Terminal Agent Performance</h3>
+        </div>
+        <div style="overflow-x: auto; border-radius: 6px; box-shadow: inset 0 0 0 1px #e5e7eb;">
+            <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.95rem; background: #ffffff;">
+                <thead>
+                    <tr style="background: linear-gradient(90deg, #374151 0%, #4b5563 100%); color: #ffffff;">
+                        <th style="padding: 14px 16px; font-weight: 600;">Agent Code</th>
+                        <th style="padding: 14px 16px; font-weight: 600;">Volume Count</th>
+                        <th style="padding: 14px 16px; font-weight: 600;">Total Money Handled</th>
+                    </tr>
+                </thead>
+                <tbody id="sa-performance-table" style="color: #374151;">
+                    <tr style="background: #f9fafb;"><td colspan="3" style="padding: 20px; text-align: center; color: #6b7280; font-style: italic;">Loading system aggregates...</td></tr>
+                </tbody>
+            </table>
+        </div>
     </div>
 
 </div>
