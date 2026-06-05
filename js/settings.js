@@ -1,5 +1,5 @@
 // ========================================================
-// ⚙️ JARVIS SETTINGS & MULTI-PRINTER ROUTING ENGINE
+// ⚙️ JARVIS SETTINGS & MULTI-PRINTER ROUTING ENGINE (CLEAN MODE)
 // ========================================================
 
 window.initJarvisSettingsEngine = function() {
@@ -11,16 +11,13 @@ window.initJarvisSettingsEngine = function() {
         const address = document.getElementById('prof-address');
         const inputKo = document.getElementById('merger-target-ko');
 
-        // 🖨️ प्रिंटर कॉन्फ़िगरेशन एलिमेंट्स
-        const depositPrinterSelect = document.getElementById('cfg-deposit-printer');
-        const withdrawalPrinterSelect = document.getElementById('cfg-withdrawal-printer');
+        // 🖨️ मैनुअल प्रिंटर इनपुट एलिमेंट्स (HTML आईडी के साथ सिंक)
+        const depositInput = document.getElementById('cfg-deposit-printer-name');
+        const withdrawalInput = document.getElementById('cfg-withdrawal-printer-name');
 
-        // १. अगर पहले से कोई प्रिंटर सेटिंग सेव है, तो उसे UI में लोड करें
-        const savedDepositPrinter = localStorage.getItem('jarvis_default_deposit_printer') || 'dialog';
-        const savedWithdrawalPrinter = localStorage.getItem('jarvis_default_withdrawal_printer') || 'dialog';
-
-        if (depositPrinterSelect) depositPrinterSelect.value = savedDepositPrinter;
-        if (withdrawalPrinterSelect) withdrawalPrinterSelect.value = savedWithdrawalPrinter;
+        // १. अगर पहले से कोई प्रिंटर नाम सेव है, तो उसे बॉक्स में लोड करें
+        if (depositInput) depositInput.value = localStorage.getItem('jarvis_default_deposit_printer') || "";
+        if (withdrawalInput) withdrawalInput.value = localStorage.getItem('jarvis_default_withdrawal_printer') || "";
 
         // २. प्रोफाइल सेक्शन्स में करंट यूज़र का लाइव डेटा इंजेक्ट करें
         if (window.currentUser) {
@@ -45,17 +42,16 @@ window.initJarvisSettingsEngine = function() {
     }
 };
 
-// 🎯 🖨️ नया फंक्शन: प्रिंटर प्राथमिकताओं को सेव करना
+// 🎯 🖨️ प्रिंटर प्राथमिकताओं (मैन्युअल नामों) को ब्राउज़र तिजोरी में सेव करना
 window.savePrinterPreferences = function() {
     try {
-        const depositPrinter = document.getElementById('cfg-deposit-printer').value;
-        const withdrawalPrinter = document.getElementById('cfg-withdrawal-printer').value;
+        const depositPrinterName = document.getElementById('cfg-deposit-printer-name').value.trim();
+        const withdrawalPrinterName = document.getElementById('cfg-withdrawal-printer-name').value.trim();
 
-        // ब्राउज़र के लोकल स्टोरेज में पक्का सेव करें
-        localStorage.setItem('jarvis_default_deposit_printer', depositPrinter);
-        localStorage.setItem('jarvis_default_withdrawal_printer', withdrawalPrinter);
+        // लोकल स्टोरेज में वैल्यू लॉक करें
+        localStorage.setItem('jarvis_default_deposit_printer', depositPrinterName);
+        localStorage.setItem('jarvis_default_withdrawal_printer', withdrawalPrinterName);
 
-        // यूज़र को अलर्ट दिखाएं
         if (window.showSystemAlert) {
             window.showSystemAlert("🖨️ आपकी प्रिंटर प्राथमिकताएं सफलतापूर्वक सुरक्षित कर ली गई हैं!", "Saved Successfully", "✅");
         }
@@ -158,7 +154,7 @@ window.submitMergerRequest = async function() {
     }
 };
 
-// 🎯 ३. करंट मर्जर और इनकमिंग रिक्वेस्ट स्टेटस चेक मैकेनिज्म
+// 🎯 ३. करंट मर्जर और इनकमिंग रिक्वेस्ट स्टेटस चेक मैकेनिज्म (टू-वे सिंक)
 window.checkCurrentMergerStatus = async function() {
     try {
         const alertBox = document.getElementById('merger-status-alert');
