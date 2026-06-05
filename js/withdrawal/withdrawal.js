@@ -1,292 +1,125 @@
 // ========================================================
-// 🖨️ 🌐 CLOUD-SYNC MASTER PASBOOK PRINT ENGINE (JARVIS MULTI-USER SYNC ENABLED)
+// 🏦 JARVIS WITHDRAWAL CORE ENGINE & TRANSACTION LEDGER
 // ========================================================
 
-window.executeWithdrawalPassbookPrint = async function(encodedTx, srNo) {
-    try {
-        const txData = JSON.parse(atob(encodedTx));
-        console.log("🖨️ Cloud-Matrix Engine Triggered for SrNo:", srNo, txData);
-
-        const koCode = window.currentUser?.ko_code || "--";
-        const userAddress = window.currentUser?.address || "KIOSK CENTER, INDIA";
-        const todayDate = new Date().toISOString().split('T')[0];
-        const client = window.supabaseClient || window.supabase;
-
-        // 🌟 [JARVIS CLOUD ROUTER LOGIC]: चेक करें कि क्या यह यूजर किसी प्रिंटर ग्रुप में मर्ज है
-        const isMergedUser = window.currentUser?.merger_status === 'merged' && window.currentUser?.printer_group_id;
-        const sharedGroupId = window.currentUser?.printer_group_id || null;
-
-        let lastPrintedLine = 0;
-        let currentPageNo = 1;
-        let lastPrintedDate = todayDate;
-
-        if (isMergedUser) {
-            console.log(`🌐 Multi-User Sync Active! Querying Cloud Printer Group: ${sharedGroupId}`);
-            
-            // १. सुप्राबेस से लाइव साझा प्रिंटर ग्रुप की कतार स्थिति डाउनलोड करें
-            const { data: cloudGroup, error: fetchErr } = await client
-                .from('shared_printer_groups')
-                .select('*')
-                .eq('group_id', sharedGroupId)
-                .maybeSingle();
-
-            if (fetchErr) throw fetchErr;
-
-            if (cloudGroup) {
-                lastPrintedLine = parseInt(cloudGroup.last_printed_line) || 0;
-                currentPageNo = parseInt(cloudGroup.page_counter) || 1;
-                lastPrintedDate = cloudGroup.last_printed_date || todayDate;
-            }
-        } else {
-            console.log("💻 Standard Single Mode Active. Loading locally from localStorage...");
-            // अगर यूजर मर्ज नहीं है, तो डिफ़ॉल्ट लोकल स्टोरेज से काम चलाएं
-            lastPrintedLine = parseInt(localStorage.getItem('passbook_last_line')) || 0;
-            currentPageNo = parseInt(localStorage.getItem('passbook_page_counter')) || 1;
-            lastPrintedDate = localStorage.getItem('passbook_last_date') || "";
-        }
-
-        // तारीख बदलने पर लाइव पेज काउंटर रीसेट नियम
-        let forceHeaderReprint = false;
-        if (lastPrintedDate !== todayDate) {
-            forceHeaderReprint = true;
-            currentPageNo = 1;
-            if (lastPrintedLine >= 15) lastPrintedLine = 0;
-        }
-
-        // १५ कतारों को पूरे पृष्ठ पर फैलाने हेतु ५२ पिक्सल हाइट नियत है
-        const rowHeight = 52;         
-        const baseHeaderOffset = 130;  
-        const dynamicTopMargin = baseHeaderOffset + (lastPrintedLine * rowHeight);
-
-        // तारीख को DD-MM-YYYY फॉर्मेट दें
-        const dateParts = todayDate.split('-');
-        const displayDate = `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`;
-
-        // प्रिंटर हेतु छुपा हुआ Iframe तैयार करें
-        let printFrame = document.getElementById('matrix-print-iframe');
-        if (!printFrame) {
-            printFrame = document.createElement('iframe');
-            printFrame.id = 'matrix-print-iframe';
-            printFrame.style.position = 'fixed';
-            printFrame.style.bottom = '0';
-            printFrame.style.right = '0';
-            printFrame.style.width = '0';
-            printFrame.style.height = '0';
-            printFrame.style.border = 'none';
-            document.body.appendChild(printFrame);
-        }
-
-        let htmlContent = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="UTF-8">
-            <style>
-                @page { size: A4 portrait; margin: 8mm 6mm; }
-                body {
-                    margin: 0; padding: 0;
-                    font-family: 'Courier New', Courier, monospace;
-                    font-size: 14px; line-height: 1.2; color: #000;
-                }
-                .header-block { text-align: center; width: 100%; margin-bottom: 5px; }
-                .header-title { font-size: 18px; font-weight: bold; text-transform: uppercase; }
-                .header-address { font-size: 12px; text-transform: uppercase; margin-top: 1px; }
-                .meta-line { font-size: 14px; font-weight: bold; text-align: center; margin: 4px 0; }
-                .matrix-table { width: 100%; border-collapse: collapse; margin-top: 2px; }
-                .matrix-table th {
-                    border-bottom: 1px dashed #000; border-top: 1px dashed #000;
-                    padding: 6px 2px; text-align: left; font-weight: bold; font-size: 14px;
-                }
-                .matrix-table td { padding: 12px 2px; font-size: 11px; }
-                .sig-line { width: 85px; border-bottom: 1px dashed #000; display: inline-block; height: 12px; }
-            </style>
-        </head>
-        <body>
-        `;
-
-        if (lastPrintedLine === 0 || forceHeaderReprint) {
-            htmlContent += `
-                <div class="header-block">
-                    <div class="header-title">Kiosk Banking System</div>
-                    <div class="header-address">${userAddress}</div>
-                </div>
-                <div class="meta-line">Date: ${displayDate} | Page No: ${currentPageNo}</div>
-                <table class="matrix-table">
-                    <thead>
-                        <tr>
-                            <th style="width: 8%; text-align:center;">Sr.No</th>
-                            <th style="width: 12%;">KO-Code</th>
-                            <th style="width: 22%;">Aadhar Number</th>
-                            <th style="width: 25%;">Name</th>
-                            <th style="width: 15%;">Amount</th>
-                            <th style="width: 18%; text-align:center;">Signature/Thumb</th>
-                        </tr>
-                    </thead>
-                </table>
-            `;
-        }
-
-        const inlineStyle = (lastPrintedLine === 0 || forceHeaderReprint) 
-            ? `margin-top: 4px;` 
-            : `position: absolute; top: ${dynamicTopMargin}px; left: 0; width: 100%;`;
-
-        htmlContent += `
-            <table class="matrix-table" style="${inlineStyle}">
-                <tbody>
-                    <tr>
-                        <td style="width: 8%; text-align:center; font-weight:bold;">${srNo}</td>
-                        <td style="width: 12%;">${koCode}</td>
-                        <td style="width: 22%; letter-spacing: 0.5px;">${txData.aadhaar_number}</td>
-                        <td style="width: 25%; text-transform: uppercase; white-space: nowrap; overflow: hidden;">${txData.customer_name}</td>
-                        <td style="width: 15%; font-weight: bold;">₹${parseFloat(txData.amount).toFixed(2)}</td>
-                        <td style="width: 18%; text-align:center;"><span class="sig-line"></span></td>
-                    </tr>
-                </tbody>
-            </table>
-            
-            ${(lastPrintedLine === 14) ? `
-                <div style="position: absolute; bottom: 10mm; left: 0; width: 100%; text-align: center; font-size: 11px; font-weight: bold; letter-spacing: 1px; color:#000;">
-                    ---- page is end ----
-                </div>
-            ` : ''}
-        </body>
-        </html>
-        `;
-
-        printFrame.srcdoc = htmlContent;
-
-        printFrame.onload = function() {
-            try {
-                printFrame.contentWindow.focus();
-                printFrame.contentWindow.print();
-                
-                setTimeout(() => {
-                    // सिंक पैरामीटर्स के साथ टाइमर प्रॉम्ट चालू करें
-                    launchPassbookVerificationFlow(lastPrintedLine, todayDate, currentPageNo, isMergedUser, sharedGroupId);
-                }, 100);
-            } catch (printErr) {
-                console.error("Internal Iframe Print Error:", printErr);
-            }
-        };
-
-    } catch (err) {
-        console.error("Passbook Print System Failure:", err);
+// १. विथड्रॉल मॉड्यूल का मुख्य इनिशियलाइज़र हुक (जो app.js कॉल करता है)
+window.initWithdrawalPage = function(currentUserData) {
+    // अगर यूजर डेटा पास हुआ है तो ग्लोबल में सिंक रखें
+    if (currentUserData) {
+        window.currentUser = currentUserData;
+    }
+    
+    // आज के सारे ट्रांजैक्शंस ग्रिड में लोड करें
+    if (typeof window.loadTodayWithdrawals === 'function') {
+        window.loadTodayWithdrawals();
     }
 };
 
-// ⏱️ ⌨️ कीबोर्ड शॉर्टकट समर्थित क्लॉथ-सिंक वेरिफिकेशन इंजन
-function launchPassbookVerificationFlow(currentLine, todayDate, currentPageNo, isMergedUser, sharedGroupId) {
-    let timerDuration = 10;
-    
-    const executeYesAction = function() {
-        clearInterval(autoYesTimer);
-        window.removeEventListener('keydown', handleTimerKey, { capture: true });
+// २. सुप्राबेस से आज के विथड्रॉल रिकॉर्ड्स लोड करके टेबल में दिखाना
+window.loadTodayWithdrawals = async function() {
+    const tbody = document.getElementById('withdrawal-table-body');
+    if (!tbody) return;
+
+    const client = window.supabaseClient || window.supabase;
+    const today = new Date().toISOString().split('T')[0];
+    const koCode = window.currentUser?.ko_code || '';
+
+    try {
+        // आज की तारीख और इस काउंटर के KO कोड के अनुसार डेटा लाएं
+        const { data, error } = await client
+            .from('withdrawals')
+            .select('*')
+            .eq('ko_code', koCode)
+            .gte('created_at', today + 'T00:00:00')
+            .order('created_at', { ascending: true });
+
+        if (error) throw error;
+
+        if (!data || data.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="7" style="padding: 15px; text-align: center; color: #666; font-style: italic;">आज इस काउंटर पर कोई विथड्रॉल नहीं हुआ है।</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = ""; // पुराना लेआउट साफ़ करें
         
-        const modal = document.getElementById('custom-prompt-modal');
-        if (modal) modal.style.display = 'none';
+        data.forEach((row, index) => {
+            const tr = document.createElement('tr');
+            tr.style.borderBottom = "1px solid #dee2e6";
+            
+            // सुरक्षा और प्रिंट इंजन के लिए डेटा को बेस64 में एनकोड करें
+            const txPayload = btoa(JSON.stringify({
+                aadhaar_number: row.aadhaar_number || "--------",
+                customer_name: row.customer_name || "VALUED CUSTOMER",
+                amount: row.amount
+            }));
 
-        // लाइन पेंटर पॉइंटर को आगे बढाएं
-        saveNextPassbookLinePointer(currentLine + 1, todayDate, currentPageNo, isMergedUser, sharedGroupId);
-    };
+            tr.innerHTML = `
+                <td style="padding: 12px; font-weight: bold; text-align: center;">${index + 1}</td>
+                <td style="padding: 12px; font-family: monospace;">${new Date(row.created_at).toLocaleTimeString('en-IN', {hour: '2-digit', minute:'2-digit'})}</td>
+                <td style="padding: 12px; font-weight: 600; color: #7d0022;">${row.account_number || '--------'}</td>
+                <td style="padding: 12px; text-transform: uppercase;">${row.customer_name}</td>
+                <td style="padding: 12px; font-weight: bold; color: #137333;">₹ ${parseFloat(row.amount).toFixed(2)}</td>
+                <td style="padding: 12px; text-align: center;">
+                    <span style="background: #d4edda; color: #155724; padding: 3px 8px; border-radius: 4px; font-size: 0.85rem; font-weight: bold;">SUCCESS</span>
+                </td>
+                <td style="padding: 12px; text-align: center;">
+                    <!-- 🖨️ मास्टर प्रिंट बटन जो withdrawal-print.js को ट्रिगर करता है -->
+                    <button type="button" class="btn-print-wit-receipt" data-tx="${txPayload}" style="background: #7d0022; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.85rem;">
+                        <i class="fas fa-print"></i> Passbook Print
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
 
-    const executeNoAction = function() {
-        clearInterval(autoYesTimer);
-        window.removeEventListener('keydown', handleTimerKey, { capture: true });
+    } catch (err) {
+        console.error("Failed to compile today's withdrawals ledger:", err);
+        tbody.innerHTML = `<tr><td colspan="7" style="padding: 15px; text-align: center; color: red; font-weight: bold;">डेटा लोड करने में त्रुटि: ${err.message}</td></tr>`;
+    }
+};
+
+// ३. नया विथड्रॉल ट्रांजैक्शन डेटाबेस में सेव करना
+window.saveNewWithdrawalTransaction = async function(e) {
+    if(e) e.preventDefault();
+
+    const accNo = document.getElementById('wit-account-no')?.value.trim();
+    const custName = document.getElementById('wit-cust-name')?.value.trim();
+    const amount = document.getElementById('wit-amount')?.value.trim();
+    const aadharNo = document.getElementById('wit-aadhar-no')?.value.trim();
+
+    if (!accNo || !custName || !amount) {
+        window.showSystemAlert("कृपया सभी अनिवार्य फ़ील्ड (खाता संख्या, नाम और राशि) भरें।", "Validation Error", "❌");
+        return;
+    }
+
+    const client = window.supabaseClient || window.supabase;
+    const koCode = window.currentUser?.ko_code || 'UNKNOWN';
+
+    try {
+        const { error } = await client
+            .from('withdrawals')
+            .insert([{
+                ko_code: koCode,
+                account_number: accNo,
+                customer_name: custName,
+                amount: parseFloat(amount),
+                aadhaar_number: aadharNo || "--------",
+                created_at: new Date().toISOString()
+            }]);
+
+        if (error) throw error;
+
+        window.showSystemAlert("🏦 विथड्रॉल ट्रांजैक्शन डेटाबेस में सफलतापूर्वक सुरक्षित कर दिया गया है!", "Transaction Saved", "✅");
         
-        const modal = document.getElementById('custom-prompt-modal');
-        if (modal) modal.style.display = 'none';
-        
-        window.showSystemAlert("⚠️ अगली बार प्रिंट करने पर यह दोबारा इसी लाइन पर छपेगा।", "Line Retained", "⚠️");
-    };
+        // फॉर्म रीसेट करें
+        const form = document.getElementById('withdrawal-master-form');
+        if(form) form.reset();
 
-    window.showSystemConfirm(
-        `क्या विथड्रॉल प्रविष्टि पासबुक पेज पर सही जगह और साफ़ प्रिंट हो गई है?\n\n(यदि आप कुछ नहीं चुनते, तो ${timerDuration} सेकंड में यह स्वतः 'YES' मान लिया जाएगा)`, 
-        "Print Alignment Verification", 
-        function() { executeYesAction(); }
-    );
+        // टेबल ग्रिड को तुरंत रिफ्रेश करें
+        window.loadTodayWithdrawals();
 
-    const submitBtn = document.getElementById('custom-prompt-submit-btn');
-    const cancelBtn = document.getElementById('custom-prompt-cancel-btn');
-    if (submitBtn) submitBtn.innerText = `Yes, Clear Line (${timerDuration}s)`;
-
-    const autoYesTimer = setInterval(() => {
-        timerDuration--;
-        if (submitBtn && document.getElementById('custom-prompt-modal').style.display === 'flex') {
-            submitBtn.innerText = `Yes, Clear Line (${timerDuration}s)`;
-        }
-
-        if (timerDuration <= 0) {
-            executeYesAction();
-            window.showSystemAlert("समय समाप्त! लाइन आगे बढ़ा दी गई है।", "Auto Acknowledged", "✅");
-        }
-    }, 1000);
-
-    if (submitBtn) {
-        submitBtn.onclick = function(e) { e.preventDefault(); executeYesAction(); };
+    } catch (err) {
+        console.error("Critical Failure in saving withdrawal transaction:", err);
+        window.showSystemAlert("ट्रांजैक्शन सेव करने में विफलता: " + err.message, "Database Error", "❌");
     }
-    if (cancelBtn) {
-        cancelBtn.onclick = function(e) { e.preventDefault(); executeNoAction(); };
-    }
-
-    function handleTimerKey(e) {
-        const modal = document.getElementById('custom-prompt-modal');
-        if (modal && modal.style.display === 'flex') {
-            if (e.key === 'Enter') { e.preventDefault(); executeYesAction(); }
-            if (e.key === 'Escape' || e.key === 'Esc') { e.preventDefault(); executeNoAction(); }
-        }
-    }
-    window.addEventListener('keydown', handleTimerKey, { capture: true });
-}
-
-// 💾 लाइन कतार और काउंटर डेटाबेस / लोकल स्टोरेज सिंकिंग हाउस
-async function saveNextPassbookLinePointer(nextLine, todayDate, currentPageNo, isMergedUser, sharedGroupId) {
-    let nextPointerLine = nextLine;
-    let nextPageCounter = currentPageNo;
-
-    if (nextLine >= 15) {
-        nextPointerLine = 0;
-        nextPageCounter = currentPageNo + 1;
-        window.showSystemAlert(`📄 इस पेज की सभी 15 कतारें भर चुकी हैं!\n\nअगला प्रिंट 'Page No: ${nextPageCounter}' के नए फ्रेश A4 पेज पर शुरू होगा। कृपया नया पेज लगाएं।`, "Page Full", "ℹ️");
-    }
-
-    if (isMergedUser && sharedGroupId) {
-        // 🌐 क्लाउड सिंकिंग एक्टिवेट करें: डेटाबेस में रिकॉर्ड अपडेट करें
-        const client = window.supabaseClient || window.supabase;
-        try {
-            const { error } = await client
-                .from('shared_printer_groups')
-                .update({
-                    last_printed_line: nextPointerLine,
-                    page_counter: nextPageCounter,
-                    last_printed_date: todayDate,
-                    updated_at: new Date().toISOString()
-                })
-                .eq('group_id', sharedGroupId);
-
-            if (error) throw error;
-            console.log(`📡 Cloud Row Height Locked successfully for group ${sharedGroupId} on Line: ${nextPointerLine}`);
-        } catch (dbErr) {
-            console.error("Failed to sync print coordinates to cloud ledger:", dbErr);
-        }
-    } else {
-        // 💻 सिंगल यूजर मोड: पुराने लोकल स्टोरेज में सेव करें
-        localStorage.setItem('passbook_last_line', nextPointerLine);
-        localStorage.setItem('passbook_page_counter', nextPageCounter);
-        localStorage.setItem('passbook_last_date', todayDate);
-    }
-    
-    if (typeof window.loadTodayWithdrawals === 'function') window.loadTodayWithdrawals();
-}
-
-// Global Event Delegation Listener for Withdrawal Print Button
-document.addEventListener('click', (e) => {
-    const printBtn = e.target.closest('.btn-print-wit-receipt');
-    if (printBtn) {
-        const encodedTx = printBtn.getAttribute('data-tx');
-        const row = printBtn.closest('tr');
-        const srNo = row ? row.cells[0].innerText : "1";
-        if (encodedTx) {
-            window.executeWithdrawalPassbookPrint(encodedTx, srNo);
-        }
-    }
-});
+};
