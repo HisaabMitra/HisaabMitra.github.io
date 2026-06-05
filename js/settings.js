@@ -1,15 +1,23 @@
 // ========================================================
-// ⚙️ JARVIS SETTINGS & MERGER ROUTING ENGINE
+// ⚙️ JARVIS SETTINGS & MERGER ROUTING ENGINE (FIXED NAMESPACE)
 // ========================================================
 
+// यह फंक्शन आटोमैटिक एक्सिक्यूट होगा जैसे ही सेटिंग्स का डोम रेंडर होगा
 (function initSettingsPage() {
     console.log("⚙️ Jarvis Settings Core Initializing...");
     
+    // आपके कोर इंडेक्स का ग्लोबल सुप्राबेस क्लाइंट चेक करें
+    window.dbClient = window.supabaseClient || window.supabase;
+
+    if (!window.dbClient) {
+        console.error("❌ Critical: Supabase client connection missing in Settings initialization context!");
+    }
+    
     // प्रोफाइल सेक्शन्स में करंट यूज़र का लाइव डेटा इंजेक्ट करें
     if (window.currentUser) {
-        document.getElementById('prof-display-name').value = window.currentUser.full_name || "";
-        document.getElementById('prof-ko-code').value = window.currentUser.ko_code || "";
-        document.getElementById('prof-address').value = window.currentUser.address || "";
+        if(document.getElementById('prof-display-name')) document.getElementById('prof-display-name').value = window.currentUser.full_name || "";
+        if(document.getElementById('prof-ko-code')) document.getElementById('prof-ko-code').value = window.currentUser.ko_code || "";
+        if(document.getElementById('prof-address')) document.getElementById('prof-address').value = window.currentUser.address || "";
         
         // चेक करें कि क्या यूजर का मर्जर स्टेटस पहले से ही पेंडिंग या मर्ज्ड है
         checkCurrentMergerStatus();
@@ -29,32 +37,35 @@ async function searchKOForMerger() {
         return;
     }
 
-    if (targetKo === window.currentUser?.ko_code) {
+    if (window.currentUser && targetKo === window.currentUser.ko_code) {
         window.showSystemAlert("आप अपने खुद के KO कोड के साथ मर्ज रिक्वेस्ट नहीं बना सकते सर!", "Operation Denied", "⚠️");
         return;
     }
 
+    const client = window.supabaseClient || window.supabase;
+
     try {
         // सुप्राबेस से लाइव यूजर सर्च क्वेरी (user_roles टेबल से)
-        const { data, error } = await window.supabase
+        const { data, error } = await client
             .from('user_roles')
             .select('full_name, address')
-            .eq('ko_code', targetKo)
-            .single();
+            .eq('ko_code', targetKo);
 
-        if (error || !data) {
-            vBox.classList.add('d-none');
-            submitBtn.disabled = true;
+        if (error || !data || data.length === 0) {
+            if(vBox) vBox.classList.add('d-none');
+            if(submitBtn) submitBtn.disabled = true;
             window.showSystemAlert(`KO कोड '${targetKo}' डेटाबेस में नहीं मिला। कृपया जांचें।`, "Not Found", "🔍");
             return;
         }
 
+        const matchUser = data[0];
+
         // लाइव डेटा डिस्प्ले करें
-        lblName.innerText = data.full_name.toUpperCase();
-        lblAddress.innerText = data.address || "KIOSK CENTER, INDIA";
+        if(lblName) lblName.innerText = matchUser.full_name.toUpperCase();
+        if(lblAddress) lblAddress.innerText = matchUser.address || "KIOSK CENTER, INDIA";
         
-        vBox.classList.remove('d-none');
-        submitBtn.disabled = false; // बटन इनेबल करें
+        if(vBox) vBox.classList.remove('d-none');
+        if(submitBtn) submitBtn.disabled = false; // बटन इनेबल करें
 
     } catch (err) {
         console.error("Merger System Search Failure:", err);
@@ -66,10 +77,11 @@ async function submitMergerRequest() {
     const targetKo = document.getElementById('merger-target-ko').value.trim();
     
     if (!window.currentUser?.id) return;
+    const client = window.supabaseClient || window.supabase;
 
     try {
         // यूज़र की रो को 'pending' और टारगेट KO कोड के साथ अपडेट करें
-        const { error } = await window.supabase
+        const { error } = await client
             .from('user_roles')
             .update({
                 merger_requested_with: targetKo,
@@ -102,6 +114,8 @@ function checkCurrentMergerStatus() {
     const status = window.currentUser?.merger_status || 'none';
     const target = window.currentUser?.merger_requested_with || '';
 
+    if (!alertBox) return;
+
     if (status === 'pending') {
         alertBox.className = "alert alert-warning small p-2 mt-2";
         alertBox.innerHTML = `<i class="fas fa-clock me-1"></i> <strong>Pending Approval:</strong> आपकी KO कोड <b>${target}</b> के साथ मर्ज करने की रिक्वेस्ट सुपर-एडमिन के पास विचाराधीन है।`;
@@ -126,9 +140,10 @@ function checkCurrentMergerStatus() {
 async function updateProfileSettings() {
     const newAddress = document.getElementById('prof-address').value.trim();
     if(!newAddress) return;
+    const client = window.supabaseClient || window.supabase;
 
     try {
-        const { error } = await window.supabase
+        const { error } = await client
             .from('user_roles')
             .update({ address: newAddress })
             .eq('id', window.currentUser.id);
