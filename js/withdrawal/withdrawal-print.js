@@ -139,16 +139,14 @@ window.executeWithdrawalPassbookPrint = function(encodedTx, srNo) {
         </html>
         `;
 
-        // 🌟 [VIOLATION FIX]: document.write() को हटाकर आधुनिक srcdoc का उपयोग किया
+        // srcdoc का उपयोग
         printFrame.srcdoc = htmlContent;
 
-        // प्रिंट ट्रिगर और टाइमर सिंक्रोनाइजेशन
         printFrame.onload = function() {
             try {
                 printFrame.contentWindow.focus();
                 printFrame.contentWindow.print();
                 
-                // प्रिंट प्रीव्यू क्लोज होते ही टाइमर मोडल स्क्रीन पर लाइव होगा
                 setTimeout(() => {
                     launchPassbookVerificationFlow(lastPrintedLine, todayDate, currentPageNo);
                 }, 100);
@@ -162,27 +160,44 @@ window.executeWithdrawalPassbookPrint = function(encodedTx, srNo) {
     }
 };
 
-// ⏱️ ⌨️ कीबोर्ड शॉर्टकट (Enter / Esc) समर्थित 10-सेकंड वेरिफिकेशन इंजन
+// ⏱️ ⌨️ कीबोर्ड शॉर्टकट समर्थित 10-सेकंड वेरिफिकेशन इंजन (पूरी तरह से फिक्स)
 function launchPassbookVerificationFlow(currentLine, todayDate, currentPageNo) {
     let timerDuration = 10;
     
-    // कोर 'YES' सबमिशन लॉजिक
+    // 🌟 सुधार: 'YES' दबाने पर मोडल को छुपाने और एलिमेंट्स को वापस रीसेट करने की व्यवस्था जोड़ी
     const executeYesAction = function() {
         clearInterval(autoYesTimer);
-        window.removeEventListener('keydown', handleTimerKey, { capture: true }); // लिसनर साफ़ करें
+        window.removeEventListener('keydown', handleTimerKey, { capture: true });
+        
+        const modal = document.getElementById('custom-prompt-modal');
+        const inputElement = document.getElementById('custom-prompt-input');
+        const inputDiv = inputElement ? inputElement.parentElement : null;
+        const submitBtn = document.getElementById('custom-prompt-submit-btn');
+
+        if (modal) modal.style.display = 'none'; // 👈 मोडल को तुरंत स्क्रीन से गायब करें
+        if (inputDiv) inputDiv.style.display = 'block'; // डिफ़ॉल्ट रीसेट
+        if (submitBtn) submitBtn.innerText = "Update Password"; // डिफ़ॉल्ट रीसेट
+
         saveNextPassbookLinePointer(currentLine + 1, todayDate, currentPageNo);
     };
 
-    // कोर 'NO' कैंसिलेशन लॉजिक
     const executeNoAction = function() {
         clearInterval(autoYesTimer);
-        window.removeEventListener('keydown', handleTimerKey, { capture: true }); // LSN क्लीन
+        window.removeEventListener('keydown', handleTimerKey, { capture: true });
+        
         const modal = document.getElementById('custom-prompt-modal');
+        const inputElement = document.getElementById('custom-prompt-input');
+        const inputDiv = inputElement ? inputElement.parentElement : null;
+        const submitBtn = document.getElementById('custom-prompt-submit-btn');
+
         if (modal) modal.style.display = 'none';
-        window.showSystemAlert("⚠️ अगली बार प्रिंट करने पर यह दोबारा इसी line पर छपेगा।", "Line Retained", "⚠️");
+        if (inputDiv) inputDiv.style.display = 'block';
+        if (submitBtn) submitBtn.innerText = "Update Password";
+
+        window.showSystemAlert("⚠️ अगली बार प्रिंट करने पर यह दोबारा इसी लाइन पर छपेगा।", "Line Retained", "⚠️");
     };
 
-    // हमारे कस्टमाइज्ड सिस्टम कन्फर्म को कॉल करें
+    // कन्फर्मेशन पॉपअप दिखाएं
     window.showSystemConfirm(
         `क्या विथड्रॉल प्रविष्टि पासबुक पेज पर सही जगह और साफ़ प्रिंट हो गई है?\n\n(यदि आप कुछ नहीं चुनते, तो ${timerDuration} सेकंड में यह स्वतः 'YES' मान लिया जाएगा)`, 
         "Print Alignment Verification", 
@@ -196,27 +211,20 @@ function launchPassbookVerificationFlow(currentLine, todayDate, currentPageNo) {
     
     if (submitBtn) submitBtn.innerText = `Yes, Clear Line (${timerDuration}s)`;
 
-    // ⚡ टाइमर काउंटडाउन
+    // लाइव टाइमर काउंटडाउन
     const autoYesTimer = setInterval(() => {
         timerDuration--;
         if (submitBtn && document.getElementById('custom-prompt-modal').style.display === 'flex') {
             submitBtn.innerText = `Yes, Clear Line (${timerDuration}s)`;
         }
 
-        // ⏳ समय समाप्त होने पर ऑटो-यस सबमिट करें
         if (timerDuration <= 0) {
-            clearInterval(autoYesTimer);
-            window.removeEventListener('keydown', handleTimerKey, { capture: true });
-            const modal = document.getElementById('custom-prompt-modal');
-            if (modal && modal.style.display === 'flex') {
-                modal.style.display = 'none';
-                saveNextPassbookLinePointer(currentLine + 1, todayDate, currentPageNo);
-                window.showSystemAlert("समय समाप्त! लाइन आगे बढ़ा दी गई है।", "Auto Acknowledged", "✅");
-            }
+            executeYesAction(); // टाइमर पूरा होने पर सीधे 'YES' ट्रिगर
+            window.showSystemAlert("समय समाप्त! लाइन आगे बढ़ा दी गई है।", "Auto Acknowledged", "✅");
         }
     }, 1000);
 
-    // 🌟 [CONVERGENCE FIX]: पुराने बबल्ड क्लिक इवेंट्स को ओवरराइड करके फ़्रीज़ होना ठीक किया गया
+    // क्लिक इवेंट्स ओवरराइड फिक्स
     if (submitBtn) {
         submitBtn.onclick = function(e) {
             e.preventDefault();
@@ -230,25 +238,23 @@ function launchPassbookVerificationFlow(currentLine, todayDate, currentPageNo) {
         };
     }
 
-    // ⌨️ [JARVIS TIMER SHORTCUTS]: Enter और Escape कीबोर्ड हुक्स
+    // कीबोर्ड हुक्स
     function handleTimerKey(e) {
         const modal = document.getElementById('custom-prompt-modal');
         if (modal && modal.style.display === 'flex') {
             if (e.key === 'Enter') {
                 e.preventDefault();
                 e.stopPropagation();
-                modal.style.display = 'none';
-                executeYesAction(); 
+                executeYesAction();
             }
             if (e.key === 'Escape' || e.key === 'Esc') {
                 e.preventDefault();
                 e.stopPropagation();
-                executeNoAction(); 
+                executeNoAction();
             }
         }
     }
 
-    // कैप्चर फेज में लिसनर चालू करें ताकि यह पूरे पेज पर सबसे पहले रन हो
     window.addEventListener('keydown', handleTimerKey, { capture: true });
 }
 
