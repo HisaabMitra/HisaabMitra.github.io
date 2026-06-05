@@ -1,239 +1,292 @@
 // ========================================================
-// 💸 AEPS CASH WITHDRAWAL CORE CONTROL ENGINE (WITH SHORTCUTS & DELETE)
+// 🖨️ 🌐 CLOUD-SYNC MASTER PASBOOK PRINT ENGINE (JARVIS MULTI-USER SYNC ENABLED)
 // ========================================================
 
-window.initWithdrawalPage = async function (currentUser) {
-    console.log("⚡ Jarvis AEPS Withdrawal Engine Initializing...");
-    
-    // कोर यूआई एलिमेंट्स को हुक करें
-    const witAadhaarInput = document.getElementById('wit-aadhaar-no');
-    const witNameInput = document.getElementById('wit-cust-name');
-    const witAmountInput = document.getElementById('wit-amount');
-    const witWordsDisplay = document.getElementById('wit-amount-words');
-
+window.executeWithdrawalPassbookPrint = async function(encodedTx, srNo) {
     try {
-        // 🚀 आते ही नए स्वतंत्र विथड्रॉल डिनॉमिनेशन कॉम्पोनेन्ट को रेंडर करें
-        if (window.WitDenominationComponent) {
-            setTimeout(() => {
-                console.log("Initializing Dedicated Withdrawal Denomination Panel...");
-                window.WitDenominationComponent.clear();
-                window.WitDenominationComponent.render('master-shared-denomination-container');
-            }, 50);
+        const txData = JSON.parse(atob(encodedTx));
+        console.log("🖨️ Cloud-Matrix Engine Triggered for SrNo:", srNo, txData);
+
+        const koCode = window.currentUser?.ko_code || "--";
+        const userAddress = window.currentUser?.address || "KIOSK CENTER, INDIA";
+        const todayDate = new Date().toISOString().split('T')[0];
+        const client = window.supabaseClient || window.supabase;
+
+        // 🌟 [JARVIS CLOUD ROUTER LOGIC]: चेक करें कि क्या यह यूजर किसी प्रिंटर ग्रुप में मर्ज है
+        const isMergedUser = window.currentUser?.merger_status === 'merged' && window.currentUser?.printer_group_id;
+        const sharedGroupId = window.currentUser?.printer_group_id || null;
+
+        let lastPrintedLine = 0;
+        let currentPageNo = 1;
+        let lastPrintedDate = todayDate;
+
+        if (isMergedUser) {
+            console.log(`🌐 Multi-User Sync Active! Querying Cloud Printer Group: ${sharedGroupId}`);
+            
+            // १. सुप्राबेस से लाइव साझा प्रिंटर ग्रुप की कतार स्थिति डाउनलोड करें
+            const { data: cloudGroup, error: fetchErr } = await client
+                .from('shared_printer_groups')
+                .select('*')
+                .eq('group_id', sharedGroupId)
+                .maybeSingle();
+
+            if (fetchErr) throw fetchErr;
+
+            if (cloudGroup) {
+                lastPrintedLine = parseInt(cloudGroup.last_printed_line) || 0;
+                currentPageNo = parseInt(cloudGroup.page_counter) || 1;
+                lastPrintedDate = cloudGroup.last_printed_date || todayDate;
+            }
         } else {
-            console.error("WitDenominationComponent structure not found in window stack!");
+            console.log("💻 Standard Single Mode Active. Loading locally from localStorage...");
+            // अगर यूजर मर्ज नहीं है, तो डिफ़ॉल्ट लोकल स्टोरेज से काम चलाएं
+            lastPrintedLine = parseInt(localStorage.getItem('passbook_last_line')) || 0;
+            currentPageNo = parseInt(localStorage.getItem('passbook_page_counter')) || 1;
+            lastPrintedDate = localStorage.getItem('passbook_last_date') || "";
         }
 
-        // 📊 [LEDGER SYSTEM]: आज की लाइव निकासी लेज़र तालिका लोड करें
-        window.loadTodayWithdrawals = async function() {
-            const tbody = document.getElementById('today-wit-body');
-            if (!tbody) return;
+        // तारीख बदलने पर लाइव पेज काउंटर रीसेट नियम
+        let forceHeaderReprint = false;
+        if (lastPrintedDate !== todayDate) {
+            forceHeaderReprint = true;
+            currentPageNo = 1;
+            if (lastPrintedLine >= 15) lastPrintedLine = 0;
+        }
 
-            const todayStr = new Date().toISOString().split('T')[0];
+        // १५ कतारों को पूरे पृष्ठ पर फैलाने हेतु ५२ पिक्सल हाइट नियत है
+        const rowHeight = 52;         
+        const baseHeaderOffset = 130;  
+        const dynamicTopMargin = baseHeaderOffset + (lastPrintedLine * rowHeight);
 
-            try {
-                const { data, error } = await window.supabaseClient
-                    .from('withdrawal_transactions')
-                    .select('*')
-                    .eq('ko_code', currentUser.ko_code)
-                    .gte('transaction_date', `${todayStr}T00:00:00`)
-                    .order('transaction_date', { ascending: false });
+        // तारीख को DD-MM-YYYY फॉर्मेट दें
+        const dateParts = todayDate.split('-');
+        const displayDate = `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`;
 
-                if (error) throw error;
+        // प्रिंटर हेतु छुपा हुआ Iframe तैयार करें
+        let printFrame = document.getElementById('matrix-print-iframe');
+        if (!printFrame) {
+            printFrame = document.createElement('iframe');
+            printFrame.id = 'matrix-print-iframe';
+            printFrame.style.position = 'fixed';
+            printFrame.style.bottom = '0';
+            printFrame.style.right = '0';
+            printFrame.style.width = '0';
+            printFrame.style.height = '0';
+            printFrame.style.border = 'none';
+            document.body.appendChild(printFrame);
+        }
 
-                tbody.innerHTML = '';
-                if (!data || data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:15px; color:#777;">आज काउंटर पर कोई निकासी (Withdrawal) नहीं मिली</td></tr>';
-                    return;
+        let htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <style>
+                @page { size: A4 portrait; margin: 8mm 6mm; }
+                body {
+                    margin: 0; padding: 0;
+                    font-family: 'Courier New', Courier, monospace;
+                    font-size: 14px; line-height: 1.2; color: #000;
                 }
+                .header-block { text-align: center; width: 100%; margin-bottom: 5px; }
+                .header-title { font-size: 18px; font-weight: bold; text-transform: uppercase; }
+                .header-address { font-size: 12px; text-transform: uppercase; margin-top: 1px; }
+                .meta-line { font-size: 14px; font-weight: bold; text-align: center; margin: 4px 0; }
+                .matrix-table { width: 100%; border-collapse: collapse; margin-top: 2px; }
+                .matrix-table th {
+                    border-bottom: 1px dashed #000; border-top: 1px dashed #000;
+                    padding: 6px 2px; text-align: left; font-weight: bold; font-size: 14px;
+                }
+                .matrix-table td { padding: 12px 2px; font-size: 11px; }
+                .sig-line { width: 85px; border-bottom: 1px dashed #000; display: inline-block; height: 12px; }
+            </style>
+        </head>
+        <body>
+        `;
 
-                // कतारों को क्रम संख्या (Sr. No.) और 🗑️ डिलीट बटन के साथ लाइव रेंडर करना
-                data.forEach((tx, index) => {
-                    const timeStr = new Date(tx.transaction_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                    const txStr = btoa(JSON.stringify(tx));
-                    const srNo = data.length - index; // रिवर्स क्रोनोलॉजिकल ऑर्डर नंबर
-
-                    tbody.insertAdjacentHTML('beforeend', `
-                        <tr style="border-bottom: 1px solid #eee;">
-                            <td style="padding:12px; font-weight: bold; color: #555; text-align:center;">${srNo}</td>
-                            <td style="padding:12px; font-weight: 600; letter-spacing:0.5px;">${tx.aadhaar_number}</td>
-                            <td style="padding:12px; text-transform: uppercase;">${tx.customer_name}</td>
-                            <td style="padding:12px; font-weight:bold; color:#c5221f;">₹${parseFloat(tx.amount).toFixed(2)}</td>
-                            <td style="padding:12px;">${timeStr}</td>
-                            <td style="padding:12px; text-align:center;">
-                                <div style="display:inline-flex; align-items:center; gap:15px; justify-content:center;">
-                                    <span class="btn-edit-wit-tx" data-tx="${txStr}" style="cursor:pointer; font-size:1.1rem; user-select:none;" title="Edit Withdrawal">✏️</span>
-                                    <span class="btn-print-wit-receipt" data-tx="${txStr}" style="cursor:pointer; font-size:1.2rem; user-select:none;" title="Print Slip">🖨️</span>
-                                    <!-- 🗑️ नया समर्पित विथड्रॉल डिलीट ट्रिगर बटन -->
-                                    <span class="btn-delete-wit-tx" data-id="${tx.id}" data-tx="${txStr}" style="cursor:pointer; font-size:1.1rem; user-select:none;" title="Delete & Rollback Withdrawal">🗑️</span>
-                                </div>
-                            </td>
+        if (lastPrintedLine === 0 || forceHeaderReprint) {
+            htmlContent += `
+                <div class="header-block">
+                    <div class="header-title">Kiosk Banking System</div>
+                    <div class="header-address">${userAddress}</div>
+                </div>
+                <div class="meta-line">Date: ${displayDate} | Page No: ${currentPageNo}</div>
+                <table class="matrix-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 8%; text-align:center;">Sr.No</th>
+                            <th style="width: 12%;">KO-Code</th>
+                            <th style="width: 22%;">Aadhar Number</th>
+                            <th style="width: 25%;">Name</th>
+                            <th style="width: 15%;">Amount</th>
+                            <th style="width: 18%; text-align:center;">Signature/Thumb</th>
                         </tr>
-                    `);
-                });
-
-                attachWithdrawalEditListeners();
-
-            } catch (err) { 
-                console.error("Withdrawal Ledger Load Error:", err); 
-            }
-        };
-
-        // 🔍 [RADAR SEARCH]: आधार नंबर सर्च इंजन
-        if (witAadhaarInput) {
-            witAadhaarInput.addEventListener('blur', async () => {
-                const aadhaarNo = witAadhaarInput.value.trim();
-                if (!aadhaarNo) return;
-
-                if (aadhaarNo.length !== 12 || isNaN(aadhaarNo)) {
-                    window.showSystemAlert("आधार नंबर पूरे 12 अंकों का होना अनिवार्य है!", "Validation Error", "❌");
-                    return;
-                }
-
-                if (witNameInput) witNameInput.value = "Searching ledger...";
-
-                try {
-                    const { data: customer, error } = await window.supabaseClient
-                        .from('banking_customers')
-                        .select('*')
-                        .eq('aadhaar_number', aadhaarNo)
-                        .maybeSingle();
-
-                    if (error) throw error;
-
-                    if (customer) {
-                        if (witNameInput) witNameInput.value = customer.customer_name.toUpperCase();
-                        if (witAmountInput) witAmountInput.focus(); 
-                    } else {
-                        if (witNameInput) witNameInput.value = "NOT REGISTERED";
-                        
-                        // 🌟 [UTILS.JS INTEGRATION]: ग्लोबल इंजन कॉल
-                        window.showDynamicNewCustomerModal({
-                            source: 'withdrawal',
-                            aadhaar_number: aadhaarNo
-                        }).then(regResult => {
-                            if (regResult && regResult.success) {
-                                if (witNameInput) witNameInput.value = regResult.customer_name;
-                                if (witAmountInput) witAmountInput.focus();
-                            } else if (regResult && regResult.cancelled) {
-                                if (witNameInput) witNameInput.value = "";
-                                witAadhaarInput.value = ""; 
-                                witAadhaarInput.focus();
-                            }
-                        }).catch(err => {
-                            console.error("Global Modal Promise Framework Error in Withdrawal:", err);
-                            if (witNameInput) witNameInput.value = "";
-                        });
-                    }
-                } catch (err) { 
-                    console.error("Aadhaar Search Error:", err); 
-                }
-            });
+                    </thead>
+                </table>
+            `;
         }
 
-        // 🔢 [LIVE TRANSLATOR]: लाइव हिंदी Numbers-to-Words कनवर्टर
-        if (witAmountInput) {
-            witAmountInput.addEventListener('input', () => {
-                const amt = parseInt(witAmountInput.value) || 0;
-                if (witWordsDisplay) {
-                    if (amt === 0) {
-                        witWordsDisplay.innerText = "Zero Rupees Only";
-                    } else if (typeof window.numberToHindiWords === 'function') {
-                        witWordsDisplay.innerText = `${window.numberToHindiWords(amt)} रुपए मात्र`;
-                    } else {
-                        witWordsDisplay.innerText = `₹${amt.toLocaleString('en-IN')} मात्र`;
-                    }
-                }
-            });
+        const inlineStyle = (lastPrintedLine === 0 || forceHeaderReprint) 
+            ? `margin-top: 4px;` 
+            : `position: absolute; top: ${dynamicTopMargin}px; left: 0; width: 100%;`;
+
+        htmlContent += `
+            <table class="matrix-table" style="${inlineStyle}">
+                <tbody>
+                    <tr>
+                        <td style="width: 8%; text-align:center; font-weight:bold;">${srNo}</td>
+                        <td style="width: 12%;">${koCode}</td>
+                        <td style="width: 22%; letter-spacing: 0.5px;">${txData.aadhaar_number}</td>
+                        <td style="width: 25%; text-transform: uppercase; white-space: nowrap; overflow: hidden;">${txData.customer_name}</td>
+                        <td style="width: 15%; font-weight: bold;">₹${parseFloat(txData.amount).toFixed(2)}</td>
+                        <td style="width: 18%; text-align:center;"><span class="sig-line"></span></td>
+                    </tr>
+                </tbody>
+            </table>
             
-            witAmountInput.addEventListener('wheel', e => e.preventDefault(), { passive: false }); 
-        }
+            ${(lastPrintedLine === 14) ? `
+                <div style="position: absolute; bottom: 10mm; left: 0; width: 100%; text-align: center; font-size: 11px; font-weight: bold; letter-spacing: 1px; color:#000;">
+                    ---- page is end ----
+                </div>
+            ` : ''}
+        </body>
+        </html>
+        `;
 
-        // ✏️ [EDIT MODULE]: एडिट निकासी प्रविष्टि लिसनर
-        function attachWithdrawalEditListeners() {
-            document.querySelectorAll('.btn-edit-wit-tx').forEach(btn => {
-                btn.onclick = function() {
-                    try {
-                        const txData = JSON.parse(atob(this.getAttribute('data-tx')));
-                        
-                        document.getElementById('wit-aadhaar-no').value = txData.aadhaar_number;
-                        document.getElementById('wit-cust-name').value = txData.customer_name;
-                        document.getElementById('wit-amount').value = txData.amount;
-                        document.getElementById('wit-remarks').value = txData.remarks || "";
-                        
-                        if (witWordsDisplay && typeof window.numberToHindiWords === 'function') {
-                            witWordsDisplay.innerText = `${window.numberToHindiWords(parseInt(txData.amount))} रुपए मात्र`;
-                        }
+        printFrame.srcdoc = htmlContent;
 
-                        const notes = [500, 200, 100, 50, 20, 10, 5];
-                        notes.forEach(note => {
-                            const inInput = document.querySelector(`.wit-denom-in[data-note="${note}"]`);
-                            const outInput = document.querySelector(`.wit-denom-out[data-note="${note}"]`);
-                            if (inInput) inInput.value = txData[`denom_in_${note}`] || 0;
-                            if (outInput) outInput.value = txData[`denom_out_${note}`] || 0;
-                        });
-
-                        const coinIn = document.querySelector('.wit-denom-in[data-note="coins"]');
-                        const coinOut = document.querySelector('.wit-denom-out[data-note="coins"]');
-                        if (coinIn) coinIn.value = txData[`denom_in_coins`] || 0;
-                        if (coinOut) coinOut.value = txData[`denom_out_coins`] || 0;
-
-                        if (window.WitDenominationComponent) window.WitDenominationComponent.calculate();
-
-                        const saveBtn = document.getElementById('btn-wit-save');
-                        if (saveBtn) {
-                            saveBtn.innerText = "🔄 Update Withdrawal";
-                            saveBtn.style.background = "#d35400";
-                            saveBtn.dataset.mode = "edit";
-                            saveBtn.dataset.editingWitId = txData.id;
-                        }
-
-                        window.showSystemAlert("पुरानी निकासी प्रविष्टि संपादन मोड में लोड हो गई है!", "Edit Mode", "ℹ️");
-                    } catch (e) { 
-                        console.error("Edit Mode Loader Failure:", e); 
-                    }
-                };
-            });
-        }
-
-        // 🧹 [CLEAR MOTOR]: मास्टर फॉर्म और कॉम्पोनेन्ट रीसेटर
-        window.masterWithdrawalClear = function() {
-            if (witAadhaarInput) witAadhaarInput.value = "";
-            if (witNameInput) witNameInput.value = "";
-            if (witAmountInput) witAmountInput.value = "";
-            if (document.getElementById('wit-remarks')) document.getElementById('wit-remarks').value = "";
-            if (witWordsDisplay) witWordsDisplay.innerText = "Zero Rupees Only";
-            
-            if (window.WitDenominationComponent) window.WitDenominationComponent.clear();
-
-            const saveBtn = document.getElementById('btn-wit-save');
-            if (saveBtn) {
-                saveBtn.innerText = "💸 Dispense Cash";
-                saveBtn.style.background = "#7d0022";
-                delete saveBtn.dataset.mode;
-                delete saveBtn.dataset.editingWitId;
+        printFrame.onload = function() {
+            try {
+                printFrame.contentWindow.focus();
+                printFrame.contentWindow.print();
+                
+                setTimeout(() => {
+                    // सिंक पैरामीटर्स के साथ टाइमर प्रॉम्ट चालू करें
+                    launchPassbookVerificationFlow(lastPrintedLine, todayDate, currentPageNo, isMergedUser, sharedGroupId);
+                }, 100);
+            } catch (printErr) {
+                console.error("Internal Iframe Print Error:", printErr);
             }
         };
 
-        const clearBtn = document.getElementById('btn-wit-clear');
-        if (clearBtn) clearBtn.onclick = window.masterWithdrawalClear;
-
-        // ⌨️ [JARVIS SHORTCUT HOOKS]: विथड्रॉल पेज के लिए जादुई कीबोर्ड इंजन
-        document.onkeydown = function(e) {
-            // १. Ctrl + S या Meta + S से ऑटो-सेव डिस्पेंस
-            if ((e.key === 's' || e.key === 'S') && (e.ctrlKey || e.metaKey)) {
-                e.preventDefault(); 
-                document.getElementById('btn-wit-save')?.click();
-            }
-            // २. Escape की (Key) दबाने पर मास्टर फॉर्म साफ़
-            if (e.key === 'Escape' || e.key === 'Esc') {
-                window.masterWithdrawalClear();
-            }
-        };
-
-        // इंजन लोड होते ही तालिका डेटा सिंक करें
-        window.loadTodayWithdrawals();
-
-    } catch (err) { 
-        console.error("Withdrawal Initialization Core Fatal Failure:", err); 
+    } catch (err) {
+        console.error("Passbook Print System Failure:", err);
     }
 };
+
+// ⏱️ ⌨️ कीबोर्ड शॉर्टकट समर्थित क्लॉथ-सिंक वेरिफिकेशन इंजन
+function launchPassbookVerificationFlow(currentLine, todayDate, currentPageNo, isMergedUser, sharedGroupId) {
+    let timerDuration = 10;
+    
+    const executeYesAction = function() {
+        clearInterval(autoYesTimer);
+        window.removeEventListener('keydown', handleTimerKey, { capture: true });
+        
+        const modal = document.getElementById('custom-prompt-modal');
+        if (modal) modal.style.display = 'none';
+
+        // लाइन पेंटर पॉइंटर को आगे बढाएं
+        saveNextPassbookLinePointer(currentLine + 1, todayDate, currentPageNo, isMergedUser, sharedGroupId);
+    };
+
+    const executeNoAction = function() {
+        clearInterval(autoYesTimer);
+        window.removeEventListener('keydown', handleTimerKey, { capture: true });
+        
+        const modal = document.getElementById('custom-prompt-modal');
+        if (modal) modal.style.display = 'none';
+        
+        window.showSystemAlert("⚠️ अगली बार प्रिंट करने पर यह दोबारा इसी लाइन पर छपेगा।", "Line Retained", "⚠️");
+    };
+
+    window.showSystemConfirm(
+        `क्या विथड्रॉल प्रविष्टि पासबुक पेज पर सही जगह और साफ़ प्रिंट हो गई है?\n\n(यदि आप कुछ नहीं चुनते, तो ${timerDuration} सेकंड में यह स्वतः 'YES' मान लिया जाएगा)`, 
+        "Print Alignment Verification", 
+        function() { executeYesAction(); }
+    );
+
+    const submitBtn = document.getElementById('custom-prompt-submit-btn');
+    const cancelBtn = document.getElementById('custom-prompt-cancel-btn');
+    if (submitBtn) submitBtn.innerText = `Yes, Clear Line (${timerDuration}s)`;
+
+    const autoYesTimer = setInterval(() => {
+        timerDuration--;
+        if (submitBtn && document.getElementById('custom-prompt-modal').style.display === 'flex') {
+            submitBtn.innerText = `Yes, Clear Line (${timerDuration}s)`;
+        }
+
+        if (timerDuration <= 0) {
+            executeYesAction();
+            window.showSystemAlert("समय समाप्त! लाइन आगे बढ़ा दी गई है।", "Auto Acknowledged", "✅");
+        }
+    }, 1000);
+
+    if (submitBtn) {
+        submitBtn.onclick = function(e) { e.preventDefault(); executeYesAction(); };
+    }
+    if (cancelBtn) {
+        cancelBtn.onclick = function(e) { e.preventDefault(); executeNoAction(); };
+    }
+
+    function handleTimerKey(e) {
+        const modal = document.getElementById('custom-prompt-modal');
+        if (modal && modal.style.display === 'flex') {
+            if (e.key === 'Enter') { e.preventDefault(); executeYesAction(); }
+            if (e.key === 'Escape' || e.key === 'Esc') { e.preventDefault(); executeNoAction(); }
+        }
+    }
+    window.addEventListener('keydown', handleTimerKey, { capture: true });
+}
+
+// 💾 लाइन कतार और काउंटर डेटाबेस / लोकल स्टोरेज सिंकिंग हाउस
+async function saveNextPassbookLinePointer(nextLine, todayDate, currentPageNo, isMergedUser, sharedGroupId) {
+    let nextPointerLine = nextLine;
+    let nextPageCounter = currentPageNo;
+
+    if (nextLine >= 15) {
+        nextPointerLine = 0;
+        nextPageCounter = currentPageNo + 1;
+        window.showSystemAlert(`📄 इस पेज की सभी 15 कतारें भर चुकी हैं!\n\nअगला प्रिंट 'Page No: ${nextPageCounter}' के नए फ्रेश A4 पेज पर शुरू होगा। कृपया नया पेज लगाएं।`, "Page Full", "ℹ️");
+    }
+
+    if (isMergedUser && sharedGroupId) {
+        // 🌐 क्लाउड सिंकिंग एक्टिवेट करें: डेटाबेस में रिकॉर्ड अपडेट करें
+        const client = window.supabaseClient || window.supabase;
+        try {
+            const { error } = await client
+                .from('shared_printer_groups')
+                .update({
+                    last_printed_line: nextPointerLine,
+                    page_counter: nextPageCounter,
+                    last_printed_date: todayDate,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('group_id', sharedGroupId);
+
+            if (error) throw error;
+            console.log(`📡 Cloud Row Height Locked successfully for group ${sharedGroupId} on Line: ${nextPointerLine}`);
+        } catch (dbErr) {
+            console.error("Failed to sync print coordinates to cloud ledger:", dbErr);
+        }
+    } else {
+        // 💻 सिंगल यूजर मोड: पुराने लोकल स्टोरेज में सेव करें
+        localStorage.setItem('passbook_last_line', nextPointerLine);
+        localStorage.setItem('passbook_page_counter', nextPageCounter);
+        localStorage.setItem('passbook_last_date', todayDate);
+    }
+    
+    if (typeof window.loadTodayWithdrawals === 'function') window.loadTodayWithdrawals();
+}
+
+// Global Event Delegation Listener for Withdrawal Print Button
+document.addEventListener('click', (e) => {
+    const printBtn = e.target.closest('.btn-print-wit-receipt');
+    if (printBtn) {
+        const encodedTx = printBtn.getAttribute('data-tx');
+        const row = printBtn.closest('tr');
+        const srNo = row ? row.cells[0].innerText : "1";
+        if (encodedTx) {
+            window.executeWithdrawalPassbookPrint(encodedTx, srNo);
+        }
+    }
+});
