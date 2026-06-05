@@ -69,14 +69,14 @@ window.executeDepositPrintReceipt = function(encodedTx) {
 
     .header {
         font-weight: bold;
-        font-size: 12px;
+        font-size: 14px;
         margin: 0;
         text-align: center;
         text-transform: uppercase;
     }
 
     .address {
-        font-size: 9px;
+        font-size: 10px;
         margin: 2px 0;
         padding-bottom: 3px;
         border-bottom: 1px dashed #000;
@@ -110,7 +110,7 @@ window.executeDepositPrintReceipt = function(encodedTx) {
     }
 
     .amount-highlight {
-        font-size: 12px;
+        font-size: 13px;
         font-weight: bold;
         border-top: 1px dashed #000;
         margin-top: 3px;
@@ -119,7 +119,7 @@ window.executeDepositPrintReceipt = function(encodedTx) {
 
     .words-section {
         text-align: left;
-        font-size: 9px;
+        font-size: 10px;
         font-style: italic;
         margin: 4px 0;
         border-bottom: 1px dashed #000;
@@ -127,7 +127,7 @@ window.executeDepositPrintReceipt = function(encodedTx) {
     }
 
     .footer {
-        font-size: 8px;
+        font-size: 9px;
         font-weight: bold;
         margin-top: 3px;
         line-height: 1.1;
