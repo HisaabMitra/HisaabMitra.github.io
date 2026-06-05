@@ -31,16 +31,20 @@
 
         <div style="flex: 1; min-width: 320px; background: #ffffff; padding: 20px; border-radius: 6px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); border-top: 5px solid #343a40; text-align: left;">
             <h3 style="margin-top: 0; margin-bottom: 10px; color: #343a40; font-size: 1.3rem;">Configure Hardware Printer's</h3>
-            <p style="color: #666; font-size: 0.85rem; line-height: 1.4; margin-bottom: 15px;">अपने Windows 'Devices & Printers' में दिख रहे प्रिंटर का सटीक नाम यहाँ टाइप करें ताकि सिस्टम सीधे प्रिंटर पर सिग्नल भेज सके।</p>
+            <p style="color: #666; font-size: 0.85rem; line-height: 1.4; margin-bottom: 15px;">आपके सिस्टम में मौजूद असली प्रिंटर्स नीचे ड्रॉपडाउन में लोड हो गए हैं, सही प्रिंटर चुनकर प्राथमिकता सुरक्षित करें।</p>
             
             <div style="margin-bottom: 15px; text-align: left;">
                 <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 6px; color: #495057;">Deposit Receipt Printer Name (Thermal)</label>
-                <input type="text" id="cfg-deposit-printer-name" placeholder="e.g., XP-80, POS-58, Thermal" style="width: 100%; padding: 12px; border: 1px solid #ced4da; border-radius: 4px; font-size: 0.95rem; box-sizing: border-box; background-color: #fff;">
+                <select id="cfg-deposit-printer-name" style="width: 100%; padding: 12px; border: 1px solid #ced4da; border-radius: 4px; font-size: 0.95rem; box-sizing: border-box; background-color: #fff; color: #212529; cursor: pointer;">
+                    <option value="">🔍 लोडिंग प्रिंटर्स लिस्ट...</option>
+                </select>
             </div>
 
             <div style="margin-bottom: 15px; text-align: left;">
                 <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 6px; color: #495057;">Withdrawal Passbook Printer Name (Matrix)</label>
-                <input type="text" id="cfg-withdrawal-printer-name" placeholder="e.g., EPSON PLQ-20, PLQ-30, LQ-310" style="width: 100%; padding: 12px; border: 1px solid #ced4da; border-radius: 4px; font-size: 0.95rem; box-sizing: border-box; background-color: #fff;">
+                <select id="cfg-withdrawal-printer-name" style="width: 100%; padding: 12px; border: 1px solid #ced4da; border-radius: 4px; font-size: 0.95rem; box-sizing: border-box; background-color: #fff; color: #212529; cursor: pointer;">
+                    <option value="">🔍 लोडिंग प्रिंटर्स लिस्ट...</option>
+                </select>
             </div>
 
             <button type="button" style="float: right; padding: 10px 20px; background: #343a40; color: #ffffff; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.9rem;" onclick="window.savePrinterPreferences()">
