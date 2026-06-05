@@ -125,7 +125,8 @@ window.executeWithdrawalPassbookPrint = function(encodedTx, srNo) {
                     <tr>
                         <td style="width: 8%; text-align:center; font-weight:bold;">${srNo}</td>
                         <td style="width: 12%;">${koCode}</td>
-                        <td style="width: 22%; letter-spacing: 0.5px;">[Aadhaar Redacted]</td>
+                        <!-- 🎯 यहाँ फ़िक्स किया गया है: अब असली आधार नंबर लाइव प्रिंट होगा -->
+                        <td style="width: 22%; letter-spacing: 0.5px;">${txData.aadhaar_number}</td>
                         <td style="width: 25%; text-transform: uppercase; white-space: nowrap; overflow: hidden;">${txData.customer_name}</td>
                         <td style="width: 15%; font-weight: bold;">₹${parseFloat(txData.amount).toFixed(2)}</td>
                         <td style="width: 18%; text-align:center;"><span class="sig-line"></span></td>
@@ -209,7 +210,7 @@ function launchPassbookVerificationFlow(currentLine, todayDate, currentPageNo) {
             if (modal && modal.style.display === 'flex') {
                 modal.style.display = 'none';
                 saveNextPassbookLinePointer(currentLine + 1, todayDate, currentPageNo);
-                window.showSystemAlert("समय समाप्त! लाइन आगे बढ़ा दी गई है।", "Auto Acknowledged", "✅");
+                window.showSystemAlert("समय समाप्त! लाइन आगे बढ़ा दी गई है।", "Auto Acknowledged", "✅");
             }
         }
     }, 1000);
