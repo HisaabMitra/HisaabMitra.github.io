@@ -1,15 +1,11 @@
 // ========================================================
-// ⚙️ JARVIS SETTINGS & MERGER ROUTING ENGINE (GLOBAL SCOPE FIXED)
+// ⚙️ JARVIS SETTINGS & MERGER ROUTING ENGINE (PRODUCTION READY)
 // ========================================================
 
 window.initJarvisSettingsEngine = function() {
-    console.log("⚙️ Jarvis Settings Core Initializing via App Gateway...");
-    
     try {
-        // आपके index.html में मौजूद लाइव सुप्राबेस क्लाइंट को ढूंढें
         window.dbClient = window.supabaseClient || window.supabase;
 
-        // प्रोफाइल सेक्शन्स में करंट यूज़र का लाइव डेटा इंजेक्ट करें
         const displayName = document.getElementById('prof-display-name');
         const koCode = document.getElementById('prof-ko-code');
         const address = document.getElementById('prof-address');
@@ -21,7 +17,6 @@ window.initJarvisSettingsEngine = function() {
             if (address) address.value = window.currentUser.address || "";
         }
         
-        // ⌨️ [ENTER KEY HOOK]: इनपुट बॉक्स में Enter दबाते ही सर्च ट्रिगर करें
         if (inputKo) {
             inputKo.onkeydown = function(e) {
                 if (e.key === 'Enter') {
@@ -31,18 +26,15 @@ window.initJarvisSettingsEngine = function() {
             };
         }
         
-        // मर्जर स्टेटस चेक करें
         window.checkCurrentMergerStatus();
-        console.log("⚙️ Jarvis Settings DOM Render Completed Successfully.");
 
     } catch (bootErr) {
         console.error("❌ Jarvis Settings Boot Engine Crashed:", bootErr);
     }
 };
 
-// 🎯 १. टारगेट KO कोड को खोजना और लाइव लेबल में वेरीफाई करना (ग्लोबल स्कोप)
+// 🎯 १. टारगेट KO कोड को खोजना और लाइव लेबल में वेरीफाई करना
 window.searchKOForMerger = async function() {
-    console.log("🔍 Search KO Target Triggered...");
     try {
         const targetKoInput = document.getElementById('merger-target-ko');
         if (!targetKoInput) return;
@@ -69,7 +61,6 @@ window.searchKOForMerger = async function() {
             return;
         }
 
-        // लाइव डेटाबेस सर्च थ्रेड
         const { data, error } = await client
             .from('user_roles')
             .select('full_name, address')
@@ -89,13 +80,11 @@ window.searchKOForMerger = async function() {
 
         const matchUser = data[0];
 
-        // लाइव डेटा डिस्प्ले और बॉक्स विज़िबिलिटी फ़ोर्स करना
         if (lblName) lblName.innerText = matchUser.full_name.toUpperCase();
         if (lblAddress) lblAddress.innerText = matchUser.address || "KIOSK CENTER, INDIA";
         
-        if (vBox) vBox.style.display = 'block'; // display block force करें
+        if (vBox) vBox.style.display = 'block'; 
         
-        // सबमिट बटन को चमकीला और एक्टिव करें
         if (submitBtn) {
             submitBtn.disabled = false;
             submitBtn.style.background = '#7d0022';
@@ -108,7 +97,7 @@ window.searchKOForMerger = async function() {
     }
 };
 
-// 🎯 २. फाइनल मर्जर रिक्वेस्ट डेटाबेस में सबमिट करना (ग्लोबल स्कोप)
+// 🎯 २. फाइनल मर्जर रिक्वेस्ट डेटाबेस में सबमिट करना
 window.submitMergerRequest = async function() {
     try {
         const targetKo = document.getElementById('merger-target-ko').value.trim();
@@ -138,24 +127,26 @@ window.submitMergerRequest = async function() {
     }
 };
 
-// 🎯 ३. करंट मर्जर स्टेटस चेक और UI लॉक मैकेनिज्म (ग्लोबल स्कोप)
-window.checkCurrentMergerStatus = function() {
+// 🎯 ३. करंट मर्जर और इनकमिंग रिक्वेस्ट स्टेटस चेक मैकेनिज्म
+window.checkCurrentMergerStatus = async function() {
     try {
         const alertBox = document.getElementById('merger-status-alert');
         const submitBtn = document.getElementById('btn-submit-merger');
         const searchBtn = document.getElementById('btn-search-merger-ko');
         const inputKo = document.getElementById('merger-target-ko');
 
+        if (!alertBox) return;
+
+        const myKo = window.currentUser?.ko_code || '';
         const status = window.currentUser?.merger_status || 'none';
         const target = window.currentUser?.merger_requested_with || '';
-
-        if (!alertBox) return;
 
         if (status === 'pending') {
             alertBox.style.display = 'block';
             alertBox.style.background = '#fff3cd';
             alertBox.style.color = '#856404';
-            alertBox.innerHTML = `⏳ <strong>Pending Approval:</strong> आपकी KO कोड <b>${target}</b> के साथ मर्ज करने की रिक्वेस्ट सुपर-एडमिन के पास विचाराधीन है।`;
+            alertBox.style.border = '1px solid #ffeeba';
+            alertBox.innerHTML = `⏳ <strong>Pending Outgoing Request:</strong> आपने KO कोड <b>${target}</b> के साथ मर्ज करने की रिक्वेस्ट सुपर-एडमिन के पास भेजी हुई है। अप्रूवल का इंतज़ार है।`;
             
             if (submitBtn) {
                 submitBtn.disabled = true;
@@ -165,7 +156,10 @@ window.checkCurrentMergerStatus = function() {
             }
             if (searchBtn) searchBtn.disabled = true;
             if (inputKo) inputKo.disabled = true;
-        } else if (status === 'merged') {
+            return; 
+        } 
+        
+        if (status === 'merged') {
             alertBox.style.display = 'block';
             alertBox.style.background = '#d4edda';
             alertBox.style.color = '#155724';
@@ -180,13 +174,38 @@ window.checkCurrentMergerStatus = function() {
             }
             if (searchBtn) searchBtn.disabled = true;
             if (inputKo) inputKo.disabled = true;
+            return;
         }
+
+        if (status === 'none' && myKo) {
+            const client = window.supabaseClient || window.supabase;
+
+            const { data: incomingReq, error } = await client
+                .from('user_roles')
+                .select('full_name, ko_code')
+                .eq('merger_requested_with', myKo)
+                .eq('merger_status', 'pending');
+
+            if (!error && incomingReq && incomingReq.length > 0) {
+                const requester = incomingReq[0];
+                
+                alertBox.style.display = 'block';
+                alertBox.style.background = '#cfe2ff';
+                alertBox.style.color = '#084298';
+                alertBox.style.border = '1px solid #b6d4fe';
+                alertBox.innerHTML = `🔔 <strong>Incoming Merger Notification:</strong> ऑपरेटर <b>${requester.full_name.toUpperCase()} (KO Code: ${requester.ko_code})</b> ने आपके काउंटर/प्रिंटर के साथ मर्ज होने की रिक्वेस्ट सुपर-एडमिन को भेजी है।`;
+                return;
+            }
+        }
+
+        alertBox.style.display = 'none';
+
     } catch (err) {
-        console.error("Error in checking merger status UI:", err);
+        console.error("Error in checking two-way merger status UI:", err);
     }
 };
 
-// 🎯 ४. प्रोफाइल अपडेट हैंडलर (ग्लोबल स्कोप)
+// 🎯 ४. प्रोफाइल अपडेट हैंडलर
 window.updateProfileSettings = async function() {
     try {
         const newAddress = document.getElementById('prof-address').value.trim();
