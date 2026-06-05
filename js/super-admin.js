@@ -250,9 +250,14 @@ async function initSuperAdminModule() {
                     <td style="padding: 14px 16px;"><span style="background: #f3f4f6; padding: 4px 8px; border-radius: 4px; font-family: monospace; font-weight:600; color:#374151;">${row.ko_code}</span></td>
                     <td style="padding: 14px 16px;"><span style="background: #fff3cd; color: #856404; padding: 4px 8px; border-radius: 4px; font-family: monospace; font-weight: bold;">👉 ${row.merger_requested_with}</span></td>
                     <td style="padding: 14px 16px;"><span style="color: #fd7e14; font-weight: bold;"><i class="fas fa-spinner fa-spin"></i> Pending Admin</span></td>
-                    <td style="padding: 14px 16px; text-align: center;">
+                    <td style="padding: 14px 16px; text-align: center; display: flex; gap: 8px; justify-content: center; align-items: center;">
+                        <!-- 🟢 Approve Button -->
                         <button type="button" onclick="approveCounterMerger('${row.id}', '${row.ko_code}', '${row.merger_requested_with}')" style="background: #28a745; color: white; border: none; padding: 6px 14px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.85rem; box-shadow: 0 2px 4px rgba(40,167,69,0.2);">
-                            <i class="fas fa-check"></i> Approve Merge
+                            <i class="fas fa-check"></i> Approve
+                        </button>
+                        <!-- 🔴 Live Reject Button added -->
+                        <button type="button" onclick="rejectCounterMerger('${row.id}', '${row.ko_code}')" style="background: #c5221f; color: white; border: none; padding: 6px 14px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.85rem; box-shadow: 0 2px 4px rgba(197,34,31,0.2);">
+                            <i class="fas fa-times"></i> Reject
                         </button>
                     </td>
                 `;
@@ -312,6 +317,35 @@ async function initSuperAdminModule() {
                 } catch (err) {
                     console.error("Critical error during merger approval thread:", err);
                     window.showSystemAlert("मर्जर प्रक्रिया विफल: " + err.message, "Transaction Failure", "❌");
+                }
+            }
+        );
+    };
+
+    // 👑 [JARVIS INTEGRATED]: मर्जर रिक्वेस्ट को लाइव रिजेक्ट करना (डेटाबेस रीसेट इंजन)
+    window.rejectCounterMerger = async function(userId, sourceKo) {
+        window.showSystemConfirm(
+            `क्या आप KO Code [${sourceKo}] की पासबुक प्रिंटर मर्जर रिक्वेस्ट को अस्वीकार (Reject) करना चाहते हैं?`,
+            "Deny Printer Merger",
+            async function() {
+                try {
+                    // डेटाबेस रो को वापस नॉर्मल स्टेट पर रीसेट करें
+                    const { error } = await window.supabaseClient
+                        .from('user_roles')
+                        .update({
+                            merger_status: 'none',
+                            merger_requested_with: null,
+                            printer_group_id: null
+                        })
+                        .eq('id', userId);
+
+                    if (error) throw error;
+
+                    window.showSystemAlert(`❌ KO Code [${sourceKo}] की मर्जर रिक्वेस्ट को रिजेक्ट कर दिया गया है और उनका काउंटर वापस रीसेट हो गया है।`, "Merger Rejected", "⚠️");
+                    window.loadPendingMergerRequests();
+                } catch (err) {
+                    console.error("Critical error during merger rejection thread:", err);
+                    window.showSystemAlert("मर्जर रिजेक्शन विफल: " + err.message, "Transaction Failure", "❌");
                 }
             }
         );
