@@ -1,5 +1,5 @@
 // ========================================================
-// 🖨️ DOT-MATRIX PLQ-20 STYLE A4 LINE-BY-LINE PRINT ENGINE (WITH KEYBOARD SHORTCUTS FOR TIMER)
+// 🖨️ DOT-MATRIX PLQ-20 STYLE A4 LINE-BY-LINE PRINT ENGINE
 // ========================================================
 
 window.executeWithdrawalPassbookPrint = function(encodedTx, srNo) {
@@ -49,9 +49,6 @@ window.executeWithdrawalPassbookPrint = function(encodedTx, srNo) {
             printFrame.style.border = 'none';
             document.body.appendChild(printFrame);
         }
-
-        const frameDoc = printFrame.contentWindow || printFrame.contentDocument;
-        const doc = frameDoc.document || frameDoc;
 
         // PLQ-20 के लिए संकीर्ण (Narrow Margin) और वर्टिकली स्ट्रेच्ड HTML लेआउट
         let htmlContent = `
@@ -125,7 +122,6 @@ window.executeWithdrawalPassbookPrint = function(encodedTx, srNo) {
                     <tr>
                         <td style="width: 8%; text-align:center; font-weight:bold;">${srNo}</td>
                         <td style="width: 12%;">${koCode}</td>
-                        <!-- 🎯 यहाँ फ़िक्स किया गया है: अब असली आधार नंबर लाइव प्रिंट होगा -->
                         <td style="width: 22%; letter-spacing: 0.5px;">${txData.aadhaar_number}</td>
                         <td style="width: 25%; text-transform: uppercase; white-space: nowrap; overflow: hidden;">${txData.customer_name}</td>
                         <td style="width: 15%; font-weight: bold;">₹${parseFloat(txData.amount).toFixed(2)}</td>
@@ -143,17 +139,23 @@ window.executeWithdrawalPassbookPrint = function(encodedTx, srNo) {
         </html>
         `;
 
-        doc.open();
-        doc.write(htmlContent);
-        doc.close();
+        // 🌟 [VIOLATION FIX]: document.write() को हटाकर आधुनिक srcdoc का उपयोग किया
+        printFrame.srcdoc = htmlContent;
 
-        setTimeout(() => {
-            printFrame.contentWindow.focus();
-            printFrame.contentWindow.print();
-            
-            // 5. प्रिंट खत्म होते ही कीबोर्ड-शॉर्टकट वाले प्रॉम्ट को चालू करें
-            launchPassbookVerificationFlow(lastPrintedLine, todayDate, currentPageNo);
-        }, 200);
+        // प्रिंट ट्रिगर और टाइमर सिंक्रोनाइजेशन
+        printFrame.onload = function() {
+            try {
+                printFrame.contentWindow.focus();
+                printFrame.contentWindow.print();
+                
+                // प्रिंट प्रीव्यू क्लोज होते ही टाइमर मोडल स्क्रीन पर लाइव होगा
+                setTimeout(() => {
+                    launchPassbookVerificationFlow(lastPrintedLine, todayDate, currentPageNo);
+                }, 100);
+            } catch (printErr) {
+                console.error("Internal Iframe Print Error:", printErr);
+            }
+        };
 
     } catch (err) {
         console.error("Passbook Print System Failure:", err);
@@ -177,7 +179,7 @@ function launchPassbookVerificationFlow(currentLine, todayDate, currentPageNo) {
         window.removeEventListener('keydown', handleTimerKey, { capture: true }); // LSN क्लीन
         const modal = document.getElementById('custom-prompt-modal');
         if (modal) modal.style.display = 'none';
-        window.showSystemAlert("⚠️ अगली बार प्रिंट करने पर यह दोबारा इसी लाइन पर छपेगा।", "Line Retained", "⚠️");
+        window.showSystemAlert("⚠️ अगली बार प्रिंट करने पर यह दोबारा इसी line पर छपेगा।", "Line Retained", "⚠️");
     };
 
     // हमारे कस्टमाइज्ड सिस्टम कन्फर्म को कॉल करें
@@ -185,7 +187,6 @@ function launchPassbookVerificationFlow(currentLine, todayDate, currentPageNo) {
         `क्या विथड्रॉल प्रविष्टि पासबुक पेज पर सही जगह और साफ़ प्रिंट हो गई है?\n\n(यदि आप कुछ नहीं चुनते, तो ${timerDuration} सेकंड में यह स्वतः 'YES' मान लिया जाएगा)`, 
         "Print Alignment Verification", 
         function() {
-            // यह तब चलता है जब यूजर 'Yes' बटन पर माउस क्लिक करता है
             executeYesAction();
         }
     );
@@ -215,11 +216,21 @@ function launchPassbookVerificationFlow(currentLine, todayDate, currentPageNo) {
         }
     }, 1000);
 
-    // माउस क्लिक इवेंट्स के लिए टाइमर ओवरराइड्स
-    submitBtn.onclick = executeYesAction;
-    cancelBtn.onclick = executeNoAction;
+    // 🌟 [CONVERGENCE FIX]: पुराने बबल्ड क्लिक इवेंट्स को ओवरराइड करके फ़्रीज़ होना ठीक किया गया
+    if (submitBtn) {
+        submitBtn.onclick = function(e) {
+            e.preventDefault();
+            executeYesAction();
+        };
+    }
+    if (cancelBtn) {
+        cancelBtn.onclick = function(e) {
+            e.preventDefault();
+            executeNoAction();
+        };
+    }
 
-    // ⌨️ 🌟 [JARVIS TIMER SHORTCUTS]: Enter और Escape की (Key) इंटरसेप्शन लॉजिक
+    // ⌨️ [JARVIS TIMER SHORTCUTS]: Enter और Escape कीबोर्ड हुक्स
     function handleTimerKey(e) {
         const modal = document.getElementById('custom-prompt-modal');
         if (modal && modal.style.display === 'flex') {
@@ -227,12 +238,12 @@ function launchPassbookVerificationFlow(currentLine, todayDate, currentPageNo) {
                 e.preventDefault();
                 e.stopPropagation();
                 modal.style.display = 'none';
-                executeYesAction(); // Enter से "Yes, Clear Line"
+                executeYesAction(); 
             }
             if (e.key === 'Escape' || e.key === 'Esc') {
                 e.preventDefault();
                 e.stopPropagation();
-                executeNoAction(); // Escape से Cancel और रो रिटेन
+                executeNoAction(); 
             }
         }
     }
