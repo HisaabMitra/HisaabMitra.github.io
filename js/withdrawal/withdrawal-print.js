@@ -1,18 +1,20 @@
 // ========================================================
-// 🖨️ 🌐 CLOUD-SYNC MASTER PASBOOK PRINT ENGINE (JARVIS MULTI-USER SYNC ENABLED)
+// 🖨️ 🌐 CLOUD-SYNC MASTER PASBOOK PRINT ENGINE (PRODUCTION READY)
 // ========================================================
 
 window.executeWithdrawalPassbookPrint = async function(encodedTx, srNo) {
     try {
         const txData = JSON.parse(atob(encodedTx));
-        console.log("🖨️ Cloud-Matrix Engine Triggered for SrNo:", srNo, txData);
 
         const koCode = window.currentUser?.ko_code || "--";
         const userAddress = window.currentUser?.address || "KIOSK CENTER, INDIA";
         const todayDate = new Date().toISOString().split('T')[0];
         const client = window.supabaseClient || window.supabase;
 
-        // 🌟 [JARVIS CLOUD ROUTER LOGIC]: चेक करें कि क्या यह यूजर किसी प्रिंटर ग्रुप में मर्ज है
+        // 🌟 [LOCAL STORAGE MAPPER]: सेटिंग्स से सेव किया हुआ मैन्युअल पासबुक प्रिंटर का नाम निकालें
+        const targetPassbookPrinter = localStorage.getItem('jarvis_default_withdrawal_printer') || "Passbook_Print";
+
+        // [JARVIS CLOUD ROUTER LOGIC]: चेक करें कि क्या यह यूजर किसी प्रिंटर ग्रुप में मर्ज है
         const isMergedUser = window.currentUser?.merger_status === 'merged' && window.currentUser?.printer_group_id;
         const sharedGroupId = window.currentUser?.printer_group_id || null;
 
@@ -21,9 +23,6 @@ window.executeWithdrawalPassbookPrint = async function(encodedTx, srNo) {
         let lastPrintedDate = todayDate;
 
         if (isMergedUser) {
-            console.log(`🌐 Multi-User Sync Active! Querying Cloud Printer Group: ${sharedGroupId}`);
-            
-            // १. सुप्राबेस से लाइव साझा प्रिंटर ग्रुप की कतार स्थिति डाउनलोड करें
             const { data: cloudGroup, error: fetchErr } = await client
                 .from('shared_printer_groups')
                 .select('*')
@@ -38,14 +37,11 @@ window.executeWithdrawalPassbookPrint = async function(encodedTx, srNo) {
                 lastPrintedDate = cloudGroup.last_printed_date || todayDate;
             }
         } else {
-            console.log("💻 Standard Single Mode Active. Loading locally from localStorage...");
-            // अगर यूजर मर्ज नहीं है, तो डिफ़ॉल्ट लोकल स्टोरेज से काम चलाएं
             lastPrintedLine = parseInt(localStorage.getItem('passbook_last_line')) || 0;
             currentPageNo = parseInt(localStorage.getItem('passbook_page_counter')) || 1;
             lastPrintedDate = localStorage.getItem('passbook_last_date') || "";
         }
 
-        // तारीख बदलने पर लाइव पेज काउंटर रीसेट नियम
         let forceHeaderReprint = false;
         if (lastPrintedDate !== todayDate) {
             forceHeaderReprint = true;
@@ -53,16 +49,13 @@ window.executeWithdrawalPassbookPrint = async function(encodedTx, srNo) {
             if (lastPrintedLine >= 15) lastPrintedLine = 0;
         }
 
-        // १५ कतारों को पूरे पृष्ठ पर फैलाने हेतु ५२ पिक्सल हाइट नियत है
         const rowHeight = 52;         
         const baseHeaderOffset = 130;  
         const dynamicTopMargin = baseHeaderOffset + (lastPrintedLine * rowHeight);
 
-        // तारीख को DD-MM-YYYY फॉर्मेट दें
         const dateParts = todayDate.split('-');
         const displayDate = `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`;
 
-        // प्रिंटर हेतु छुपा हुआ Iframe तैयार करें
         let printFrame = document.getElementById('matrix-print-iframe');
         if (!printFrame) {
             printFrame = document.createElement('iframe');
@@ -81,6 +74,8 @@ window.executeWithdrawalPassbookPrint = async function(encodedTx, srNo) {
         <html>
         <head>
             <meta charset="UTF-8">
+            <!-- 🎯 विंडोज़ डायरेक्ट रूटिंग लॉक: टाइटल टैग को सीधे आपके सेव किए गए पासबुक प्रिंटर के नाम पर सेट किया गया है -->
+            <title>${targetPassbookPrinter}</title>
             <style>
                 @page { size: A4 portrait; margin: 8mm 6mm; }
                 body {
@@ -161,7 +156,6 @@ window.executeWithdrawalPassbookPrint = async function(encodedTx, srNo) {
                 printFrame.contentWindow.print();
                 
                 setTimeout(() => {
-                    // सिंक पैरामीटर्स के साथ टाइमर प्रॉम्ट चालू करें
                     launchPassbookVerificationFlow(lastPrintedLine, todayDate, currentPageNo, isMergedUser, sharedGroupId);
                 }, 100);
             } catch (printErr) {
@@ -185,7 +179,6 @@ function launchPassbookVerificationFlow(currentLine, todayDate, currentPageNo, i
         const modal = document.getElementById('custom-prompt-modal');
         if (modal) modal.style.display = 'none';
 
-        // लाइन पेंटर पॉइंटर को आगे बढाएं
         saveNextPassbookLinePointer(currentLine + 1, todayDate, currentPageNo, isMergedUser, sharedGroupId);
     };
 
@@ -196,14 +189,18 @@ function launchPassbookVerificationFlow(currentLine, todayDate, currentPageNo, i
         const modal = document.getElementById('custom-prompt-modal');
         if (modal) modal.style.display = 'none';
         
-        window.showSystemAlert("⚠️ अगली बार प्रिंट करने पर यह दोबारा इसी लाइन पर छपेगा।", "Line Retained", "⚠️");
+        if (window.showSystemAlert) {
+            window.showSystemAlert("⚠️ अगली बार प्रिंट करने पर यह दोबारा इसी लाइन पर छपेगा।", "Line Retained", "⚠️");
+        }
     };
 
-    window.showSystemConfirm(
-        `क्या विथड्रॉल प्रविष्टि पासबुक पेज पर सही जगह और साफ़ प्रिंट हो गई है?\n\n(यदि आप कुछ नहीं चुनते, तो ${timerDuration} सेकंड में यह स्वतः 'YES' मान लिया जाएगा)`, 
-        "Print Alignment Verification", 
-        function() { executeYesAction(); }
-    );
+    if (window.showSystemConfirm) {
+        window.showSystemConfirm(
+            `क्या विथड्रॉल प्रविष्टि पासबुक पेज पर सही जगह और साफ़ प्रिंट हो गई है?\n\n(यदि आप कुछ नहीं चुनते, तो ${timerDuration} सेकंड में यह स्वतः 'YES' मान लिया जाएगा)`, 
+            "Print Alignment Verification", 
+            function() { executeYesAction(); }
+        );
+    }
 
     const submitBtn = document.getElementById('custom-prompt-submit-btn');
     const cancelBtn = document.getElementById('custom-prompt-cancel-btn');
@@ -217,7 +214,9 @@ function launchPassbookVerificationFlow(currentLine, todayDate, currentPageNo, i
 
         if (timerDuration <= 0) {
             executeYesAction();
-            window.showSystemAlert("समय समाप्त! लाइन आगे बढ़ा दी गई है।", "Auto Acknowledged", "✅");
+            if (window.showSystemAlert) {
+                window.showSystemAlert("समय समाप्त! लाइन आगे बढ़ा दी गई है।", "Auto Acknowledged", "✅");
+            }
         }
     }, 1000);
 
@@ -246,11 +245,12 @@ async function saveNextPassbookLinePointer(nextLine, todayDate, currentPageNo, i
     if (nextLine >= 15) {
         nextPointerLine = 0;
         nextPageCounter = currentPageNo + 1;
-        window.showSystemAlert(`📄 इस पेज की सभी 15 कतारें भर चुकी हैं!\n\nअगला प्रिंट 'Page No: ${nextPageCounter}' के नए फ्रेश A4 पेज पर शुरू होगा। कृपया नया पेज लगाएं।`, "Page Full", "ℹ️");
+        if (window.showSystemAlert) {
+            window.showSystemAlert(`📄 इस पेज की सभी 15 कतारें भर चुकी हैं!\n\nअगला प्रिंट 'Page No: ${nextPageCounter}' के नए फ्रेश A4 पेज पर शुरू होगा। कृपया नया पेज लगाएं।`, "Page Full", "ℹ️");
+        }
     }
 
     if (isMergedUser && sharedGroupId) {
-        // 🌐 क्लाउड सिंकिंग एक्टिवेट करें: डेटाबेस में रिकॉर्ड अपडेट करें
         const client = window.supabaseClient || window.supabase;
         try {
             const { error } = await client
@@ -264,12 +264,10 @@ async function saveNextPassbookLinePointer(nextLine, todayDate, currentPageNo, i
                 .eq('group_id', sharedGroupId);
 
             if (error) throw error;
-            console.log(`📡 Cloud Row Height Locked successfully for group ${sharedGroupId} on Line: ${nextPointerLine}`);
         } catch (dbErr) {
             console.error("Failed to sync print coordinates to cloud ledger:", dbErr);
         }
     } else {
-        // 💻 सिंगल यूजर मोड: पुराने लोकल स्टोरेज में सेव करें
         localStorage.setItem('passbook_last_line', nextPointerLine);
         localStorage.setItem('passbook_page_counter', nextPageCounter);
         localStorage.setItem('passbook_last_date', todayDate);
