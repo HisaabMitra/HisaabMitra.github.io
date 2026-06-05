@@ -153,7 +153,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (pageName === 'search' && typeof initSearchModule === 'function') initSearchModule();
         if (pageName === 'super-admin' && typeof initSuperAdminModule === 'function') initSuperAdminModule();
+    
+
+
+    if (pageName === 'settings') {
+            if (typeof window.initJarvisSettingsEngine === 'function') {
+                window.initJarvisSettingsEngine();
+            } else {
+                console.error("❌ initJarvisSettingsEngine function missing in settings.js scope!");
+            }
+        }
     }
+                          
     
     if (logoutBtn) {
         logoutBtn.addEventListener('click', () => {
