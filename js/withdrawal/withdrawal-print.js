@@ -65,7 +65,7 @@ window.executeWithdrawalPassbookPrint = function(encodedTx, srNo) {
                     margin: 0;
                     padding: 0;
                     font-family: 'Courier New', Courier, monospace;
-                    font-size: 12px;
+                    font-size: 14px;
                     line-height: 1.2;
                     color: #000;
                 }
@@ -74,9 +74,9 @@ window.executeWithdrawalPassbookPrint = function(encodedTx, srNo) {
                     width: 100%;
                     margin-bottom: 5px;
                 }
-                .header-title { font-size: 16px; font-weight: bold; text-transform: uppercase; }
-                .header-address { font-size: 10px; text-transform: uppercase; margin-top: 1px; }
-                .meta-line { font-size: 11px; font-weight: bold; text-align: center; margin: 4px 0; }
+                .header-title { font-size: 18px; font-weight: bold; text-transform: uppercase; }
+                .header-address { font-size: 12px; text-transform: uppercase; margin-top: 1px; }
+                .meta-line { font-size: 14px; font-weight: bold; text-align: center; margin: 4px 0; }
                 .matrix-table { width: 100%; border-collapse: collapse; margin-top: 2px; }
                 .matrix-table th {
                     border-bottom: 1px dashed #000;
@@ -84,7 +84,7 @@ window.executeWithdrawalPassbookPrint = function(encodedTx, srNo) {
                     padding: 6px 2px;
                     text-align: left;
                     font-weight: bold;
-                    font-size: 11px;
+                    font-size: 14px;
                 }
                 .matrix-table td { padding: 12px 2px; font-size: 11px; }
                 .sig-line { width: 85px; border-bottom: 1px dashed #000; display: inline-block; height: 12px; }
@@ -176,7 +176,7 @@ function launchPassbookVerificationFlow(currentLine, todayDate, currentPageNo) {
         window.removeEventListener('keydown', handleTimerKey, { capture: true }); // LSN क्लीन
         const modal = document.getElementById('custom-prompt-modal');
         if (modal) modal.style.display = 'none';
-        window.showSystemAlert("⚠️ संरेखण (Alignment) निरस्त! अगली बार प्रिंट करने पर यह दोबारा इसी लाइन पर छपेगा।", "Line Retained", "⚠️");
+        window.showSystemAlert("⚠️ अगली बार प्रिंट करने पर यह दोबारा इसी लाइन पर छपेगा।", "Line Retained", "⚠️");
     };
 
     // हमारे कस्टमाइज्ड सिस्टम कन्फर्म को कॉल करें
@@ -209,7 +209,7 @@ function launchPassbookVerificationFlow(currentLine, todayDate, currentPageNo) {
             if (modal && modal.style.display === 'flex') {
                 modal.style.display = 'none';
                 saveNextPassbookLinePointer(currentLine + 1, todayDate, currentPageNo);
-                window.showSystemAlert("समय समाप्त! एंट्री को सफल मानकर कतार लाइन आगे बढ़ा दी गई है।", "Auto Acknowledged", "✅");
+                window.showSystemAlert("समय समाप्त! लाइन आगे बढ़ा दी गई है।", "Auto Acknowledged", "✅");
             }
         }
     }, 1000);
@@ -244,7 +244,7 @@ function saveNextPassbookLinePointer(nextLine, todayDate, currentPageNo) {
     if (nextLine >= 15) {
         localStorage.setItem('passbook_last_line', 0);
         localStorage.setItem('passbook_page_counter', currentPageNo + 1);
-        window.showSystemAlert(`📄 इस पेज की सभी 15 कतारें भर चुकी हैं!\n\nअगला प्रिंट 'Page No: ${currentPageNo + 1}' के नए फ्रेश A4 पेज पर शुरू होगा। कृपया नया पेज लगाएं।`, "Page Full", "ℹ️");
+        window.showSystemAlert(`📄 इस पेज की सभी 15 कतारें भर चुकी हैं!\n\nअगला प्रिंट 'Page No: ${currentPageNo + 1}' पर शुरू होगा। कृपया नया पेज लगाएं।`, "Page Full", "ℹ️");
     } else {
         localStorage.setItem('passbook_last_line', nextLine);
     }
