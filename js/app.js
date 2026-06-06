@@ -152,6 +152,16 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
+        // 💸 FUND TRANSFER GATEWAY MODULAR ROUTER HOOK
+        if (pageName === 'fundtransfer') {
+            if (typeof window.initFundTransferPage === 'function') {
+                console.log("💸 Triggering Jarvis Fund Transfer Engine...");
+                window.initFundTransferPage(currentLoggedInUser);
+            } else {
+                console.error("❌ initFundTransferPage function missing in fundtransfer.js scope!");
+            }
+        }
+
         if (pageName === 'search' && typeof initSearchModule === 'function') initSearchModule();
         if (pageName === 'super-admin' && typeof initSuperAdminModule === 'function') initSuperAdminModule();
         
