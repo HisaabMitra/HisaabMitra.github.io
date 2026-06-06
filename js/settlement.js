@@ -102,7 +102,7 @@ window.initSettlementPage = async function(currentUser) {
     attachWordTranslator(depAmountInput, depWords);
     attachWordTranslator(witAmountInput, witWords);
 
-    // 🚀 [DEPOSIT ROUTINE]: Settle Balance (+), Counter Cash Notes (-)
+    // 🚀 [DEPOSIT ROUTINE]
     const btnDepSave = document.getElementById('btn-settle-dep-save');
     if (btnDepSave) {
         btnDepSave.onclick = async function() {
@@ -120,7 +120,7 @@ window.initSettlementPage = async function(currentUser) {
 
             try {
                 btnDepSave.disabled = true;
-                btnDepSave.innerText = "Processing Data Sync...";
+                btnDepSave.innerText = "सहेज रहे हैं...";
 
                 const { data: liveUser } = await window.supabaseClient.from('user_roles').select('*').eq('ko_code', currentUser.ko_code).maybeSingle();
                 const computedNewBalance = (parseFloat(liveUser.settlement_balance) || 0) + amount;
@@ -141,10 +141,10 @@ window.initSettlementPage = async function(currentUser) {
                     amount: amount,
                     previous_balance: parseFloat(liveUser.settlement_balance) || 0,
                     new_balance: computedNewBalance,
-                    narration: "Settlement Account Deposit: Settle Plus (+), Counter Cash Out (-)"
+                    narration: "Settlement Account Deposit"
                 }]);
 
-                window.showSystemAlert(`₹${amount.toFixed(2)} सेटलमेंट खाते में जोड़े गए, और काउंटर डिनॉमिनेशन से नोट माइनस कर दिए गए हैं।`, "Deposit Complete", "✅");
+                window.showSystemAlert(`₹${amount.toFixed(2)} सफलतापूर्वक सेटलमेंट खाते में जोड़े गए।`, "सफलता", "✅");
                 depAmountInput.value = "";
                 if (depWords) depWords.innerText = "Zero Rupees Only";
                 await syncLiveSettlementVault();
@@ -152,7 +152,7 @@ window.initSettlementPage = async function(currentUser) {
 
             } catch (err) {
                 console.error(err);
-                window.showSystemAlert("डेटाबेस अपडेट विफलता।", "Error", "❌");
+                window.showSystemAlert("डेटाबेस अपडेट विफल हुआ।", "त्रुटि", "❌");
             } finally {
                 btnDepSave.disabled = false;
                 btnDepSave.innerText = "📥 Process Bank Deposit";
@@ -160,7 +160,7 @@ window.initSettlementPage = async function(currentUser) {
         };
     }
 
-    // 🚀 [WITHDRAWAL ROUTINE]: Settle Balance (-), Counter Cash Notes (+)
+    // 🚀 [WITHDRAWAL ROUTINE]
     const btnWitSave = document.getElementById('btn-settle-wit-save');
     if (btnWitSave) {
         btnWitSave.onclick = async function() {
@@ -178,7 +178,7 @@ window.initSettlementPage = async function(currentUser) {
 
             try {
                 btnWitSave.disabled = true;
-                btnWitSave.innerText = "Processing Data Sync...";
+                btnWitSave.innerText = "सहेज रहे हैं...";
 
                 const { data: liveUser } = await window.supabaseClient.from('user_roles').select('*').eq('ko_code', currentUser.ko_code).maybeSingle();
                 const dbSettleBal = parseFloat(liveUser.settlement_balance) || 0;
@@ -206,10 +206,10 @@ window.initSettlementPage = async function(currentUser) {
                     amount: amount,
                     previous_balance: dbSettleBal,
                     new_balance: computedNewBalance,
-                    narration: "Settlement Account Withdrawal: Settle Minus (-), Counter Cash In (+)"
+                    narration: "Settlement Account Withdrawal"
                 }]);
 
-                window.showSystemAlert(`₹${amount.toFixed(2)} सेटलमेंट खाते से काटे गए, और काउंटर डिनॉमिनेशन में नोट प्लस कर दिए गए हैं।`, "Withdrawal Complete", "✅");
+                window.showSystemAlert(`₹${amount.toFixed(2)} सेटलमेंट खाते से काट कर काउंटर पर जोड़ दिए गए हैं।`, "सफलता", "✅");
                 witAmountInput.value = "";
                 if (witWords) witWords.innerText = "Zero Rupees Only";
                 await syncLiveSettlementVault();
@@ -217,7 +217,7 @@ window.initSettlementPage = async function(currentUser) {
 
             } catch (err) {
                 console.error(err);
-                window.showSystemAlert("डेटाबेस अपडेट विफलता।", "Error", "❌");
+                window.showSystemAlert("डेटाबेस अपडेट विफल हुआ।", "त्रुटि", "❌");
             } finally {
                 btnWitSave.disabled = false;
                 btnWitSave.innerText = "📤 Process Bank Withdrawal";
@@ -225,7 +225,7 @@ window.initSettlementPage = async function(currentUser) {
         };
     }
 
-    // 🚀 [CONTRA ROUTINE]: LIVE DIRECT CREDIT/DEBIT MUTATION ENGINE 
+    // 🚀 [CONTRA ROUTINE]
     const btnContraSave = document.getElementById('btn-settle-contra-save');
     if (btnContraSave) {
         btnContraSave.onclick = async function() {
@@ -239,26 +239,23 @@ window.initSettlementPage = async function(currentUser) {
 
             try {
                 btnContraSave.disabled = true;
-                btnContraSave.innerText = "Processing Direct Mutation...";
+                btnContraSave.innerText = "सहेज रहे हैं...";
 
-                // Fetch current absolute live balance snapshot from database
                 const { data: liveUser } = await window.supabaseClient.from('user_roles').select('settlement_balance').eq('ko_code', currentUser.ko_code).maybeSingle();
                 const currentDBBal = parseFloat(liveUser.settlement_balance) || 0;
 
                 let computedNewBalance = currentDBBal;
 
-                // 🌟 ATOMIC LOGIC MAP: Evaluate mutation type rules
                 if (type === 'credit') {
-                    computedNewBalance = currentDBBal + amount; // Pure Credit Addition
+                    computedNewBalance = currentDBBal + amount;
                 } else if (type === 'debit') {
                     if (amount > currentDBBal) {
                         window.showSystemAlert("इस डेबिट के लिए सेटलमेंट खाते में पर्याप्त राशि नहीं है!", "Insufficient Capital", "⚠️");
                         return;
                     }
-                    computedNewBalance = currentDBBal - amount; // Pure Debit Subtraction
+                    computedNewBalance = currentDBBal - amount;
                 }
 
-                // 💾 Update database right away
                 const { error: updateError } = await window.supabaseClient
                     .from('user_roles')
                     .update({ settlement_balance: computedNewBalance })
@@ -266,23 +263,22 @@ window.initSettlementPage = async function(currentUser) {
 
                 if (updateError) throw updateError;
 
-                // Log entry directly into audit ledger logs table
                 await window.supabaseClient.from('settlement_logs').insert([{
                     ko_code: currentUser.ko_code,
                     transaction_type: 'CONTRA',
                     amount: amount,
                     previous_balance: currentDBBal,
                     new_balance: computedNewBalance,
-                    narration: `Direct Contra Adjustment: Balance Successfully ${type.toUpperCase() + 'ED'}`
+                    narration: `Direct Contra ${type.toUpperCase()}`
                 }]);
 
-                window.showSystemAlert(`₹${amount.toFixed(2)} का डायरेक्ट कॉन्ट्रा ${type === 'credit' ? 'क्रेडिट' : 'डेबिट'} सफलतापूर्वक पूरा हुआ।`, "Contra Applied", "✅");
+                window.showSystemAlert(`₹${amount.toFixed(2)} का डायरेक्ट कॉन्ट्रा समायोजन सफलतापूर्वक पूरा हुआ।`, "सफलता", "✅");
                 contraAmountInput.value = "";
                 await syncLiveSettlementVault();
 
             } catch (err) {
                 console.error("Critical Contra direct balance fault:", err);
-                window.showSystemAlert("कॉन्ट्रा बैलेंस म्यूटेशन फेल हुआ।", "Error", "❌");
+                window.showSystemAlert("कॉन्ट्रा अपडेट विफल हुआ।", "त्रुटि", "❌");
             } finally {
                 btnContraSave.disabled = false;
                 btnContraSave.innerText = "🔄 Execute Contra Adjustment";
