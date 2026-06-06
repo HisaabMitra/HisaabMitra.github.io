@@ -48,7 +48,7 @@ window.savePrinterPreferences = function() {
         localStorage.setItem('jarvis_default_withdrawal_printer', withdrawalPrinterName);
 
         if (window.showSystemAlert) {
-            window.showSystemAlert("🖨️ आपकी प्रिंटर प्राथमिकताएं सफलतापूर्वक सुरक्षित कर ली गई हैं!", "Saved Successfully", "✅");
+            window.showSystemAlert("🖨️ आपकी PRINT प्राथमिकताएं सफलतापूर्वक सुरक्षित कर ली गई हैं!", "Saved Successfully", "✅");
         }
     } catch (err) {
         console.error("Failed to save printer preferences:", err);
