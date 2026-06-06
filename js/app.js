@@ -175,14 +175,19 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-
-            if (pageName === 'settlement') {
+        // 🏦 SETTLEMENT GATEWAY MATRIX CHECK
+        if (pageName === 'settlement') {
             if (typeof window.initSettlementPage === 'function') {
-            console.log("🏢 Triggering Jarvis Settlement Engine...");
+                console.log("🏦 Triggering Jarvis Settlement Engine...");
                 window.initSettlementPage(currentLoggedInUser);
             } else {
-        console.error("❌ initSettlementPage function missing in settlement.js scope!");
+                console.error("❌ initSettlementPage function missing in settlement.js scope!");
             }
+        }
+        
+        // ⚡ SAFETY FALLBACK FOR UNBUILT PARTS (IMPS, REPORTS, EXPENSES)
+        if (['imps', 'report', 'expense'].includes(pageName)) {
+            console.log(`ℹ️ Module ${pageName} mounted in workspace DOM container.`);
         }
     }
                         
