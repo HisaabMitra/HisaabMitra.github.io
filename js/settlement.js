@@ -53,18 +53,22 @@ window.initSettlementPage = async function(currentUser) {
         }
     }
 
-    // 🔄 [TAB PANEL SWAPPER ROUTINE]
+    // 🔄 [UPDATED VERTICAL TAB PANEL SWAPPER ROUTINE]
     optButtons.forEach(btn => {
         btn.addEventListener('click', (e) => {
             const targetPanel = btn.getAttribute('data-panel');
 
+            // Set Premium Left Sidebar active state styles
             optButtons.forEach(b => {
                 b.style.background = '#ffffff';
                 b.style.color = '#495057';
+                b.style.border = '1px solid #ced4da';
             });
             btn.style.background = targetPanel === 'withdrawal' ? '#27ae60' : (targetPanel === 'contra' ? '#343a40' : '#7d0022');
             btn.style.color = '#ffffff';
+            btn.style.border = 'none';
 
+            // Toggle active panels viewport display
             panels.forEach(p => p.style.display = 'none');
             const targetElement = document.getElementById(`panel-settle-${targetPanel}`);
             if (targetElement) targetElement.style.display = 'block';
@@ -102,7 +106,7 @@ window.initSettlementPage = async function(currentUser) {
     attachWordTranslator(depAmountInput, depWords);
     attachWordTranslator(witAmountInput, witWords);
 
-    // 🚀 [DEPOSIT ROUTINE]
+    // 🚀 [DEPOSIT ROUTINE]: Settle Balance (+), Counter Cash Notes (-)
     const btnDepSave = document.getElementById('btn-settle-dep-save');
     if (btnDepSave) {
         btnDepSave.onclick = async function() {
@@ -155,12 +159,12 @@ window.initSettlementPage = async function(currentUser) {
                 window.showSystemAlert("डेटाबेस अपडेट विफल हुआ।", "त्रुटि", "❌");
             } finally {
                 btnDepSave.disabled = false;
-                btnDepSave.innerText = "📥 Process Bank Deposit";
+                btnDepSave.innerText = "📥 Save Bank Deposit";
             }
         };
     }
 
-    // 🚀 [WITHDRAWAL ROUTINE]
+    // 🚀 [WITHDRAWAL ROUTINE]: Settle Balance (-), Counter Cash Notes (+)
     const btnWitSave = document.getElementById('btn-settle-wit-save');
     if (btnWitSave) {
         btnWitSave.onclick = async function() {
@@ -220,7 +224,7 @@ window.initSettlementPage = async function(currentUser) {
                 window.showSystemAlert("डेटाबेस अपडेट विफल हुआ।", "त्रुटि", "❌");
             } finally {
                 btnWitSave.disabled = false;
-                btnWitSave.innerText = "📤 Process Bank Withdrawal";
+                btnWitSave.innerText = "📤 Save Bank Withdrawal";
             }
         };
     }
