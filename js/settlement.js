@@ -1,4 +1,4 @@
-// =======================================================
+// ========================================================
 // 🏢 VAULT ENGINE: REAL-TIME SETTLEMENT & CAPITAL RECONCILIATION
 // ========================================================
 
@@ -24,7 +24,6 @@ window.initSettlementPage = async function(currentUser) {
 
     // Global Vault State Cache Variables
     let currentSettlementBalance = 0;
-    // user_roles schema mapping ke hisab se currentUser.settlement_account check kiya
     let currentSettlementAccountNo = currentUser?.settlement_account || "NOT_CONFIGURED";
 
     // Inject User Bank Details into Top Header Dashboard
@@ -34,7 +33,6 @@ window.initSettlementPage = async function(currentUser) {
         // 💳 [VAULT UTILITY]: Live Bank Ledger Sync from user_roles Table
         async function syncLiveSettlementVault() {
             try {
-                // 🌟 FIX: kiosk_users ki jagah user_roles use kiya aur settlement_account_no ki jagah settlement_account
                 const { data, error } = await window.supabaseClient
                     .from('user_roles')
                     .select('settlement_balance, settlement_account')
@@ -50,7 +48,6 @@ window.initSettlementPage = async function(currentUser) {
                     if (lblBalance) lblBalance.innerText = `₹${currentSettlementBalance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
                     if (lblAccNo) lblAccNo.innerText = currentSettlementAccountNo;
                     
-                    // Global memory session state ko bhi refresh karein
                     if (window.currentUser) {
                         window.currentUser.settlement_balance = currentSettlementBalance;
                         window.currentUser.settlement_account = currentSettlementAccountNo;
@@ -66,7 +63,6 @@ window.initSettlementPage = async function(currentUser) {
             btn.addEventListener('click', (e) => {
                 const targetPanel = btn.getAttribute('data-panel');
 
-                // Toggle Button styling
                 optButtons.forEach(b => {
                     b.style.background = '#ffffff';
                     b.style.color = '#495057';
@@ -74,12 +70,10 @@ window.initSettlementPage = async function(currentUser) {
                 btn.style.background = targetPanel === 'withdrawal' ? '#27ae60' : (targetPanel === 'contra' ? '#343a40' : '#7d0022');
                 btn.style.color = '#ffffff';
 
-                // Toggle Panels active states
                 panels.forEach(p => p.style.display = 'none');
                 const targetElement = document.getElementById(`panel-settle-${targetPanel}`);
                 if (targetElement) targetElement.style.display = 'block';
 
-                // Dynamic Denomination Mounting Logic based on active context
                 mountDenominationForPanel(targetPanel);
             });
         });
@@ -91,15 +85,12 @@ window.initSettlementPage = async function(currentUser) {
                 return;
             }
 
-            // Clear any active instances running in standard viewport
             window.WitDenominationComponent.clear();
 
             if (panelType === 'deposit') {
-                // DEPOSIT MODE: Counter Cash OUT Flow setup
                 window.WitDenominationComponent.render('settle-deposit-denom-container');
                 updateDenominationHeaderLabel("📥 Cash Out Counter Matrix");
             } else if (panelType === 'withdrawal') {
-                // WITHDRAWAL MODE: Counter Cash IN Flow setup
                 window.WitDenominationComponent.render('settle-withdrawal-denom-container');
                 updateDenominationHeaderLabel("📤 Cash In Counter Matrix");
             }
@@ -143,10 +134,15 @@ window.initSettlementPage = async function(currentUser) {
                     return;
                 }
 
-                // Verify denomination tally against input box amount
-                const denoTotal = window.WitDenominationComponent ? window.WitDenominationComponent.getTotalAmount() : amount;
+                // 🌟 FIX: getTotalAmount() hatakar seedha display field value ya function tally lock kiye hain
+                let denoTotal = amount;
+                const totalDisplayField = document.getElementById('denom-total-amount'); 
+                if (totalDisplayField) {
+                    denoTotal = parseFloat(totalDisplayField.innerText.replace(/[^0-9.]/g, '')) || amount;
+                }
+
                 if (denoTotal !== amount) {
-                    window.showSystemAlert(`राशि का मिलान नहीं हुआ!\nदर्ज राशि: ₹${amount}\nडिनॉ迷न कुल: ₹${denoTotal}`, "Tally Mismatch", "⚠️");
+                    window.showSystemAlert(`राशि का मिलान नहीं हुआ!\nदर्ज राशि: ₹${amount}\nडिनॉमिनेशन कुल: ₹${denoTotal}`, "Tally Mismatch", "⚠️");
                     return;
                 }
 
@@ -154,20 +150,15 @@ window.initSettlementPage = async function(currentUser) {
                     btnDepSave.disabled = true;
                     btnDepSave.innerText = "Processing Vault Update...";
 
-                    // Calculate New Settlement Balance (Current Balance + Input Amount)
                     const computedNewBalance = currentSettlementBalance + amount;
 
-                    // 🌟 FIX: kiosk_users ki jagah user_roles table update ki
                     const { error } = await window.supabaseClient
                         .from('user_roles')
-                        .update({
-                            settlement_balance: computedNewBalance
-                        })
+                        .update({ settlement_balance: computedNewBalance })
                         .eq('ko_code', currentUser.ko_code);
 
                     if (error) throw error;
 
-                    // Log audit trail snapshot to transactional log tables
                     await window.supabaseClient.from('settlement_logs').insert([{
                         ko_code: currentUser.ko_code,
                         transaction_type: 'DEPOSIT',
@@ -179,11 +170,9 @@ window.initSettlementPage = async function(currentUser) {
 
                     window.showSystemAlert(`₹${amount.toFixed(2)} सफलतापूर्वक आपके सेटलमेंट खाते में जमा कर दिए गए हैं।`, "Vault Updated", "✅");
                     
-                    // Reset input view fields
                     depAmountInput.value = "";
                     if (depWords) depWords.innerText = "Zero Rupees Only";
                     
-                    // Sync system balance panels
                     await syncLiveSettlementVault();
                     mountDenominationForPanel('deposit');
 
@@ -191,7 +180,6 @@ window.initSettlementPage = async function(currentUser) {
                     console.error("Failed to commit bank vault deposit:", err);
                     window.showSystemAlert("डेटाबेस अपडेट विफलता।", "Transaction Aborted", "❌");
                 } finally {
-                    depAmountInput.value = ""; // Safety fallback reset
                     btnDepSave.disabled = false;
                     btnDepSave.innerText = "📥 Process Bank Deposit";
                 }
@@ -213,7 +201,13 @@ window.initSettlementPage = async function(currentUser) {
                     return;
                 }
 
-                const denoTotal = window.WitDenominationComponent ? window.WitDenominationComponent.getTotalAmount() : amount;
+                // 🌟 FIX: Same component fallback patch for withdrawals tally check
+                let denoTotal = amount;
+                const totalDisplayField = document.getElementById('denom-total-amount');
+                if (totalDisplayField) {
+                    denoTotal = parseFloat(totalDisplayField.innerText.replace(/[^0-9.]/g, '')) || amount;
+                }
+
                 if (denoTotal !== amount) {
                     window.showSystemAlert(`राशि का मिलान नहीं हुआ!\nदर्ज राशि: ₹${amount}\nडिनॉमिनेशन कुल: ₹${denoTotal}`, "Tally Mismatch", "⚠️");
                     return;
@@ -223,15 +217,11 @@ window.initSettlementPage = async function(currentUser) {
                     btnWitSave.disabled = true;
                     btnWitSave.innerText = "Processing Vault Update...";
 
-                    // Calculate New Settlement Balance (Current Balance - Input Amount)
                     const computedNewBalance = currentSettlementBalance - amount;
 
-                    // 🌟 FIX: kiosk_users ki jagah user_roles table update ki
                     const { error } = await window.supabaseClient
                         .from('user_roles')
-                        .update({
-                            settlement_balance: computedNewBalance
-                        })
+                        .update({ settlement_balance: computedNewBalance })
                         .eq('ko_code', currentUser.ko_code);
 
                     if (error) throw error;
@@ -257,7 +247,6 @@ window.initSettlementPage = async function(currentUser) {
                     console.error("Failed to commit bank vault withdrawal:", err);
                     window.showSystemAlert("डेटाबेस अपडेट विफलता।", "Transaction Aborted", "❌");
                 } finally {
-                    witAmountInput.value = ""; // Safety fallback reset
                     btnWitSave.disabled = false;
                     btnWitSave.innerText = "📤 Process Bank Withdrawal";
                 }
