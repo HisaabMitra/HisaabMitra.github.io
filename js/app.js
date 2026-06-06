@@ -113,6 +113,7 @@ document.addEventListener('DOMContentLoaded', () => {
             workspace.innerHTML = await response.text();
             initializePageModules(pageName);
         } catch (error) {
+            console.error("Component Loading Failed:", error);
             workspace.innerHTML = `<div style="padding: 20px; color: var(--color-maroon-main); text-align: center;"><h3>⚠️ Component Failure</h3></div>`;
         }
     }
@@ -153,19 +154,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (pageName === 'search' && typeof initSearchModule === 'function') initSearchModule();
         if (pageName === 'super-admin' && typeof initSuperAdminModule === 'function') initSuperAdminModule();
-    
-
-
-    if (pageName === 'settings') {
+        
+        // 🖨️ SETTINGS GATEWAY: Jarvis Boot Engine Trigger
+        if (pageName === 'settings') {
             if (typeof window.initJarvisSettingsEngine === 'function') {
+                console.log("⚙️ Triggering Jarvis Settings Engine...");
                 window.initJarvisSettingsEngine();
             } else {
                 console.error("❌ initJarvisSettingsEngine function missing in settings.js scope!");
             }
         }
     }
-                          
-    
+                        
     if (logoutBtn) {
         logoutBtn.addEventListener('click', () => {
             // 🗑️ लॉगआउट करने पर ब्राउज़र की तिजोरी को साफ़ करें ताकि अनधिकृत एक्सेस ब्लॉक हो सके
