@@ -73,12 +73,12 @@ window.initSettlementPage = async function(currentUser) {
         });
     });
 
-    // 🧮 [DENOMINATION MOUNT ENGINE] - Trigger naye specialized components
+    // 🧮 [DENOMINATION MOUNT ENGINE] - Linking to the generic new components
     function mountDenominationForPanel(panelType) {
-        if (panelType === 'deposit' && window.SettleDepDenomComponent) {
-            window.SettleDepDenomComponent.render('settle-deposit-denom-container');
-        } else if (panelType === 'withdrawal' && window.SettleWitDenomComponent) {
-            window.SettleWitDenomComponent.render('settle-withdrawal-denom-container');
+        if (panelType === 'deposit' && window.DenominationOutInComponent) {
+            window.DenominationOutInComponent.render('settle-deposit-denom-container');
+        } else if (panelType === 'withdrawal' && window.DenominationInOutComponent) {
+            window.DenominationInOutComponent.render('settle-withdrawal-denom-container');
         }
     }
 
@@ -112,7 +112,7 @@ window.initSettlementPage = async function(currentUser) {
                 return;
             }
 
-            const denoTotal = window.SettleDepDenomComponent ? window.SettleDepDenomComponent.calculate() : amount;
+            const denoTotal = window.DenominationOutInComponent ? window.DenominationOutInComponent.calculate() : amount;
             if (denoTotal !== amount) {
                 window.showSystemAlert(`राशि का मिलान नहीं हुआ!\nदर्ज राशि: ₹${amount}\nडिनॉमिनेशन कुल: ₹${denoTotal}`, "Tally Mismatch", "⚠️");
                 return;
@@ -124,12 +124,12 @@ window.initSettlementPage = async function(currentUser) {
 
                 const { data: liveUser } = await window.supabaseClient.from('user_roles').select('*').eq('ko_code', currentUser.ko_code).maybeSingle();
                 const computedNewBalance = (parseFloat(liveUser.settlement_balance) || 0) + amount;
-                const inputNotes = window.SettleDepDenomComponent.getValues();
+                const inputNotes = window.DenominationOutInComponent.getValues();
 
                 let updatedNotesPayload = { settlement_balance: computedNewBalance };
                 for (let key in inputNotes) {
                     const currentStock = parseInt(liveUser[key]) || 0;
-                    updatedNotesPayload[key] = Math.max(0, currentStock - inputNotes[key]); // Minus Notes
+                    updatedNotesPayload[key] = Math.max(0, currentStock - inputNotes[key]); // Subtraction
                 }
 
                 const { error } = await window.supabaseClient.from('user_roles').update(updatedNotesPayload).eq('ko_code', currentUser.ko_code);
@@ -170,7 +170,7 @@ window.initSettlementPage = async function(currentUser) {
                 return;
             }
 
-            const denoTotal = window.SettleWitDenomComponent ? window.SettleWitDenomComponent.calculate() : amount;
+            const denoTotal = window.DenominationInOutComponent ? window.DenominationInOutComponent.calculate() : amount;
             if (denoTotal !== amount) {
                 window.showSystemAlert(`राशि का मिलान नहीं हुआ!\nदर्ज राशि: ₹${amount}\nडिनॉमिनेशन कुल: ₹${denoTotal}`, "Tally Mismatch", "⚠️");
                 return;
@@ -189,12 +189,12 @@ window.initSettlementPage = async function(currentUser) {
                 }
 
                 const computedNewBalance = dbSettleBal - amount;
-                const inputNotes = window.SettleWitDenomComponent.getValues();
+                const inputNotes = window.DenominationInOutComponent.getValues();
 
                 let updatedNotesPayload = { settlement_balance: computedNewBalance };
                 for (let key in inputNotes) {
                     const currentStock = parseInt(liveUser[key]) || 0;
-                    updatedNotesPayload[key] = currentStock + inputNotes[key]; // Plus Notes
+                    updatedNotesPayload[key] = currentStock + inputNotes[key]; // Addition
                 }
 
                 const { error } = await window.supabaseClient.from('user_roles').update(updatedNotesPayload).eq('ko_code', currentUser.ko_code);
@@ -225,7 +225,7 @@ window.initSettlementPage = async function(currentUser) {
         };
     }
 
-    // 🚀 [CONTRA ROUTINE]: Settle Balance Updates dynamically on selection mapping
+    // 🚀 [CONTRA ROUTINE]
     const btnContraSave = document.getElementById('btn-settle-contra-save');
     if (btnContraSave) {
         btnContraSave.onclick = async function() {
@@ -242,11 +242,6 @@ window.initSettlementPage = async function(currentUser) {
                 btnContraSave.innerText = "Executing Adjustments...";
 
                 const { data: liveUser } = await window.supabaseClient.from('user_roles').select('*').eq('ko_code', currentUser.ko_code).maybeSingle();
-                
-                // 🌟 FIX: Contra Type ke hisab se physical stock column mutations map karenge
-                let updatedNotesPayload = {};
-                const valueOfNotes = type === 'cash_to_safe' ? -amount : amount; 
-                // Internal adjustments write parameters set kiya
                 
                 await window.supabaseClient.from('settlement_logs').insert([{
                     ko_code: currentUser.ko_code,
