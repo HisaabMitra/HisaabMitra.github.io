@@ -73,7 +73,7 @@ window.initSettlementPage = async function(currentUser) {
         });
     });
 
-    // 🧮 [DENOMINATION MOUNT ENGINE] - Linking to the generic new components
+    // 🧮 [DENOMINATION MOUNT ENGINE]
     function mountDenominationForPanel(panelType) {
         if (panelType === 'deposit' && window.DenominationOutInComponent) {
             window.DenominationOutInComponent.render('settle-deposit-denom-container');
@@ -129,7 +129,7 @@ window.initSettlementPage = async function(currentUser) {
                 let updatedNotesPayload = { settlement_balance: computedNewBalance };
                 for (let key in inputNotes) {
                     const currentStock = parseInt(liveUser[key]) || 0;
-                    updatedNotesPayload[key] = Math.max(0, currentStock - inputNotes[key]); // Subtraction
+                    updatedNotesPayload[key] = Math.max(0, currentStock - inputNotes[key]);
                 }
 
                 const { error } = await window.supabaseClient.from('user_roles').update(updatedNotesPayload).eq('ko_code', currentUser.ko_code);
@@ -194,7 +194,7 @@ window.initSettlementPage = async function(currentUser) {
                 let updatedNotesPayload = { settlement_balance: computedNewBalance };
                 for (let key in inputNotes) {
                     const currentStock = parseInt(liveUser[key]) || 0;
-                    updatedNotesPayload[key] = currentStock + inputNotes[key]; // Addition
+                    updatedNotesPayload[key] = currentStock + inputNotes[key];
                 }
 
                 const { error } = await window.supabaseClient.from('user_roles').update(updatedNotesPayload).eq('ko_code', currentUser.ko_code);
@@ -225,7 +225,7 @@ window.initSettlementPage = async function(currentUser) {
         };
     }
 
-    // 🚀 [CONTRA ROUTINE]
+    // 🚀 [CONTRA ROUTINE]: LIVE DIRECT CREDIT/DEBIT MUTATION ENGINE 
     const btnContraSave = document.getElementById('btn-settle-contra-save');
     if (btnContraSave) {
         btnContraSave.onclick = async function() {
@@ -239,29 +239,53 @@ window.initSettlementPage = async function(currentUser) {
 
             try {
                 btnContraSave.disabled = true;
-                btnContraSave.innerText = "Executing Adjustments...";
+                btnContraSave.innerText = "Processing Direct Mutation...";
 
-                const { data: liveUser } = await window.supabaseClient.from('user_roles').select('*').eq('ko_code', currentUser.ko_code).maybeSingle();
-                
+                // Fetch current absolute live balance snapshot from database
+                const { data: liveUser } = await window.supabaseClient.from('user_roles').select('settlement_balance').eq('ko_code', currentUser.ko_code).maybeSingle();
+                const currentDBBal = parseFloat(liveUser.settlement_balance) || 0;
+
+                let computedNewBalance = currentDBBal;
+
+                // 🌟 ATOMIC LOGIC MAP: Evaluate mutation type rules
+                if (type === 'credit') {
+                    computedNewBalance = currentDBBal + amount; // Pure Credit Addition
+                } else if (type === 'debit') {
+                    if (amount > currentDBBal) {
+                        window.showSystemAlert("इस डेबिट के लिए सेटलमेंट खाते में पर्याप्त राशि नहीं है!", "Insufficient Capital", "⚠️");
+                        return;
+                    }
+                    computedNewBalance = currentDBBal - amount; // Pure Debit Subtraction
+                }
+
+                // 💾 Update database right away
+                const { error: updateError } = await window.supabaseClient
+                    .from('user_roles')
+                    .update({ settlement_balance: computedNewBalance })
+                    .eq('ko_code', currentUser.ko_code);
+
+                if (updateError) throw updateError;
+
+                // Log entry directly into audit ledger logs table
                 await window.supabaseClient.from('settlement_logs').insert([{
                     ko_code: currentUser.ko_code,
                     transaction_type: 'CONTRA',
                     amount: amount,
-                    previous_balance: parseFloat(liveUser.settlement_balance) || 0,
-                    new_balance: parseFloat(liveUser.settlement_balance) || 0,
-                    narration: `Contra Adjustment Executed: ${type === 'cash_to_safe' ? 'Counter Cash to Secure Vault Safe' : 'Secure Vault Safe to Counter Cash'}`
+                    previous_balance: currentDBBal,
+                    new_balance: computedNewBalance,
+                    narration: `Direct Contra Adjustment: Balance Successfully ${type.toUpperCase() + 'ED'}`
                 }]);
 
-                window.showSystemAlert("कॉन्ट्रा एंट्री आंतरिक सामंजस्य के लिए सफलतापूर्वक निष्पादित की गई।", "Contra Success", "✅");
+                window.showSystemAlert(`₹${amount.toFixed(2)} का डायरेक्ट कॉन्ट्रा ${type === 'credit' ? 'क्रेडिट' : 'डेबिट'} सफलतापूर्वक पूरा हुआ।`, "Contra Applied", "✅");
                 contraAmountInput.value = "";
                 await syncLiveSettlementVault();
 
             } catch (err) {
-                console.error(err);
-                window.showSystemAlert("कॉन्ट्रा अपडेट विफल।", "Error", "❌");
+                console.error("Critical Contra direct balance fault:", err);
+                window.showSystemAlert("कॉन्ट्रा बैलेंस म्यूटेशन फेल हुआ।", "Error", "❌");
             } finally {
                 btnContraSave.disabled = false;
-                btnContraSave.innerText = "🔄 Execute Contra";
+                btnContraSave.innerText = "🔄 Execute Contra Adjustment";
             }
         };
     }
