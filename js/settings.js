@@ -4,6 +4,7 @@
 
 window.initJarvisSettingsEngine = async function() {
     try {
+        console.log("🖨️ Initializing Jarvis Settings Module Layout...");
         window.dbClient = window.supabaseClient || window.supabase;
 
         const displayName = document.getElementById('prof-display-name');
@@ -11,9 +12,10 @@ window.initJarvisSettingsEngine = async function() {
         const address = document.getElementById('prof-address');
         const inputKo = document.getElementById('merger-target-ko');
 
-        // Live printer agent fetch fire karna
+        // Python Agent se live list pull karke dropdown populate karna
         await window.loadInstalledPrinters();
 
+        // Inject active logged-in user profile attributes
         if (window.currentUser) {
             if (displayName) displayName.value = window.currentUser.full_name || "";
             if (koCode) koCode.value = window.currentUser.ko_code || "";
@@ -28,53 +30,12 @@ window.initJarvisSettingsEngine = async function() {
                 }
             };
         }
+        
         window.checkCurrentMergerStatus();
+
     } catch (bootErr) {
         console.error("❌ Jarvis Settings Boot Engine Crashed:", bootErr);
     }
-};
-
-// 📑 DYNAMIC TAB EVENT CONTROLLER BINDING SYSTEM
-window.initJarvisTabSystem = function() {
-    console.log("🛡️ Initializing Tab Framework listeners...");
-    
-    const coreBtn = document.getElementById('btn-jarvis-tab-core');
-    const downloadBtn = document.getElementById('btn-jarvis-tab-download');
-    const corePane = document.getElementById('pane-jarvis-tab-core');
-    const downloadPane = document.getElementById('pane-jarvis-tab-download');
-
-    if(!coreBtn || !downloadBtn) return;
-
-    function resetTabStyles() {
-        corePane.style.display = 'none';
-        downloadPane.style.display = 'none';
-        
-        coreBtn.style.background = '#f8f9fa';
-        coreBtn.style.color = '#495057';
-        coreBtn.style.borderLeftColor = 'transparent';
-
-        downloadBtn.style.background = '#f8f9fa';
-        downloadBtn.style.color = '#495057';
-        downloadBtn.style.borderLeftColor = 'transparent';
-    }
-
-    coreBtn.onclick = function(e) {
-        e.preventDefault();
-        resetTabStyles();
-        corePane.style.display = 'block';
-        this.style.background = '#ffffff';
-        this.style.color = '#7d0022';
-        this.style.borderLeftColor = '#7d0022';
-    };
-
-    downloadBtn.onclick = function(e) {
-        e.preventDefault();
-        resetTabStyles();
-        downloadPane.style.display = 'block';
-        this.style.background = '#ffffff';
-        this.style.color = '#7d0022';
-        this.style.borderLeftColor = '#7d0022';
-    };
 };
 
 window.savePrinterPreferences = function() {
@@ -82,6 +43,7 @@ window.savePrinterPreferences = function() {
         const depositPrinterName = document.getElementById('cfg-deposit-printer-name').value.trim();
         const withdrawalPrinterName = document.getElementById('cfg-withdrawal-printer-name').value.trim();
 
+        // Preference lock to local storage
         localStorage.setItem('jarvis_default_deposit_printer', depositPrinterName);
         localStorage.setItem('jarvis_default_withdrawal_printer', withdrawalPrinterName);
 
@@ -93,7 +55,7 @@ window.savePrinterPreferences = function() {
     }
 };
 
-// 🎯 TARGET KO EXTRACTOR & VALIDATOR
+// 🎯 TARGET KO EXTRACTOR & VALIDATOR (SUPABASE BINDING)
 window.searchKOForMerger = async function() {
     try {
         const targetKoInput = document.getElementById('merger-target-ko');
@@ -172,7 +134,7 @@ window.checkCurrentMergerStatus = async function() {
         } 
         if (status === 'merged') {
             alertBox.style.display = 'block';
-            alertBox.innerHTML = `✅ <strong>Active:</strong> आपका काउंटर KO कोड <b>${target}</b> के साथ लिंक्ड है।`;
+            alertBox.innerHTML = `✅ <strong>Active:</strong> आपका काउंटर KO कोड <b>${target}</b> के साथ सफलतापूर्वक लिंक्ड है।`;
             if (submitBtn) submitBtn.disabled = true;
             if (searchBtn) searchBtn.disabled = true;
             if (inputKo) inputKo.disabled = true;
