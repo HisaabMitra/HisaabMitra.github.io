@@ -23,11 +23,11 @@ window.initWithdrawalPage = async function (currentUser) {
             console.error("WitDenominationComponent structure not found in window stack!");
         }
 
-        // 🖨️ SILENT WITHDRAWAL PRINT FUNCTION (Direct Matrix Printer Spooler Transmission)
+        // 🖨️ SILENT WITHDRAWAL PRINT FUNCTION (Direct Matrix Printer Spooler Transmission via Python Backend)
         window.executeWithdrawalPrintReceipt = async function(encodedTx) {
             try {
                 const txData = JSON.parse(atob(encodedTx));
-                console.log("🖨️ Initializing Silent Matrix Print via Python Agent:", txData);
+                console.log("🖨️ Transmitting Silent Matrix Print via Python Agent:", txData);
 
                 const txDate = new Date(txData.transaction_date);
                 const day = String(txDate.getDate()).padStart(2, '0');
@@ -50,38 +50,23 @@ window.initWithdrawalPage = async function (currentUser) {
                     return;
                 }
 
-                // Passbook / Matrix printing alignment control layout text stream
+                // 📊 Pure text layout optimized for Matrix/Passbook printer parsing stream
                 const receiptHTML = `
-                    <!DOCTYPE html>
-                    <html>
-                    <head>
-                        <meta charset="UTF-8">
-                        <style>
-                            @page { size: auto; margin: 0; }
-                            body { font-family: 'Courier New', Courier, monospace; font-size: 12px; color: #000; margin: 0; padding: 10px; }
-                            .title { font-weight: bold; text-align: center; text-transform: uppercase; }
-                            .meta-data { margin: 5px 0; text-align: center; }
-                            .line { border-top: 1px dashed #000; margin: 5px 0; }
-                            .row { display: flex; justify-content: space-between; margin-bottom: 3px; }
-                        </style>
-                    </head>
-                    <body>
-                        <div class="title">Cash Withdrawal Slip</div>
-                        <div class="meta-data">KO Operator Center: ${userAddress}</div>
-                        <div class="line"></div>
-                        <div class="row"><span>Date:</span> <span>${formattedDate}</span></div>
-                        <div class="row"><span>Aadhaar No:</span> <span>${txData.aadhaar_number}</span></div>
-                        <div class="row"><span>Customer Name:</span> <span style="text-transform: uppercase;">${txData.customer_name}</span></div>
-                        <div class="line"></div>
-                        <div class="row" style="font-weight: bold;"><span>Debited Amount:</span> <span>₹${parseFloat(txData.amount).toFixed(2)}</span></div>
-                        <div style="font-style: italic; margin-top: 4px;">Words: ${amountInWords}</div>
-                        <div class="line"></div>
-                        <div style="text-align: center; font-size: 10px; margin-top: 5px;">Transaction Successful - System Generated Cash Receipt</div>
-                    </body>
-                    </html>
+                    Cash Withdrawal Slip
+                    KO Operator Center: ${userAddress}
+                    -------------------------------------
+                    Date: ${formattedDate}
+                    Aadhaar No: ${txData.aadhaar_number}
+                    Customer Name: ${txData.customer_name.toUpperCase()}
+                    -------------------------------------
+                    Debited Amount: Rs. ${parseFloat(txData.amount).toFixed(2)}
+                    Words: ${amountInWords}
+                    -------------------------------------
+                    Transaction Successful
+                    System Generated Cash Receipt
                 `;
 
-                // Python Agent local network hit
+                // 🚀 Send payload directly to our Python Local Server localhost:5000
                 const response = await fetch("http://127.0.0.1:5000/print", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -93,9 +78,9 @@ window.initWithdrawalPage = async function (currentUser) {
 
                 const result = await response.json();
                 if (result.success) {
-                    console.log(`🚀 Withdrawal receipt printed on: ${selectedPrinter}`);
+                    console.log(`🚀 Withdrawal receipt printed silently on: ${selectedPrinter}`);
                     if (window.showSystemAlert) {
-                        window.showSystemAlert("निकासी रसीद सफलतापूर्वक पासबुक/मैट्रिक्स प्रिंटर पर भेज दी गई है।", "Print Successful", "✅");
+                        window.showSystemAlert("निकासी रसीद सफलतापूर्वक प्रिंटर पर भेज दी गई है।", "Print Successful", "✅");
                     }
                 } else {
                     throw new Error(result.message || "Unknown error from agent");
@@ -131,7 +116,7 @@ window.initWithdrawalPage = async function (currentUser) {
                     return;
                 }
 
-                // कतारों को क्रम संख्या (Sr. No.) और 🗑️ डिलीट बटन के साथ लाइव रेंडर करना
+                // rows ko clear class matching 'btn-print-wit-receipt' ke sath inject karna
                 data.forEach((tx, index) => {
                     const timeStr = new Date(tx.transaction_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                     const txStr = btoa(JSON.stringify(tx));
@@ -318,13 +303,20 @@ window.initWithdrawalPage = async function (currentUser) {
     }
 };
 
-// 🌐 Global Event Delegation for Dynamic Withdrawal Print Icons
-document.addEventListener('click', (e) => {
+// 🌐 MASTER DELEGATION FOR SILENT WITHDRAWAL PRINT
+// Purane links clean karke click controller ko global storage par lock kiya
+document.removeEventListener('click', triggerWithdrawalSilentPrint);
+document.addEventListener('click', triggerWithdrawalSilentPrint);
+
+function triggerWithdrawalSilentPrint(e) {
     const printBtn = e.target.closest('.btn-print-wit-receipt');
     if (printBtn) {
+        e.preventDefault();
+        e.stopPropagation(); // Browser native printing popup ko yahin block karega
+        
         const encodedTx = printBtn.getAttribute('data-tx');
         if (encodedTx && typeof window.executeWithdrawalPrintReceipt === 'function') {
             window.executeWithdrawalPrintReceipt(encodedTx);
         }
     }
-});
+}
