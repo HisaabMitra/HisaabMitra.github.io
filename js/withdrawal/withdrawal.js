@@ -1,5 +1,5 @@
 // ========================================================
-// 💸 AEPS CASH WITHDRAWAL CORE CONTROL ENGINE (WITH SHORTCUTS & DELETE)
+// 💸 AEPS CASH WITHDRAWAL CORE CONTROL ENGINE (WITH SILENT MATRIX PRINT)
 // ========================================================
 
 window.initWithdrawalPage = async function (currentUser) {
@@ -22,6 +22,91 @@ window.initWithdrawalPage = async function (currentUser) {
         } else {
             console.error("WitDenominationComponent structure not found in window stack!");
         }
+
+        // 🖨️ SILENT WITHDRAWAL PRINT FUNCTION (Direct Matrix Printer Spooler Transmission)
+        window.executeWithdrawalPrintReceipt = async function(encodedTx) {
+            try {
+                const txData = JSON.parse(atob(encodedTx));
+                console.log("🖨️ Initializing Silent Matrix Print via Python Agent:", txData);
+
+                const txDate = new Date(txData.transaction_date);
+                const day = String(txDate.getDate()).padStart(2, '0');
+                const month = String(txDate.getMonth() + 1).padStart(2, '0');
+                const year = txDate.getFullYear();
+                const formattedDate = `${day}-${month}-${year}`;
+
+                const userAddress = window.currentUser?.address || "KIOSK CENTER, INDIA";
+                const amountInWords = window.numberToHindiWords ? `${window.numberToHindiWords(parseInt(txData.amount))} रुपए मात्र` : "Rupees Only";
+
+                // 💾 LocalStorage se withdrawal (Matrix) printer ka naam nikalna
+                const selectedPrinter = localStorage.getItem('jarvis_default_withdrawal_printer');
+
+                if (!selectedPrinter) {
+                    if (window.showSystemAlert) {
+                        window.showSystemAlert("कृपया पहले सेटिंग्स में जाकर विथड्रॉल प्रिंटर सेलेक्ट करें!", "Printer Not Set", "⚠️");
+                    } else {
+                        alert("⚠️ कृपया पहले सेटिंग्स में जाकर विथड्रॉल प्रिंटर सेलेक्ट करें!");
+                    }
+                    return;
+                }
+
+                // Passbook / Matrix printing alignment control layout text stream
+                const receiptHTML = `
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <meta charset="UTF-8">
+                        <style>
+                            @page { size: auto; margin: 0; }
+                            body { font-family: 'Courier New', Courier, monospace; font-size: 12px; color: #000; margin: 0; padding: 10px; }
+                            .title { font-weight: bold; text-align: center; text-transform: uppercase; }
+                            .meta-data { margin: 5px 0; text-align: center; }
+                            .line { border-top: 1px dashed #000; margin: 5px 0; }
+                            .row { display: flex; justify-content: space-between; margin-bottom: 3px; }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="title">Cash Withdrawal Slip</div>
+                        <div class="meta-data">KO Operator Center: ${userAddress}</div>
+                        <div class="line"></div>
+                        <div class="row"><span>Date:</span> <span>${formattedDate}</span></div>
+                        <div class="row"><span>Aadhaar No:</span> <span>${txData.aadhaar_number}</span></div>
+                        <div class="row"><span>Customer Name:</span> <span style="text-transform: uppercase;">${txData.customer_name}</span></div>
+                        <div class="line"></div>
+                        <div class="row" style="font-weight: bold;"><span>Debited Amount:</span> <span>₹${parseFloat(txData.amount).toFixed(2)}</span></div>
+                        <div style="font-style: italic; margin-top: 4px;">Words: ${amountInWords}</div>
+                        <div class="line"></div>
+                        <div style="text-align: center; font-size: 10px; margin-top: 5px;">Transaction Successful - System Generated Cash Receipt</div>
+                    </body>
+                    </html>
+                `;
+
+                // Python Agent local network hit
+                const response = await fetch("http://127.0.0.1:5000/print", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        printer_name: selectedPrinter,
+                        content: receiptHTML
+                    })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    console.log(`🚀 Withdrawal receipt printed on: ${selectedPrinter}`);
+                    if (window.showSystemAlert) {
+                        window.showSystemAlert("निकासी रसीद सफलतापूर्वक पासबुक/मैट्रिक्स प्रिंटर पर भेज दी गई है।", "Print Successful", "✅");
+                    }
+                } else {
+                    throw new Error(result.message || "Unknown error from agent");
+                }
+            } catch (printErr) {
+                console.error("Matrix Spooler Printing Failure:", printErr);
+                if (window.showSystemAlert) {
+                    window.showSystemAlert("प्रिंट सर्विस offline है। कृपया HisaabMitra local system runtime चेक करें।", "Print Error", "❌");
+                }
+            }
+        };
 
         // 📊 [LEDGER SYSTEM]: आज की लाइव निकासी लेज़र तालिका लोड करें
         window.loadTodayWithdrawals = async function() {
@@ -50,7 +135,7 @@ window.initWithdrawalPage = async function (currentUser) {
                 data.forEach((tx, index) => {
                     const timeStr = new Date(tx.transaction_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                     const txStr = btoa(JSON.stringify(tx));
-                    const srNo = data.length - index; // रिवर्स क्रोनोलॉजिकल ऑर्डर नंबर
+                    const srNo = data.length - index;
 
                     tbody.insertAdjacentHTML('beforeend', `
                         <tr style="border-bottom: 1px solid #eee;">
@@ -63,7 +148,6 @@ window.initWithdrawalPage = async function (currentUser) {
                                 <div style="display:inline-flex; align-items:center; gap:15px; justify-content:center;">
                                     <span class="btn-edit-wit-tx" data-tx="${txStr}" style="cursor:pointer; font-size:1.1rem; user-select:none;" title="Edit Withdrawal">✏️</span>
                                     <span class="btn-print-wit-receipt" data-tx="${txStr}" style="cursor:pointer; font-size:1.2rem; user-select:none;" title="Print Slip">🖨️</span>
-                                    <!-- 🗑️ नया समर्पित विथड्रॉल डिलीट ट्रिगर बटन -->
                                     <span class="btn-delete-wit-tx" data-id="${tx.id}" data-tx="${txStr}" style="cursor:pointer; font-size:1.1rem; user-select:none;" title="Delete & Rollback Withdrawal">🗑️</span>
                                 </div>
                             </td>
@@ -106,7 +190,6 @@ window.initWithdrawalPage = async function (currentUser) {
                     } else {
                         if (witNameInput) witNameInput.value = "NOT REGISTERED";
                         
-                        // 🌟 [UTILS.JS INTEGRATION]: ग्लोबल इंजन कॉल
                         window.showDynamicNewCustomerModal({
                             source: 'withdrawal',
                             aadhaar_number: aadhaarNo
@@ -144,7 +227,6 @@ window.initWithdrawalPage = async function (currentUser) {
                     }
                 }
             });
-            
             witAmountInput.addEventListener('wheel', e => e.preventDefault(), { passive: false }); 
         }
 
@@ -217,14 +299,12 @@ window.initWithdrawalPage = async function (currentUser) {
         const clearBtn = document.getElementById('btn-wit-clear');
         if (clearBtn) clearBtn.onclick = window.masterWithdrawalClear;
 
-        // ⌨️ [JARVIS SHORTCUT HOOKS]: विथड्रॉल पेज के लिए जादुई कीबोर्ड इंजन
+        // ⌨️ [JARVIS SHORTCUT HOOKS]
         document.onkeydown = function(e) {
-            // १. Ctrl + S या Meta + S से ऑटो-सेव डिस्पेंस
             if ((e.key === 's' || e.key === 'S') && (e.ctrlKey || e.metaKey)) {
                 e.preventDefault(); 
                 document.getElementById('btn-wit-save')?.click();
             }
-            // २. Escape की (Key) दबाने पर मास्टर फॉर्म साफ़
             if (e.key === 'Escape' || e.key === 'Esc') {
                 window.masterWithdrawalClear();
             }
@@ -237,3 +317,14 @@ window.initWithdrawalPage = async function (currentUser) {
         console.error("Withdrawal Initialization Core Fatal Failure:", err); 
     }
 };
+
+// 🌐 Global Event Delegation for Dynamic Withdrawal Print Icons
+document.addEventListener('click', (e) => {
+    const printBtn = e.target.closest('.btn-print-wit-receipt');
+    if (printBtn) {
+        const encodedTx = printBtn.getAttribute('data-tx');
+        if (encodedTx && typeof window.executeWithdrawalPrintReceipt === 'function') {
+            window.executeWithdrawalPrintReceipt(encodedTx);
+        }
+    }
+});
