@@ -24,19 +24,20 @@ window.initSettlementPage = async function(currentUser) {
 
     // Global Vault State Cache Variables
     let currentSettlementBalance = 0;
-    let currentSettlementAccountNo = currentUser?.settlement_account_no || "NOT_CONFIGURED";
+    // user_roles schema mapping ke hisab se currentUser.settlement_account check kiya
+    let currentSettlementAccountNo = currentUser?.settlement_account || "NOT_CONFIGURED";
 
     // Inject User Bank Details into Top Header Dashboard
     if (lblAccNo) lblAccNo.innerText = currentSettlementAccountNo;
 
     try {
-        // 💳 [VAULT UTILITY]: Live Bank Ledger Sync from Database
+        // 💳 [VAULT UTILITY]: Live Bank Ledger Sync from user_roles Table
         async function syncLiveSettlementVault() {
             try {
-                // Fetch current user details from data matrix to reflect real-time wallet balance
+                // 🌟 FIX: kiosk_users ki jagah user_roles use kiya aur settlement_account_no ki jagah settlement_account
                 const { data, error } = await window.supabaseClient
-                    .from('kiosk_users')
-                    .select('settlement_balance, settlement_account_no')
+                    .from('user_roles')
+                    .select('settlement_balance, settlement_account')
                     .eq('ko_code', currentUser.ko_code)
                     .maybeSingle();
 
@@ -44,10 +45,16 @@ window.initSettlementPage = async function(currentUser) {
 
                 if (data) {
                     currentSettlementBalance = parseFloat(data.settlement_balance) || 0;
-                    currentSettlementAccountNo = data.settlement_account_no || "NOT_CONFIGURED";
+                    currentSettlementAccountNo = data.settlement_account || "NOT_CONFIGURED";
                     
                     if (lblBalance) lblBalance.innerText = `₹${currentSettlementBalance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
                     if (lblAccNo) lblAccNo.innerText = currentSettlementAccountNo;
+                    
+                    // Global memory session state ko bhi refresh karein
+                    if (window.currentUser) {
+                        window.currentUser.settlement_balance = currentSettlementBalance;
+                        window.currentUser.settlement_account = currentSettlementAccountNo;
+                    }
                 }
             } catch (err) {
                 console.error("❌ Failed to sync settlement balances from cloud node:", err);
@@ -139,7 +146,7 @@ window.initSettlementPage = async function(currentUser) {
                 // Verify denomination tally against input box amount
                 const denoTotal = window.WitDenominationComponent ? window.WitDenominationComponent.getTotalAmount() : amount;
                 if (denoTotal !== amount) {
-                    window.showSystemAlert(`राशि का मिलान नहीं हुआ!\nदर्ज राशि: ₹${amount}\nडिनॉमिनेशन कुल: ₹${denoTotal}`, "Tally Mismatch", "⚠️");
+                    window.showSystemAlert(`राशि का मिलान नहीं हुआ!\nदर्ज राशि: ₹${amount}\nडिनॉ迷न कुल: ₹${denoTotal}`, "Tally Mismatch", "⚠️");
                     return;
                 }
 
@@ -147,15 +154,14 @@ window.initSettlementPage = async function(currentUser) {
                     btnDepSave.disabled = true;
                     btnDepSave.innerText = "Processing Vault Update...";
 
-                    // Khas Logic Hook: Calculate New Settlement Balance (Current Balance + Input Amount)
+                    // Calculate New Settlement Balance (Current Balance + Input Amount)
                     const computedNewBalance = currentSettlementBalance + amount;
 
-                    // Execute atomic mutations on user configuration profile ledger
+                    // 🌟 FIX: kiosk_users ki jagah user_roles table update ki
                     const { error } = await window.supabaseClient
-                        .from('kiosk_users')
+                        .from('user_roles')
                         .update({
-                            settlement_balance: computedNewBalance,
-                            updated_at: new Date().toISOString()
+                            settlement_balance: computedNewBalance
                         })
                         .eq('ko_code', currentUser.ko_code);
 
@@ -185,6 +191,7 @@ window.initSettlementPage = async function(currentUser) {
                     console.error("Failed to commit bank vault deposit:", err);
                     window.showSystemAlert("डेटाबेस अपडेट विफलता।", "Transaction Aborted", "❌");
                 } finally {
+                    depAmountInput.value = ""; // Safety fallback reset
                     btnDepSave.disabled = false;
                     btnDepSave.innerText = "📥 Process Bank Deposit";
                 }
@@ -216,14 +223,14 @@ window.initSettlementPage = async function(currentUser) {
                     btnWitSave.disabled = true;
                     btnWitSave.innerText = "Processing Vault Update...";
 
-                    // Khas Logic Hook: Calculate New Settlement Balance (Current Balance - Input Amount)
+                    // Calculate New Settlement Balance (Current Balance - Input Amount)
                     const computedNewBalance = currentSettlementBalance - amount;
 
+                    // 🌟 FIX: kiosk_users ki jagah user_roles table update ki
                     const { error } = await window.supabaseClient
-                        .from('kiosk_users')
+                        .from('user_roles')
                         .update({
-                            settlement_balance: computedNewBalance,
-                            updated_at: new Date().toISOString()
+                            settlement_balance: computedNewBalance
                         })
                         .eq('ko_code', currentUser.ko_code);
 
@@ -250,6 +257,7 @@ window.initSettlementPage = async function(currentUser) {
                     console.error("Failed to commit bank vault withdrawal:", err);
                     window.showSystemAlert("डेटाबेस अपडेट विफलता।", "Transaction Aborted", "❌");
                 } finally {
+                    witAmountInput.value = ""; // Safety fallback reset
                     btnWitSave.disabled = false;
                     btnWitSave.innerText = "📤 Process Bank Withdrawal";
                 }
