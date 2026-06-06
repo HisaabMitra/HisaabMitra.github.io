@@ -8,10 +8,10 @@
     <div style="display: flex; gap: 25px; flex-wrap: wrap; align-items: flex-start;">
         
         <div style="flex: 1; min-width: 200px; max-width: 240px; display: flex; flex-direction: column; gap: 8px;">
-            <button onclick="switchJarvisTab('jarvis-tab-core', this)" class="jarvis-nav-btn active-jarvis-tab" style="width: 100%; text-align: left; padding: 12px 15px; font-weight: bold; font-size: 0.95rem; border: 1px solid #dee2e6; border-left: 4px solid #7d0022; border-radius: 4px; background: #ffffff; color: #7d0022; cursor: pointer; transition: all 0.2s;">
+            <button type="button" data-target-tab="jarvis-tab-core" class="jarvis-nav-btn" style="width: 100%; text-align: left; padding: 12px 15px; font-weight: bold; font-size: 0.95rem; border: 1px solid #dee2e6; border-left: 4px solid #7d0022; border-radius: 4px; background: #ffffff; color: #7d0022; cursor: pointer; transition: all 0.2s;">
                 ⚙️ Core Settings
             </button>
-            <button onclick="switchJarvisTab('jarvis-tab-download', this)" class="jarvis-nav-btn" style="width: 100%; text-align: left; padding: 12px 15px; font-weight: bold; font-size: 0.95rem; border: 1px solid #dee2e6; border-left: 4px solid transparent; border-radius: 4px; background: #f8f9fa; color: #495057; cursor: pointer; transition: all 0.2s;">
+            <button type="button" data-target-tab="jarvis-tab-download" class="jarvis-nav-btn" style="width: 100%; text-align: left; padding: 12px 15px; font-weight: bold; font-size: 0.95rem; border: 1px solid #dee2e6; border-left: 4px solid transparent; border-radius: 4px; background: #f8f9fa; color: #495057; cursor: pointer; transition: all 0.2s;">
                 📥 Pre-requisites & Agent
             </button>
         </div>
@@ -119,7 +119,7 @@
                     </div>
 
                     <div style="margin-top: 25px; padding: 15px; background: #e8f4fd; border: 1px solid #bbeeef; border-radius: 6px; color: #1d4ed8; font-size: 0.85rem; line-height: 1.5;">
-                        💡 <b>त्वरित निर्देश (Quick Guide):</b> सबसे पहले पाइथन इंस्टॉल करें -> एजेंट ZIP को एक्सट्रैक्ट करें -> <code>INSTRUCTIONS.txt</code> खोलें और डिपेंडेंसी इंस्टॉल करके <code>run_agent_hidden.vbs</code> को डबल क्लिक करके बैकग्राउंड में स्टार्ट करें।
+                        💡 <b>त्वरित निर्देश (Quick Guide):</b> सबसे पहले पाइथन इंस्टॉल करें -> एजेंट ZIP को एक्सट्रैक्ट करें -> <code>INSTRUCTIONS.txt</code> खोलें और डिपेंडेंसी इंस्टॉल करके <code>run_agent_hidden.vbs</code> को क्लिक करके बैकग्राउंड में स्टार्ट करें।
                     </div>
                 </div>
             </div>
@@ -129,34 +129,40 @@
 </div>
 
 <script>
-function switchJarvisTab(targetTabId, element) {
-    try {
-        // 1. Sabhi content panes ko dhundh kar hide karein
-        const panes = document.querySelectorAll('.jarvis-tab-pane');
-        panes.forEach(pane => pane.style.display = 'none');
+(function() {
+    console.log("🚀 Custom Tab Engine Mounted Directly into Memory Context");
 
-        // 2. Target pane ko smoothly display 'block' karein
-        const activePane = document.getElementById(targetTabId);
-        if (activePane) {
-            activePane.style.display = 'block';
-        }
+    // Dynamic Binding Mechanism
+    const tabButtons = document.querySelectorAll('.jarvis-nav-btn');
+    
+    tabButtons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            const targetTabId = this.getAttribute('data-target-tab');
+            
+            // 1. All Content Boxes Hide
+            document.querySelectorAll('.jarvis-tab-pane').forEach(pane => {
+                pane.style.display = 'none';
+            });
 
-        // 3. Sabhi sidebar nav buttons se dynamic active style aur borders ko reset karein
-        const buttons = document.querySelectorAll('.jarvis-nav-btn');
-        buttons.forEach(btn => {
-            btn.style.background = '#f8f9fa';
-            btn.style.color = '#495057';
-            btn.style.borderLeftColor = 'transparent';
+            // 2. Target Content Box Show
+            const targetPane = document.getElementById(targetTabId);
+            if (targetPane) {
+                targetPane.style.display = 'block';
+            }
+
+            // 3. Reset Button States
+            tabButtons.forEach(btn => {
+                btn.style.background = '#f8f9fa';
+                btn.style.color = '#495057';
+                btn.style.borderLeftColor = 'transparent';
+            });
+
+            // 4. Highlight Clicked Button
+            this.style.background = '#ffffff';
+            this.style.color = '#7d0022';
+            this.style.borderLeftColor = '#7d0022';
         });
-
-        // 4. Click kiye huye element/button par active visual trigger lock karein
-        if (element) {
-            element.style.background = '#ffffff';
-            element.style.color = '#7d0022';
-            element.style.borderLeftColor = '#7d0022';
-        }
-    } catch(err) {
-        console.error("Jarvis Tab Switching Engine Crashed:", err);
-    }
-}
+    });
+})();
 </script>
