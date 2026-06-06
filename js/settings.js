@@ -1,8 +1,8 @@
 // ========================================================
-// ⚙️ JARVIS SETTINGS & MULTI-PRINTER ROUTING ENGINE (ELECTRON DYNAMIC MODE)
+// ⚙️ JARVIS SETTINGS & MULTI-PRINTER ROUTING ENGINE (PYTHON AGENT MODE)
 // ========================================================
 
-window.initJarvisSettingsEngine = function() {
+window.initJarvisSettingsEngine = async function() {
     try {
         window.dbClient = window.supabaseClient || window.supabase;
 
@@ -11,59 +11,18 @@ window.initJarvisSettingsEngine = function() {
         const address = document.getElementById('prof-address');
         const inputKo = document.getElementById('merger-target-ko');
 
-        // 🖨️ इलेक्ट्रॉन डिटेक्शन चेक
-        const isElectron = typeof window !== 'undefined' && window.process && window.process.type === 'renderer';
+        // 🔄 STEP 1 & 2: Local Python Agent se printers load karna aur dropdown bharna
+        // Note: Saved values iske andar hi automatic restore hongi dropdown bharne ke baad.
+        await window.loadInstalledPrinters();
 
-        // 🖨️ ड्रॉपडाउन एलिमेंट्स (HTML में select टैग होने चाहिए)
-        const depositSelect = document.getElementById('cfg-deposit-printer-name');
-        const withdrawalSelect = document.getElementById('cfg-withdrawal-printer-name');
-
-        if (isElectron) {
-            const { ipcRenderer } = require('electron');
-
-            // इलेक्ट्रॉन से सभी लाइव हार्डवेयर प्रिंटर्स खींचना
-            ipcRenderer.invoke('get-printers').then((printers) => {
-                
-                // डिपॉजिट ड्रॉपडाउन भरना
-                if (depositSelect) {
-                    depositSelect.innerHTML = '<option value="">-- सिलेक्ट प्रिंटर --</option>';
-                    printers.forEach((p) => {
-                        let opt = document.createElement('option');
-                        opt.value = p.name;
-                        opt.text = p.name + (p.isDefault ? ' (Default)' : '');
-                        depositSelect.appendChild(opt);
-                    });
-                    // सेव की हुई वैल्यू रीलोड करना
-                    depositSelect.value = localStorage.getItem('jarvis_default_deposit_printer') || "";
-                }
-
-                // विड्रॉल ड्रॉपडाउन भरना
-                if (withdrawalSelect) {
-                    withdrawalSelect.innerHTML = '<option value="">-- सिलेक्ट प्रिंटर --</option>';
-                    printers.forEach((p) => {
-                        let opt = document.createElement('option');
-                        opt.value = p.name;
-                        opt.text = p.name + (p.isDefault ? ' (Default)' : '');
-                        withdrawalSelect.appendChild(opt);
-                    });
-                    // सेव की हुई वैल्यू रीलोड करना
-                    withdrawalSelect.value = localStorage.getItem('jarvis_default_withdrawal_printer') || "";
-                }
-            }).catch(err => console.error("❌ Failed to fetch hardware printers:", err));
-
-        } else {
-            // अगर नॉर्मल ब्राउज़र में खुला है, तो पुराना मैन्युअल इनपुट सिस्टम बैकअप की तरह काम करेगा
-            if (depositSelect) depositSelect.value = localStorage.getItem('jarvis_default_deposit_printer') || "";
-            if (withdrawalSelect) withdrawalSelect.value = localStorage.getItem('jarvis_default_withdrawal_printer') || "";
-        }
-
-        // २. प्रोफाइल सेक्शन्स में करंट यूज़र का लाइव डेटा इंजेक्ट करें
+        // 👤 STEP 3: Profile section me current user ka live data inject karna
         if (window.currentUser) {
             if (displayName) displayName.value = window.currentUser.full_name || "";
             if (koCode) koCode.value = window.currentUser.ko_code || "";
             if (address) address.value = window.currentUser.address || "";
         }
         
+        // KO Merger Input Handler
         if (inputKo) {
             inputKo.onkeydown = function(e) {
                 if (e.key === 'Enter') {
@@ -73,6 +32,7 @@ window.initJarvisSettingsEngine = function() {
             };
         }
         
+        // Current Merger Status Check
         window.checkCurrentMergerStatus();
 
     } catch (bootErr) {
@@ -80,13 +40,13 @@ window.initJarvisSettingsEngine = function() {
     }
 };
 
-// 🎯 🖨️ प्रिंटर प्राथमिकताओं (ड्रॉपडाउन वैल्यूज) को ब्राउज़र तिजोरी में सेव करना
+// 🎯 🖨️ Printer preferences ko browser storage (localStorage) me save karna
 window.savePrinterPreferences = function() {
     try {
         const depositPrinterName = document.getElementById('cfg-deposit-printer-name').value.trim();
         const withdrawalPrinterName = document.getElementById('cfg-withdrawal-printer-name').value.trim();
 
-        // लोकल स्टोरेज में वैल्यू लॉक करें
+        // Local storage me values locked
         localStorage.setItem('jarvis_default_deposit_printer', depositPrinterName);
         localStorage.setItem('jarvis_default_withdrawal_printer', withdrawalPrinterName);
 
@@ -287,5 +247,50 @@ window.updateProfileSettings = async function() {
         window.showSystemAlert("प्रोफाइल का पता सफलतापूर्वक अपडेट कर दिया गया है।", "Success", "✅");
     } catch (err) {
         console.error("Profile Update Failed:", err);
+    }
+};
+
+// 🎯 🐍 ५. पाइथन लोकल एजेंट से लाइव प्रिंटर लोड करने वाला फंक्शन (With Exact Flow)
+window.loadInstalledPrinters = async function () {
+    try {
+        // HTTP Call to local agent
+        const response = await fetch("http://127.0.0.1:5000/printers");
+        const result = await response.json();
+
+        if (!result.success) {
+            throw new Error("Printer fetch failed");
+        }
+
+        const depositSelect = document.getElementById("cfg-deposit-printer-name");
+        const withdrawalSelect = document.getElementById("cfg-withdrawal-printer-name");
+
+        if (!depositSelect || !withdrawalSelect) return;
+
+        // Reset Options
+        depositSelect.innerHTML = '<option value="">Select Printer</option>';
+        withdrawalSelect.innerHTML = '<option value="">Select Printer</option>';
+
+        // Dropdown Fill Loop
+        result.printers.forEach((printer) => {
+            const text = printer.name + (printer.default ? " (Default)" : "");
+            
+            depositSelect.add(new Option(text, printer.name));
+            withdrawalSelect.add(new Option(text, printer.name));
+        });
+
+        // 🌟 Exact Flow Fix: Dropdown fill hone ke thik baad saved printer restore karein
+        depositSelect.value = localStorage.getItem('jarvis_default_deposit_printer') || "";
+        withdrawalSelect.value = localStorage.getItem('jarvis_default_withdrawal_printer') || "";
+
+    } catch (err) {
+        console.error("Printer Agent Connection Failed", err);
+
+        if (window.showSystemAlert) {
+            window.showSystemAlert(
+                "Printer Agent not running. Please start HisaabMitra Printer Agent.",
+                "Printer Service Offline",
+                "⚠️"
+            );
+        }
     }
 };
