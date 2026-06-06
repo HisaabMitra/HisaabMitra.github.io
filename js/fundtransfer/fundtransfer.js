@@ -1,5 +1,5 @@
 // ========================================================
-// 💸 DIRECT CUSTOMER-TO-CUSTOMER FUND TRANSFER ENGINE (COMPLETE CODE)
+// 💸 DIRECT CUSTOMER-TO-CUSTOMER FUND TRANSFER ENGINE (STREAMLINED CORE)
 // ========================================================
 
 window.initFundTransferPage = async function(currentUser) {
@@ -44,13 +44,13 @@ window.initFundTransferPage = async function(currentUser) {
                     return;
                 }
 
-                // Table Rows Rendering with Complete Structural Layout (No Cross Marks / Masking)
+                // Table Rows Rendering with Complete Look (No Masking / Cross Marks)
                 data.forEach((tx, index) => {
                     const timeStr = new Date(tx.transaction_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                     const txStr = btoa(JSON.stringify(tx));
                     const srNo = data.length - index;
 
-                    // Aapki direct entries aur IDs bina kisi masking ke table me render hongi
+                    // Direct identifiers print bina kisi masking/cross marks ke
                     const displayFromId = tx.from_account_number || tx.from_aadhaar || "REF-" + tx.id.slice(0,6);
                     const displayToId = tx.to_account_number || tx.to_aadhaar || "REF-" + tx.id.slice(0,6);
 
@@ -119,7 +119,7 @@ window.initFundTransferPage = async function(currentUser) {
                     lblNameElement.innerText = "NOT REGISTERED";
                     if (isSender) isFromCustomerValid = false; else isToCustomerValid = false;
 
-                    // 🌟 [UTILS.JS MODAL SYNC]: Open new customer registration popup
+                    // 🌟 [UTILS.JS MODAL SYNC]: Open customer registration system
                     if (window.showDynamicNewCustomerModal) {
                         window.showDynamicNewCustomerModal({
                             source: 'fundtransfer',
@@ -145,7 +145,7 @@ window.initFundTransferPage = async function(currentUser) {
             }
         }
 
-        // Attach Blur Event Handlers
+        // Attach Blur Events Listeners for Inputs
         if (fromAadhaarInput) {
             fromAadhaarInput.addEventListener('blur', () => {
                 verifyCustomerAadhaar(fromAadhaarInput, lblFromName, true);
@@ -164,7 +164,7 @@ window.initFundTransferPage = async function(currentUser) {
             });
         }
 
-        // 🔢 [LIVE TRANSLATOR]: Hindi Numbers-to-Words Live Stream
+        // 🔢 [LIVE TRANSLATOR]: Live Hindi Words Translation
         if (ftAmountInput) {
             ftAmountInput.addEventListener('input', () => {
                 const amt = parseInt(ftAmountInput.value) || 0;
@@ -181,81 +181,24 @@ window.initFundTransferPage = async function(currentUser) {
             ftAmountInput.addEventListener('wheel', e => e.preventDefault(), { passive: false });
         }
 
-        // 🚀 [EXECUTE CORE ENGINE]: Final Database Sync
+        // 🚀 [EXECUTE MODULE HOOK]: Modular integration call with fundtransfer-save.js
         const saveBtn = document.getElementById('btn-ft-save');
         if (saveBtn) {
             saveBtn.onclick = async function() {
-                try {
-                    const fromAadhaar = fromAadhaarInput.value.trim();
-                    const toAadhaar = toAadhaarInput.value.trim();
-                    const amount = parseFloat(ftAmountInput.value) || 0;
-                    const remarks = ftRemarksInput.value.trim();
-
-                    if (!fromAadhaar || !toAadhaar || amount <= 0) {
-                        window.showSystemAlert("कृपया प्रेषक/प्राप्तकर्ता आधार और वैध राशि दर्ज करें।", "Validation Error", "❌");
-                        return;
-                    }
-
-                    if (!isFromCustomerValid || !isToCustomerValid) {
-                        window.showSystemAlert("लेनदेन निष्पादित करने से पहले दोनों पक्षों का पंजीकृत होना अनिवार्य है!", "Verification Missing", "⚠️");
-                        return;
-                    }
-
-                    saveBtn.disabled = true;
-                    saveBtn.innerText = "Processing...";
-
-                    const payload = {
-                        ko_code: currentUser.ko_code,
-                        from_aadhaar: fromAadhaar,
-                        from_customer_name: lblFromName.innerText,
-                        to_aadhaar: toAadhaar,
-                        to_customer_name: lblToName.innerText,
-                        amount: amount,
-                        remarks: remarks,
-                        transaction_date: new Date().toISOString()
-                    };
-
-                    const isEditMode = saveBtn.dataset.mode === "edit";
-                    let resultError = null;
-
-                    if (isEditMode) {
-                        const txId = saveBtn.dataset.editingFtId;
-                        const { error } = await window.supabaseClient
-                            .from('fund_transfers')
-                            .update(payload)
-                            .eq('id', txId);
-                        resultError = error;
-                    } else {
-                        const { error } = await window.supabaseClient
-                            .from('fund_transfers')
-                            .insert([payload]);
-                        resultError = error;
-                    }
-
-                    if (resultError) throw resultError;
-
-                    window.showSystemAlert(
-                        isEditMode ? "फंड ट्रांसफर एंट्री सफलतापूर्वक अपडेट कर दी गई है।" : "फंड ट्रांसफर सफलतापूर्वक पूर्ण हो चुका है।",
-                        "Transaction Success",
-                        "✅"
-                    );
-
-                    window.masterFundTransferClear();
-                    window.loadTodayFundTransfers();
-
-                } catch (err) {
-                    console.error("Fund Transfer Process Failure:", err);
-                    window.showSystemAlert("डेटाबेस सिंक विफलता। कृपया एंट्री जांचें।", "Error", "❌");
-                } finally {
-                    saveBtn.disabled = false;
-                    saveBtn.innerText = saveBtn.dataset.mode === "edit" ? "🔄 Update Transfer" : "🚀 Execute Transfer";
+                if (typeof window.executeFundTransferSave === 'function') {
+                    await window.executeFundTransferSave(saveBtn, currentUser, {
+                        isFromValid: isFromCustomerValid,
+                        isToValid: isToCustomerValid
+                    });
+                } else {
+                    console.error("executeFundTransferSave function missing from global window context!");
                 }
             };
         }
 
-        // ✏️ [EDIT & DELETE ACTION HOOKS]
+        // ✏️ [ROW EVENTS HUB]: Action Controls Listeners Binding
         function attachFundTransferActionListeners() {
-            // Edit Row Tracker
+            // Edit Control Row Tracker
             document.querySelectorAll('.btn-edit-ft-tx').forEach(btn => {
                 btn.onclick = function() {
                     try {
@@ -290,33 +233,22 @@ window.initFundTransferPage = async function(currentUser) {
                 };
             });
 
-            // Delete Record Tracker
+            // Delete Control Row Tracker (Link directly to fundtransfer-delete.js)
             document.querySelectorAll('.btn-delete-ft-tx').forEach(btn => {
                 btn.onclick = async function() {
                     const txId = this.getAttribute('data-id');
                     if (!txId) return;
 
-                    if (window.showSystemConfirm) {
-                        window.showSystemConfirm("क्या आप वाकई इस फंड ट्रांसफर रिकॉर्ड को डिलीट करना चाहते हैं?", "Confirm Deletion", async function() {
-                            try {
-                                const { error } = await window.supabaseClient
-                                    .from('fund_transfers')
-                                    .delete()
-                                    .eq('id', txId);
-
-                                if (error) throw error;
-                                window.showSystemAlert("रिकॉर्ड सफलतापूर्वक डिलीट कर दिया गया है।", "Deleted", "✅");
-                                window.loadTodayFundTransfers();
-                            } catch (err) {
-                                console.error("Deletion crash:", err);
-                            }
-                        });
+                    if (typeof window.executeFundTransferDelete === 'function') {
+                        await window.executeFundTransferDelete(txId);
+                    } else {
+                        console.error("executeFundTransferDelete function missing from global window context!");
                     }
                 };
             });
         }
 
-        // 🧹 [CLEAR CONTROLLER]: Resets Form State completely
+        // 🧹 [CLEAR CONTROLLER]: Form State Reset System
         window.masterFundTransferClear = function() {
             if (fromAadhaarInput) fromAadhaarInput.value = "";
             if (toAadhaarInput) toAadhaarInput.value = "";
@@ -341,7 +273,7 @@ window.initFundTransferPage = async function(currentUser) {
         const clearBtn = document.getElementById('btn-ft-clear');
         if (clearBtn) clearBtn.onclick = window.masterFundTransferClear;
 
-        // ⌨️ Shortcut Keys Handler Engine (Ctrl+S / Escape)
+        // ⌨️ Shortcuts Handler Hooks
         document.onkeydown = function(e) {
             if ((e.key === 's' || e.key === 'S') && (e.ctrlKey || e.metaKey)) {
                 e.preventDefault();
@@ -352,85 +284,10 @@ window.initFundTransferPage = async function(currentUser) {
             }
         };
 
-        // Initialize table
+        // Bootstrap load sequence
         window.loadTodayFundTransfers();
 
     } catch (err) {
         console.error("Fund Transfer Gateway Crash:", err);
     }
 };
-
-// 🌐 GLOBAL DELEGATION ROUTER FOR INSTANT FETCH SLIP PRINTING (SILENT TRANS)
-document.removeEventListener('click', triggerFundTransferSilentPrinting);
-document.addEventListener('click', triggerFundTransferSilentPrinting);
-
-async function triggerFundTransferSilentPrinting(e) {
-    const printBtn = e.target.closest('.btn-print-ft-receipt');
-    if (!printBtn) return;
-
-    e.preventDefault();
-    e.stopPropagation();
-
-    try {
-        const txData = JSON.parse(atob(printBtn.getAttribute('data-tx')));
-        console.log("🖨️ Firing Fund Transfer Silent Receipt Execution:", txData);
-
-        const txDate = new Date(txData.transaction_date);
-        const day = String(txDate.getDate()).padStart(2, '0');
-        const month = String(txDate.getMonth() + 1).padStart(2, '0');
-        const year = txDate.getFullYear();
-        const formattedDate = `${day}-${month}-${year}`;
-
-        const userAddress = window.currentUser?.address || "KIOSK CENTER, INDIA";
-        const amountInWords = window.numberToHindiWords ? `${window.numberToHindiWords(parseInt(txData.amount))} रुपए मात्र` : "Rupees Only";
-
-        // Fetch user default deposit thermal printer from storage cache context
-        const selectedPrinter = localStorage.getItem('jarvis_default_deposit_printer');
-
-        if (!selectedPrinter) {
-            window.showSystemAlert("कृपया पहले सेटिंग्स में जाकर डिपॉजिट थर्मल प्रिंटर सेलेक्ट करें!", "Printer Not Set", "⚠️");
-            return;
-        }
-
-        // 📊 Complete layout for 58mm thermal transmission payload
-        const receiptText = `
-            Kiosk Banking System
-            Address: ${userAddress}
-            Date: ${formattedDate}
-            --------------------------
-            TRANSFER SLIP (SUCCESS)
-            --------------------------
-            From Account: ${txData.from_aadhaar}
-            Sender: ${txData.from_customer_name.toUpperCase()}
-            
-            To Account: ${txData.to_aadhaar}
-            Receiver: ${txData.to_customer_name.toUpperCase()}
-            
-            Amount: Rs. ${parseFloat(txData.amount).toFixed(2)}
-            Words: ${amountInWords}
-            --------------------------
-            Computer Generated Receipt.
-            No signature needed.
-        `;
-
-        const response = await fetch("http://127.0.0.1:5000/print", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                printer_name: selectedPrinter,
-                content: receiptText
-            })
-        });
-
-        const result = await response.json();
-        if (result.success) {
-            window.showSystemAlert("फंड ट्रांसफर रसीद सफलतापूर्वक थर्मल प्रिंटर पर भेज दी गई है।", "Print Successful", "✅");
-        } else {
-            throw new Error(result.message);
-        }
-
-    } catch (err) {
-        console.error("FT Printing Spooler Error:", err);
-        window.showSystemAlert("प्रिंट सर्विस offline है। HisaabMitra background agent चालू करें।", "Print Error", "❌");
-    }
-}
