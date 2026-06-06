@@ -8,17 +8,17 @@
     <div style="display: flex; gap: 25px; flex-wrap: wrap; align-items: flex-start;">
         
         <div style="flex: 1; min-width: 200px; max-width: 240px; display: flex; flex-direction: column; gap: 8px;">
-            <button type="button" id="btn-jarvis-tab-core" class="jarvis-nav-btn" style="width: 100%; text-align: left; padding: 12px 15px; font-weight: bold; font-size: 0.95rem; border: 1px solid #dee2e6; border-left: 4px solid #7d0022; border-radius: 4px; background: #ffffff; color: #7d0022; cursor: pointer;">
+            <button type="button" data-jarvis-target="jarvis-tab-core" class="jarvis-dynamic-nav-btn" style="width: 100%; text-align: left; padding: 12px 15px; font-weight: bold; font-size: 0.95rem; border: 1px solid #dee2e6; border-left: 4px solid #7d0022; border-radius: 4px; background: #ffffff; color: #7d0022; cursor: pointer; transition: all 0.2s;">
                 ⚙️ Core Settings
             </button>
-            <button type="button" id="btn-jarvis-tab-download" class="jarvis-nav-btn" style="width: 100%; text-align: left; padding: 12px 15px; font-weight: bold; font-size: 0.95rem; border: 1px solid #dee2e6; border-left: 4px solid transparent; border-radius: 4px; background: #f8f9fa; color: #495057; cursor: pointer;">
+            <button type="button" data-jarvis-target="jarvis-tab-download" class="jarvis-dynamic-nav-btn" style="width: 100%; text-align: left; padding: 12px 15px; font-weight: bold; font-size: 0.95rem; border: 1px solid #dee2e6; border-left: 4px solid transparent; border-radius: 4px; background: #f8f9fa; color: #495057; cursor: pointer; transition: all 0.2s;">
                 📥 Pre-requisites & Agent
             </button>
         </div>
 
         <div style="flex: 3; min-width: 320px;">
             
-            <div id="pane-jarvis-tab-core" class="jarvis-tab-pane" style="display: block;">
+            <div id="jarvis-tab-core" class="jarvis-tab-pane" style="display: block;">
                 <div style="display: flex; gap: 25px; flex-wrap: wrap; margin-bottom: 25px; text-align: left;">
                     
                     <div style="flex: 1; min-width: 320px; background: #ffffff; padding: 20px; border-radius: 6px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); border-top: 5px solid #7d0022; text-align: left;">
@@ -91,12 +91,13 @@
                 </div>
             </div>
 
-            <div id="pane-jarvis-tab-download" class="jarvis-tab-pane" style="display: none;">
+            <div id="jarvis-tab-download" class="jarvis-tab-pane" style="display: none;">
                 <div style="background: #ffffff; padding: 25px; border-radius: 6px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); border-top: 5px solid #7d0022; text-align: left;">
                     <h3 style="margin-top: 0; margin-bottom: 10px; color: #7d0022; font-size: 1.4rem;">📥 System Pre-requisites & Setup Files</h3>
                     <p style="color: #555; font-size: 0.9rem; line-height: 1.5; margin-bottom: 20px;">इस काउंटर पर साइलेंट पासबुक और थर्मल प्रिंटिंग चालू करने के लिए नीचे दिए गए दोनों पैकेजेस का होना अनिवार्य है।</p>
                     
                     <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+                        
                         <div style="flex: 1; min-width: 280px; border: 1px solid #dee2e6; border-radius: 6px; padding: 20px; background: #f8f9fa;">
                             <div style="font-size: 2rem; margin-bottom: 10px;">🐍</div>
                             <h4 style="margin: 0 0 8px 0; color: #212529; font-size: 1.1rem;">1. Python Runtime Installer</h4>
@@ -114,6 +115,7 @@
                                 📥 Download Agent ZIP
                             </a>
                         </div>
+
                     </div>
 
                     <div style="margin-top: 25px; padding: 15px; background: #e8f4fd; border: 1px solid #bbeeef; border-radius: 6px; color: #1d4ed8; font-size: 0.85rem; line-height: 1.5;">
@@ -125,3 +127,46 @@
         </div>
     </div>
 </div>
+
+<script>
+(function() {
+    console.log("🛡️ Jarvis Tab Delegation Engine Mounted on Document Window Context!");
+
+    // Purane bhatkte huye click event traces ko reset karna taaki clean logic fire ho sake
+    document.removeEventListener('click', executeJarvisTabSwitching);
+    document.addEventListener('click', executeJarvisTabSwitching);
+
+    function executeJarvisTabSwitching(e) {
+        // Find closest element matching our dynamic sidebar tab class
+        const btn = e.target.closest('.jarvis-dynamic-nav-btn');
+        if (!btn) return; // Agar kisi aur cheez par click hua ho toh script bypass karein
+        
+        e.preventDefault();
+        const targetTabId = btn.getAttribute('data-jarvis-target');
+        console.log("🎯 Dynamic Event Intercepted for Panel:", targetTabId);
+
+        // 1. Saare panels hide karein
+        document.querySelectorAll('.jarvis-tab-pane').forEach(pane => {
+            pane.style.display = 'none';
+        });
+
+        // 2. Target pane ko explicitly block show karein
+        const targetPane = document.getElementById(targetTabId);
+        if (targetPane) {
+            targetPane.style.display = 'block';
+        }
+
+        // 3. Saare buttons ka active look normal gray par reset karein
+        document.querySelectorAll('.jarvis-dynamic-nav-btn').forEach(navBtn => {
+            navBtn.style.background = '#f8f9fa';
+            navBtn.style.color = '#495057';
+            navBtn.style.borderLeftColor = 'transparent';
+        });
+
+        // 4. Sirf click kiye gaye button ko premium Maroon/White theme par highlight karein
+        btn.style.background = '#ffffff';
+        btn.style.color = '#7d0022';
+        btn.style.borderLeftColor = '#7d0022';
+    }
+})();
+</script>
