@@ -4,7 +4,7 @@
 
 window.initJarvisSettingsEngine = async function() {
     try {
-        console.log("🖨️ Initializing Jarvis Settings Module Layout...");
+        console.log("🖨️ Initializing Jarvis Settings Core Panels...");
         window.dbClient = window.supabaseClient || window.supabase;
 
         const displayName = document.getElementById('prof-display-name');
@@ -12,10 +12,10 @@ window.initJarvisSettingsEngine = async function() {
         const address = document.getElementById('prof-address');
         const inputKo = document.getElementById('merger-target-ko');
 
-        // Python Agent se live list pull karke dropdown populate karna
+        // Automatic printer fetch call to local agent
         await window.loadInstalledPrinters();
 
-        // Inject active logged-in user profile attributes
+        // Inject currently logged-in user details
         if (window.currentUser) {
             if (displayName) displayName.value = window.currentUser.full_name || "";
             if (koCode) koCode.value = window.currentUser.ko_code || "";
@@ -43,7 +43,7 @@ window.savePrinterPreferences = function() {
         const depositPrinterName = document.getElementById('cfg-deposit-printer-name').value.trim();
         const withdrawalPrinterName = document.getElementById('cfg-withdrawal-printer-name').value.trim();
 
-        // Preference lock to local storage
+        // Store selected options directly into browser storage cache
         localStorage.setItem('jarvis_default_deposit_printer', depositPrinterName);
         localStorage.setItem('jarvis_default_withdrawal_printer', withdrawalPrinterName);
 
@@ -55,7 +55,7 @@ window.savePrinterPreferences = function() {
     }
 };
 
-// 🎯 TARGET KO EXTRACTOR & VALIDATOR (SUPABASE BINDING)
+// 🎯 TARGET KO EXTRACTOR & VALIDATOR
 window.searchKOForMerger = async function() {
     try {
         const targetKoInput = document.getElementById('merger-target-ko');
