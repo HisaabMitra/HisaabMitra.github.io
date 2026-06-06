@@ -35,6 +35,17 @@ window.initJarvisSettingsEngine = async function() {
         // Current Merger Status Check
         window.checkCurrentMergerStatus();
 
+        // 🎨 🖨️ STEP 4: UI TAB SYNCHRONIZATION (Naye Element Selection Rule ke liye)
+        // Page load hote hi pehle "Core Settings" wale button ko automatically dark red highlight pe lock karna
+        setTimeout(() => {
+            const firstTabBtn = document.querySelector('.jarvis-dynamic-nav-btn[data-jarvis-target="jarvis-tab-core"]');
+            if (firstTabBtn) {
+                firstTabBtn.style.background = '#ffffff';
+                firstTabBtn.style.color = '#7d0022';
+                firstTabBtn.style.borderLeftColor = '#7d0022';
+            }
+        }, 50);
+
     } catch (bootErr) {
         console.error("❌ Jarvis Settings Boot Engine Crashed:", bootErr);
     }
