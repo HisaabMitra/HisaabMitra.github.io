@@ -1,5 +1,5 @@
 // ========================================================
-// 🧮 GENERIC DENOMINATION PLUGIN: IN-OUT MATRIX (CASH INFLOW)
+// 🧮 GENERIC DENOMINATION PLUGIN: IN-OUT (CASH INFLOW)
 // ========================================================
 
 window.DenominationInOutComponent = {
@@ -10,13 +10,13 @@ window.DenominationInOutComponent = {
         const notes = [500, 200, 100, 50, 20, 10, 5];
         
         container.innerHTML = `
-            <h4 style="margin-top:0; color:#27ae60; font-size:0.95rem; font-weight:700; border-bottom:2px solid #27ae60; padding-bottom:8px; text-transform: uppercase; letter-spacing:0.5px;">📤 Cash Inflow Matrix (In First)</h4>
+            <h4 style="margin-top:0; color:#27ae60; font-size:0.95rem; font-weight:700; border-bottom:2px solid #27ae60; padding-bottom:8px; text-transform: uppercase; letter-spacing:0.5px;">📤 डिनॉमिनेशन विवरण (निकासी)</h4>
             <table style="width: 100%; border-collapse: collapse; text-align: center; margin-top:10px;">
                 <thead>
                     <tr style="background:#f4faf6; color:#27ae60; font-size:0.8rem; text-transform: uppercase; font-weight:700;">
-                        <th style="padding:10px; border-bottom: 1px solid #eaeaea;">Value</th>
-                        <th style="padding:10px; border-bottom: 1px solid #eaeaea; color: #27ae60;">📥 IN (लेना)</th>
-                        <th style="padding:10px; border-bottom: 1px solid #eaeaea; color: #444;">Total Value</th>
+                        <th style="padding:10px; border-bottom: 1px solid #eaeaea;">नोट का मूल्य</th>
+                        <th style="padding:10px; border-bottom: 1px solid #eaeaea; color: #27ae60;">संख्या (IN)</th>
+                        <th style="padding:10px; border-bottom: 1px solid #eaeaea; color: #444;">कुल राशि</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -28,14 +28,14 @@ window.DenominationInOutComponent = {
                         </tr>
                     `).join('')}
                     <tr style="border-bottom: 1px solid #f6f6f6; background: #fffdfd;">
-                        <td style="padding:8px; font-size:0.9rem; color:#333;"><strong>🪙 Coins</strong></td>
-                        <td style="padding:8px;"><input type="number" class="gen-in-val" data-note="coins" value="0" min="0" tabindex="47" style="width:70px; padding:6px; text-align:center; border:1px solid #dcdcdc; border-radius:4px; font-weight:600;" placeholder="Value"></td>
+                        <td style="padding:8px; font-size:0.9rem; color:#333;"><strong>🪙 सिक्के</strong></td>
+                        <td style="padding:8px;"><input type="number" class="gen-in-val" data-note="coins" value="0" min="0" tabindex="47" style="width:70px; padding:6px; text-align:center; border:1px solid #dcdcdc; border-radius:4px; font-weight:600;" placeholder="राशि"></td>
                         <td style="padding:8px; font-size:0.9rem; color:#27ae60; font-weight:700;" id="gen-in-display-coins">₹0</td>
                     </tr>
                 </tbody>
             </table>
             <div style="margin-top:20px; padding:14px; background:#f4faf6; border-left:4px solid #27ae60; border-radius:4px; font-weight:bold; display:flex; justify-content:space-between; align-items:center;">
-                <span style="color:#27ae60; font-size:0.9rem; text-transform:uppercase; letter-spacing:0.3px;">Net Inflow Total:</span>
+                <span style="color:#27ae60; font-size:0.9rem; text-transform:uppercase; letter-spacing:0.3px;">कुल निकासी मूल्य:</span>
                 <span id="gen-in-total-calculated" style="color:#27ae60; font-size:1.2rem;">₹0</span>
             </div>
         `;
