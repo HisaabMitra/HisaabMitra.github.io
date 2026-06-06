@@ -8,10 +8,10 @@
     <div style="display: flex; gap: 25px; flex-wrap: wrap; align-items: flex-start;">
         
         <div style="flex: 1; min-width: 200px; max-width: 240px; display: flex; flex-direction: column; gap: 8px;">
-            <button onclick="switchJarvisTab('jarvis-tab-core')" class="jarvis-nav-btn active-jarvis-tab" style="width: 100%; text-align: left; padding: 12px 15px; font-weight: bold; font-size: 0.95rem; border: 1px solid #dee2e6; border-left: 4px solid #7d0022; border-radius: 4px; background: #ffffff; color: #7d0022; cursor: pointer; transition: all 0.2s;">
+            <button onclick="switchJarvisTab('jarvis-tab-core', this)" class="jarvis-nav-btn active-jarvis-tab" style="width: 100%; text-align: left; padding: 12px 15px; font-weight: bold; font-size: 0.95rem; border: 1px solid #dee2e6; border-left: 4px solid #7d0022; border-radius: 4px; background: #ffffff; color: #7d0022; cursor: pointer; transition: all 0.2s;">
                 ⚙️ Core Settings
             </button>
-            <button onclick="switchJarvisTab('jarvis-tab-download')" class="jarvis-nav-btn" style="width: 100%; text-align: left; padding: 12px 15px; font-weight: bold; font-size: 0.95rem; border: 1px solid #dee2e6; border-left: 4px solid #transparent; border-radius: 4px; background: #f8f9fa; color: #495057; cursor: pointer; transition: all 0.2s;">
+            <button onclick="switchJarvisTab('jarvis-tab-download', this)" class="jarvis-nav-btn" style="width: 100%; text-align: left; padding: 12px 15px; font-weight: bold; font-size: 0.95rem; border: 1px solid #dee2e6; border-left: 4px solid transparent; border-radius: 4px; background: #f8f9fa; color: #495057; cursor: pointer; transition: all 0.2s;">
                 📥 Pre-requisites & Agent
             </button>
         </div>
@@ -102,8 +102,8 @@
                             <div style="font-size: 2rem; margin-bottom: 10px;">🐍</div>
                             <h4 style="margin: 0 0 8px 0; color: #212529; font-size: 1.1rem;">1. Python Runtime Installer</h4>
                             <p style="margin: 0 0 20px 0; color: #666; font-size: 0.85rem; line-height: 1.4;">यदि सिस्टम में पहले से पाइथन इंस्टॉल नहीं है, तो इसे डाउनलोड करें। इंस्टॉल करते समय <b>"Add Python to PATH"</b> पर टिक करना न भूलें।</p>
-                            <a href="./assets/downloads/python-installer.zip" download style="display: inline-block; width: 100%; text-align: center; padding: 10px 0; background: #495057; color: #ffffff; text-decoration: none; border-radius: 4px; font-weight: bold; font-size: 0.9rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                                📥 Download Python Zip
+                            <a href="https://www.python.org/ftp/python/3.11.9/python-3.11.9-amd64.exe" style="display: inline-block; width: 100%; text-align: center; padding: 10px 0; background: #495057; color: #ffffff; text-decoration: none; border-radius: 4px; font-weight: bold; font-size: 0.9rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                📥 Download Python (.EXE)
                             </a>
                         </div>
 
@@ -111,7 +111,7 @@
                             <div style="font-size: 2rem; margin-bottom: 10px;">🖨️</div>
                             <h4 style="margin: 0 0 8px 0; color: #7d0022; font-size: 1.1rem;">2. HisaabMitra Printer Agent</h4>
                             <p style="margin: 0 0 20px 0; color: #666; font-size: 0.85rem; line-height: 1.4;">इसमें <code>app.py</code>, बैकग्राउंड हाइड स्क्रिप्ट, और सेटअप निर्देश शामिल हैं। इसे अनज़िप करके निर्देशानुसार रन करें।</p>
-                            <a href="./assets/downloads/Hisaabmitra-Printer-Agent.zip" download style="display: inline-block; width: 100%; text-align: center; padding: 10px 0; background: #7d0022; color: #ffffff; text-decoration: none; border-radius: 4px; font-weight: bold; font-size: 0.9rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                            <a href="./assets/downloads/hisaabmitra-printer-agent.zip" download style="display: inline-block; width: 100%; text-align: center; padding: 10px 0; background: #7d0022; color: #ffffff; text-decoration: none; border-radius: 4px; font-weight: bold; font-size: 0.9rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                                 📥 Download Agent ZIP
                             </a>
                         </div>
@@ -129,29 +129,34 @@
 </div>
 
 <script>
-function switchJarvisTab(targetTabId) {
-    // 1. Sabhi panes ko hide karein
-    const panes = document.querySelectorAll('.jarvis-tab-pane');
-    panes.forEach(pane => pane.style.display = 'none');
+function switchJarvisTab(targetTabId, element) {
+    try {
+        // 1. Sabhi content panes ko dhundh kar hide karein
+        const panes = document.querySelectorAll('.jarvis-tab-pane');
+        panes.forEach(pane => pane.style.display = 'none');
 
-    // 2. Sabhi buttons se active class aur styles hataein
-    const buttons = document.querySelectorAll('.jarvis-nav-btn');
-    buttons.forEach(btn => {
-        btn.style.background = '#f8f9fa';
-        btn.style.color = '#495057';
-        btn.style.borderLeftColor = 'transparent';
-    });
+        // 2. Target pane ko smoothly display 'block' karein
+        const activePane = document.getElementById(targetTabId);
+        if (activePane) {
+            activePane.style.display = 'block';
+        }
 
-    // 3. Target pane ko active/show karein
-    const activePane = document.getElementById(targetTabId);
-    if (activePane) activePane.style.display = 'block';
+        // 3. Sabhi sidebar nav buttons se dynamic active style aur borders ko reset karein
+        const buttons = document.querySelectorAll('.jarvis-nav-btn');
+        buttons.forEach(btn => {
+            btn.style.background = '#f8f9fa';
+            btn.style.color = '#495057';
+            btn.style.borderLeftColor = 'transparent';
+        });
 
-    // 4. Clicked button ko highlight karein
-    const clickedBtn = event.currentTarget;
-    if (clickedBtn) {
-        clickedBtn.style.background = '#ffffff';
-        clickedBtn.style.color = '#7d0022';
-        clickedBtn.style.borderLeftColor = '#7d0022';
+        // 4. Click kiye huye element/button par active visual trigger lock karein
+        if (element) {
+            element.style.background = '#ffffff';
+            element.style.color = '#7d0022';
+            element.style.borderLeftColor = '#7d0022';
+        }
+    } catch(err) {
+        console.error("Jarvis Tab Switching Engine Crashed:", err);
     }
 }
 </script>
