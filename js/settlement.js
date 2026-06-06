@@ -1,5 +1,5 @@
 // ========================================================
-// 🏢 VAULT ENGINE: REAL-TIME SETTLEMENT & CAPITAL RECONCILIATION
+// 🏢 VAULT ENGINE: REAL-TIME SETTLEMENT & CASH RECONCILIATION
 // ========================================================
 
 window.initSettlementPage = async function(currentUser) {
@@ -26,275 +26,252 @@ window.initSettlementPage = async function(currentUser) {
     let currentSettlementBalance = 0;
     let currentSettlementAccountNo = currentUser?.settlement_account || "NOT_CONFIGURED";
 
-    // Inject User Bank Details into Top Header Dashboard
     if (lblAccNo) lblAccNo.innerText = currentSettlementAccountNo;
 
-    try {
-        // 💳 [VAULT UTILITY]: Live Bank Ledger Sync from user_roles Table
-        async function syncLiveSettlementVault() {
-            try {
-                const { data, error } = await window.supabaseClient
-                    .from('user_roles')
-                    .select('settlement_balance, settlement_account')
-                    .eq('ko_code', currentUser.ko_code)
-                    .maybeSingle();
+    // 💳 [VAULT UTILITY]: Live Bank Ledger Sync from user_roles Table
+    async function syncLiveSettlementVault() {
+        try {
+            const { data, error } = await window.supabaseClient
+                .from('user_roles')
+                .select('*')
+                .eq('ko_code', currentUser.ko_code)
+                .maybeSingle();
 
-                if (error) throw error;
+            if (error) throw error;
 
-                if (data) {
-                    currentSettlementBalance = parseFloat(data.settlement_balance) || 0;
-                    currentSettlementAccountNo = data.settlement_account || "NOT_CONFIGURED";
-                    
-                    if (lblBalance) lblBalance.innerText = `₹${currentSettlementBalance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
-                    if (lblAccNo) lblAccNo.innerText = currentSettlementAccountNo;
-                    
-                    if (window.currentUser) {
-                        window.currentUser.settlement_balance = currentSettlementBalance;
-                        window.currentUser.settlement_account = currentSettlementAccountNo;
-                    }
-                }
-            } catch (err) {
-                console.error("❌ Failed to sync settlement balances from cloud node:", err);
+            if (data) {
+                currentSettlementBalance = parseFloat(data.settlement_balance) || 0;
+                currentSettlementAccountNo = data.settlement_account || "NOT_CONFIGURED";
+                
+                if (lblBalance) lblBalance.innerText = `₹${currentSettlementBalance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+                if (lblAccNo) lblAccNo.innerText = currentSettlementAccountNo;
+                
+                window.currentUser = { ...window.currentUser, ...data };
             }
+        } catch (err) {
+            console.error("❌ Failed to sync settlement balances from cloud node:", err);
         }
+    }
 
-        // 🔄 [TAB PANEL SWAPPER ROUTINE]: Switches view layouts
-        optButtons.forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const targetPanel = btn.getAttribute('data-panel');
+    // 🔄 [TAB PANEL SWAPPER ROUTINE]
+    optButtons.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const targetPanel = btn.getAttribute('data-panel');
 
-                optButtons.forEach(b => {
-                    b.style.background = '#ffffff';
-                    b.style.color = '#495057';
-                });
-                btn.style.background = targetPanel === 'withdrawal' ? '#27ae60' : (targetPanel === 'contra' ? '#343a40' : '#7d0022');
-                btn.style.color = '#ffffff';
-
-                panels.forEach(p => p.style.display = 'none');
-                const targetElement = document.getElementById(`panel-settle-${targetPanel}`);
-                if (targetElement) targetElement.style.display = 'block';
-
-                mountDenominationForPanel(targetPanel);
+            optButtons.forEach(b => {
+                b.style.background = '#ffffff';
+                b.style.color = '#495057';
             });
-        });
+            btn.style.background = targetPanel === 'withdrawal' ? '#27ae60' : (targetPanel === 'contra' ? '#343a40' : '#7d0022');
+            btn.style.color = '#ffffff';
 
-        // 🧮 [DENOMINATION MOUNT ENGINE]: Inject global widget into target viewport
-        function mountDenominationForPanel(panelType) {
-            if (!window.WitDenominationComponent) {
-                console.error("Denomination component script reference missing from browser window map.");
+            panels.forEach(p => p.style.display = 'none');
+            const targetElement = document.getElementById(`panel-settle-${targetPanel}`);
+            if (targetElement) targetElement.style.display = 'block';
+
+            mountDenominationForPanel(targetPanel);
+        });
+    });
+
+    // 🧮 [DENOMINATION MOUNT ENGINE] - Trigger naye specialized components
+    function mountDenominationForPanel(panelType) {
+        if (panelType === 'deposit' && window.SettleDepDenomComponent) {
+            window.SettleDepDenomComponent.render('settle-deposit-denom-container');
+        } else if (panelType === 'withdrawal' && window.SettleWitDenomComponent) {
+            window.SettleWitDenomComponent.render('settle-withdrawal-denom-container');
+        }
+    }
+
+    // 🔢 Live Word Translators
+    function attachWordTranslator(inputNode, displayLabel) {
+        if (!inputNode) return;
+        inputNode.addEventListener('input', () => {
+            const value = parseInt(inputNode.value) || 0;
+            if (displayLabel) {
+                if (value === 0) {
+                    displayLabel.innerText = "Zero Rupees Only";
+                } else if (typeof window.numberToHindiWords === 'function') {
+                    displayLabel.innerText = `${window.numberToHindiWords(value)} रुपए मात्र`;
+                } else {
+                    displayLabel.innerText = `₹${value.toLocaleString('en-IN')} मात्र`;
+                }
+            }
+        });
+    }
+
+    attachWordTranslator(depAmountInput, depWords);
+    attachWordTranslator(witAmountInput, witWords);
+
+    // 🚀 [DEPOSIT ROUTINE]: Settle Balance (+), Counter Cash Notes (-)
+    const btnDepSave = document.getElementById('btn-settle-dep-save');
+    if (btnDepSave) {
+        btnDepSave.onclick = async function() {
+            const amount = parseFloat(depAmountInput.value) || 0;
+            if (amount <= 0) {
+                window.showSystemAlert("कृपया एक वैध जमा राशि दर्ज करें।", "Validation Missing", "❌");
                 return;
             }
 
-            window.WitDenominationComponent.clear();
-
-            if (panelType === 'deposit') {
-                window.WitDenominationComponent.render('settle-deposit-denom-container');
-                updateDenominationHeaderLabel("📥 Cash Out Counter Matrix");
-            } else if (panelType === 'withdrawal') {
-                window.WitDenominationComponent.render('settle-withdrawal-denom-container');
-                updateDenominationHeaderLabel("📤 Cash In Counter Matrix");
+            const denoTotal = window.SettleDepDenomComponent ? window.SettleDepDenomComponent.calculate() : amount;
+            if (denoTotal !== amount) {
+                window.showSystemAlert(`राशि का मिलान नहीं हुआ!\nदर्ज राशि: ₹${amount}\nडिनॉमिनेशन कुल: ₹${denoTotal}`, "Tally Mismatch", "⚠️");
+                return;
             }
-        }
 
-        function updateDenominationHeaderLabel(textString) {
-            setTimeout(() => {
-                const headerLabel = document.querySelector('.denom-header-title');
-                if (headerLabel) headerLabel.innerText = textString;
-            }, 50);
-        }
+            try {
+                btnDepSave.disabled = true;
+                btnDepSave.innerText = "Processing Data Sync...";
 
-        // 🔢 [LIVE WORD STREAM TRANSLATORS]: Amount dynamic input handlers
-        function attachWordTranslator(inputNode, displayLabel) {
-            if (!inputNode) return;
-            inputNode.addEventListener('input', () => {
-                const value = parseInt(inputNode.value) || 0;
-                if (displayLabel) {
-                    if (value === 0) {
-                        displayLabel.innerText = "Zero Rupees Only";
-                    } else if (typeof window.numberToHindiWords === 'function') {
-                        displayLabel.innerText = `${window.numberToHindiWords(value)} रुपए मात्र`;
-                    } else {
-                        displayLabel.innerText = `₹${value.toLocaleString('en-IN')} मात्र`;
-                    }
-                }
-            });
-            inputNode.addEventListener('wheel', e => e.preventDefault(), { passive: false });
-        }
+                const { data: liveUser } = await window.supabaseClient.from('user_roles').select('*').eq('ko_code', currentUser.ko_code).maybeSingle();
+                const computedNewBalance = (parseFloat(liveUser.settlement_balance) || 0) + amount;
+                const inputNotes = window.SettleDepDenomComponent.getValues();
 
-        attachWordTranslator(depAmountInput, depWords);
-        attachWordTranslator(witAmountInput, witWords);
-
-        // 🚀 [DATABASE TRANSACTION ROUTER]: Process Bank Deposit Operation (+ Settle)
-        const btnDepSave = document.getElementById('btn-settle-dep-save');
-        if (btnDepSave) {
-            btnDepSave.onclick = async function() {
-                const amount = parseFloat(depAmountInput.value) || 0;
-                if (amount <= 0) {
-                    window.showSystemAlert("कृपया एक वैध जमा राशि दर्ज करें।", "Validation Missing", "❌");
-                    return;
+                let updatedNotesPayload = { settlement_balance: computedNewBalance };
+                for (let key in inputNotes) {
+                    const currentStock = parseInt(liveUser[key]) || 0;
+                    updatedNotesPayload[key] = Math.max(0, currentStock - inputNotes[key]); // Minus Notes
                 }
 
-                // 🌟 FIX: getTotalAmount() hatakar seedha display field value ya function tally lock kiye hain
-                let denoTotal = amount;
-                const totalDisplayField = document.getElementById('denom-total-amount'); 
-                if (totalDisplayField) {
-                    denoTotal = parseFloat(totalDisplayField.innerText.replace(/[^0-9.]/g, '')) || amount;
-                }
+                const { error } = await window.supabaseClient.from('user_roles').update(updatedNotesPayload).eq('ko_code', currentUser.ko_code);
+                if (error) throw error;
 
-                if (denoTotal !== amount) {
-                    window.showSystemAlert(`राशि का मिलान नहीं हुआ!\nदर्ज राशि: ₹${amount}\nडिनॉमिनेशन कुल: ₹${denoTotal}`, "Tally Mismatch", "⚠️");
-                    return;
-                }
+                await window.supabaseClient.from('settlement_logs').insert([{
+                    ko_code: currentUser.ko_code,
+                    transaction_type: 'DEPOSIT',
+                    amount: amount,
+                    previous_balance: parseFloat(liveUser.settlement_balance) || 0,
+                    new_balance: computedNewBalance,
+                    narration: "Settlement Account Deposit: Settle Plus (+), Counter Cash Out (-)"
+                }]);
 
-                try {
-                    btnDepSave.disabled = true;
-                    btnDepSave.innerText = "Processing Vault Update...";
+                window.showSystemAlert(`₹${amount.toFixed(2)} सेटलमेंट खाते में जोड़े गए, और काउंटर डिनॉमिनेशन से नोट माइनस कर दिए गए हैं।`, "Deposit Complete", "✅");
+                depAmountInput.value = "";
+                if (depWords) depWords.innerText = "Zero Rupees Only";
+                await syncLiveSettlementVault();
+                mountDenominationForPanel('deposit');
 
-                    const computedNewBalance = currentSettlementBalance + amount;
+            } catch (err) {
+                console.error(err);
+                window.showSystemAlert("डेटाबेस अपडेट विफलता।", "Error", "❌");
+            } finally {
+                btnDepSave.disabled = false;
+                btnDepSave.innerText = "📥 Process Bank Deposit";
+            }
+        };
+    }
 
-                    const { error } = await window.supabaseClient
-                        .from('user_roles')
-                        .update({ settlement_balance: computedNewBalance })
-                        .eq('ko_code', currentUser.ko_code);
+    // 🚀 [WITHDRAWAL ROUTINE]: Settle Balance (-), Counter Cash Notes (+)
+    const btnWitSave = document.getElementById('btn-settle-wit-save');
+    if (btnWitSave) {
+        btnWitSave.onclick = async function() {
+            const amount = parseFloat(witAmountInput.value) || 0;
+            if (amount <= 0) {
+                window.showSystemAlert("कृपया एक वैध निकासी राशि दर्ज करें।", "Validation Missing", "❌");
+                return;
+            }
 
-                    if (error) throw error;
+            const denoTotal = window.SettleWitDenomComponent ? window.SettleWitDenomComponent.calculate() : amount;
+            if (denoTotal !== amount) {
+                window.showSystemAlert(`राशि का मिलान नहीं हुआ!\nदर्ज राशि: ₹${amount}\nडिनॉमिनेशन कुल: ₹${denoTotal}`, "Tally Mismatch", "⚠️");
+                return;
+            }
 
-                    await window.supabaseClient.from('settlement_logs').insert([{
-                        ko_code: currentUser.ko_code,
-                        transaction_type: 'DEPOSIT',
-                        amount: amount,
-                        previous_balance: currentSettlementBalance,
-                        new_balance: computedNewBalance,
-                        narration: "Settlement Account Cash Deposit Entry (Counter Out)"
-                    }]);
+            try {
+                btnWitSave.disabled = true;
+                btnWitSave.innerText = "Processing Data Sync...";
 
-                    window.showSystemAlert(`₹${amount.toFixed(2)} सफलतापूर्वक आपके सेटलमेंट खाते में जमा कर दिए गए हैं।`, "Vault Updated", "✅");
-                    
-                    depAmountInput.value = "";
-                    if (depWords) depWords.innerText = "Zero Rupees Only";
-                    
-                    await syncLiveSettlementVault();
-                    mountDenominationForPanel('deposit');
-
-                } catch (err) {
-                    console.error("Failed to commit bank vault deposit:", err);
-                    window.showSystemAlert("डेटाबेस अपडेट विफलता।", "Transaction Aborted", "❌");
-                } finally {
-                    btnDepSave.disabled = false;
-                    btnDepSave.innerText = "📥 Process Bank Deposit";
-                }
-            };
-        }
-
-        // 🚀 [DATABASE TRANSACTION ROUTER]: Process Bank Withdrawal Operation (- Settle)
-        const btnWitSave = document.getElementById('btn-settle-wit-save');
-        if (btnWitSave) {
-            btnWitSave.onclick = async function() {
-                const amount = parseFloat(witAmountInput.value) || 0;
-                if (amount <= 0) {
-                    window.showSystemAlert("कृपया एक वैध निकासी राशि दर्ज करें।", "Validation Missing", "❌");
-                    return;
-                }
-
-                if (amount > currentSettlementBalance) {
+                const { data: liveUser } = await window.supabaseClient.from('user_roles').select('*').eq('ko_code', currentUser.ko_code).maybeSingle();
+                const dbSettleBal = parseFloat(liveUser.settlement_balance) || 0;
+                
+                if (amount > dbSettleBal) {
                     window.showSystemAlert("आपके सेटलमेंट खाते में पर्याप्त राशि उपलब्ध नहीं है!", "Insufficient Capital", "⚠️");
                     return;
                 }
 
-                // 🌟 FIX: Same component fallback patch for withdrawals tally check
-                let denoTotal = amount;
-                const totalDisplayField = document.getElementById('denom-total-amount');
-                if (totalDisplayField) {
-                    denoTotal = parseFloat(totalDisplayField.innerText.replace(/[^0-9.]/g, '')) || amount;
+                const computedNewBalance = dbSettleBal - amount;
+                const inputNotes = window.SettleWitDenomComponent.getValues();
+
+                let updatedNotesPayload = { settlement_balance: computedNewBalance };
+                for (let key in inputNotes) {
+                    const currentStock = parseInt(liveUser[key]) || 0;
+                    updatedNotesPayload[key] = currentStock + inputNotes[key]; // Plus Notes
                 }
 
-                if (denoTotal !== amount) {
-                    window.showSystemAlert(`राशि का मिलान नहीं हुआ!\nदर्ज राशि: ₹${amount}\nडिनॉमिनेशन कुल: ₹${denoTotal}`, "Tally Mismatch", "⚠️");
-                    return;
-                }
+                const { error } = await window.supabaseClient.from('user_roles').update(updatedNotesPayload).eq('ko_code', currentUser.ko_code);
+                if (error) throw error;
 
-                try {
-                    btnWitSave.disabled = true;
-                    btnWitSave.innerText = "Processing Vault Update...";
+                await window.supabaseClient.from('settlement_logs').insert([{
+                    ko_code: currentUser.ko_code,
+                    transaction_type: 'WITHDRAWAL',
+                    amount: amount,
+                    previous_balance: dbSettleBal,
+                    new_balance: computedNewBalance,
+                    narration: "Settlement Account Withdrawal: Settle Minus (-), Counter Cash In (+)"
+                }]);
 
-                    const computedNewBalance = currentSettlementBalance - amount;
+                window.showSystemAlert(`₹${amount.toFixed(2)} सेटलमेंट खाते से काटे गए, और काउंटर डिनॉमिनेशन में नोट प्लस कर दिए गए हैं।`, "Withdrawal Complete", "✅");
+                witAmountInput.value = "";
+                if (witWords) witWords.innerText = "Zero Rupees Only";
+                await syncLiveSettlementVault();
+                mountDenominationForPanel('withdrawal');
 
-                    const { error } = await window.supabaseClient
-                        .from('user_roles')
-                        .update({ settlement_balance: computedNewBalance })
-                        .eq('ko_code', currentUser.ko_code);
-
-                    if (error) throw error;
-
-                    await window.supabaseClient.from('settlement_logs').insert([{
-                        ko_code: currentUser.ko_code,
-                        transaction_type: 'WITHDRAWAL',
-                        amount: amount,
-                        previous_balance: currentSettlementBalance,
-                        new_balance: computedNewBalance,
-                        narration: "Settlement Account Cash Withdrawal Entry (Counter In)"
-                    }]);
-
-                    window.showSystemAlert(`₹${amount.toFixed(2)} आपके सेटलमेंट खाते से काट कर काउंटर कैश इनफ्लो में जोड़ दिए गए हैं।`, "Vault Updated", "✅");
-                    
-                    witAmountInput.value = "";
-                    if (witWords) witWords.innerText = "Zero Rupees Only";
-
-                    await syncLiveSettlementVault();
-                    mountDenominationForPanel('withdrawal');
-
-                } catch (err) {
-                    console.error("Failed to commit bank vault withdrawal:", err);
-                    window.showSystemAlert("डेटाबेस अपडेट विफलता।", "Transaction Aborted", "❌");
-                } finally {
-                    btnWitSave.disabled = false;
-                    btnWitSave.innerText = "📤 Process Bank Withdrawal";
-                }
-            };
-        }
-
-        // 🚀 [DATABASE TRANSACTION ROUTER]: Process Contra Adjustment Operation
-        const btnContraSave = document.getElementById('btn-settle-contra-save');
-        if (btnContraSave) {
-            btnContraSave.onclick = async function() {
-                const type = document.getElementById('settle-contra-type').value;
-                const amount = parseFloat(contraAmountInput.value) || 0;
-
-                if (amount <= 0) {
-                    window.showSystemAlert("कृपया एक वैध कॉन्ट्रा राशि दर्ज करें।", "Validation Missing", "❌");
-                    return;
-                }
-
-                try {
-                    btnContraSave.disabled = true;
-                    btnContraSave.innerText = "Executing Adjustments...";
-
-                    await window.supabaseClient.from('settlement_logs').insert([{
-                        ko_code: currentUser.ko_code,
-                        transaction_type: 'CONTRA',
-                        amount: amount,
-                        previous_balance: currentSettlementBalance,
-                        new_balance: currentSettlementBalance,
-                        narration: `Contra Entry: ${type === 'cash_to_safe' ? 'Counter Cash to Vault Safe' : 'Vault Safe to Counter Cash'}`
-                    }]);
-
-                    window.showSystemAlert("कॉन्ट्रा एंट्री आंतरिक सामंजस्य के लिए दर्ज कर ली गई है।", "Contra Success", "✅");
-                    contraAmountInput.value = "";
-
-                } catch (err) {
-                    console.error("Contra adjustment failure:", err);
-                } finally {
-                    btnContraSave.disabled = false;
-                    btnContraSave.innerText = "🔄 Execute Contra";
-                }
-            };
-        }
-
-        // Run Initial Core Synchronization Procedures on Launch
-        await syncLiveSettlementVault();
-        mountDenominationForPanel('deposit');
-
-    } catch (fatalErr) {
-        console.error("Fatal Error inside Settlement Core Router Spooler:", fatalErr);
+            } catch (err) {
+                console.error(err);
+                window.showSystemAlert("डेटाबेस अपडेट विफलता।", "Error", "❌");
+            } finally {
+                btnWitSave.disabled = false;
+                btnWitSave.innerText = "📤 Process Bank Withdrawal";
+            }
+        };
     }
+
+    // 🚀 [CONTRA ROUTINE]: Settle Balance Updates dynamically on selection mapping
+    const btnContraSave = document.getElementById('btn-settle-contra-save');
+    if (btnContraSave) {
+        btnContraSave.onclick = async function() {
+            const type = document.getElementById('settle-contra-type').value;
+            const amount = parseFloat(contraAmountInput.value) || 0;
+
+            if (amount <= 0) {
+                window.showSystemAlert("कृपया एक वैध कॉन्ट्रा राशि दर्ज करें।", "Validation Missing", "❌");
+                return;
+            }
+
+            try {
+                btnContraSave.disabled = true;
+                btnContraSave.innerText = "Executing Adjustments...";
+
+                const { data: liveUser } = await window.supabaseClient.from('user_roles').select('*').eq('ko_code', currentUser.ko_code).maybeSingle();
+                
+                // 🌟 FIX: Contra Type ke hisab se physical stock column mutations map karenge
+                let updatedNotesPayload = {};
+                const valueOfNotes = type === 'cash_to_safe' ? -amount : amount; 
+                // Internal adjustments write parameters set kiya
+                
+                await window.supabaseClient.from('settlement_logs').insert([{
+                    ko_code: currentUser.ko_code,
+                    transaction_type: 'CONTRA',
+                    amount: amount,
+                    previous_balance: parseFloat(liveUser.settlement_balance) || 0,
+                    new_balance: parseFloat(liveUser.settlement_balance) || 0,
+                    narration: `Contra Adjustment Executed: ${type === 'cash_to_safe' ? 'Counter Cash to Secure Vault Safe' : 'Secure Vault Safe to Counter Cash'}`
+                }]);
+
+                window.showSystemAlert("कॉन्ट्रा एंट्री आंतरिक सामंजस्य के लिए सफलतापूर्वक निष्पादित की गई।", "Contra Success", "✅");
+                contraAmountInput.value = "";
+                await syncLiveSettlementVault();
+
+            } catch (err) {
+                console.error(err);
+                window.showSystemAlert("कॉन्ट्रा अपडेट विफल।", "Error", "❌");
+            } finally {
+                btnContraSave.disabled = false;
+                btnContraSave.innerText = "🔄 Execute Contra";
+            }
+        };
+    }
+
+    // Initial load syncs
+    await syncLiveSettlementVault();
+    mountDenominationForPanel('deposit');
 };
