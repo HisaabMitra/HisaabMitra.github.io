@@ -1,105 +1,60 @@
-<div id="jarvis-settings-wrapper" style="display: block !important; visibility: visible !important; opacity: 1 !important; padding: 25px; max-width: 1000px; margin: 0 auto; font-family: sans-serif; text-align: left; box-sizing: border-box;">
+<div id="jarvis-search-wrapper" style="display: block !important; padding: 25px; max-width: 1050px; margin: 0 auto; font-family: sans-serif; text-align: left; box-sizing: border-box;">
     
     <div style="border-bottom: 3px solid #7d0022; padding-bottom: 12px; margin-bottom: 25px; text-align: left;">
-        <h2 style="color: #7d0022; margin: 0; font-size: 1.8rem; font-weight: bold;">⚙️ Jarvis System Settings</h2>
-        <p style="margin: 5px 0 0 0; color: #555; font-size: 0.95rem;">Configure your printer mergers, profile preferences, and core prerequisites instantly.</p>
+        <h2 style="color: #7d0022; margin: 0; font-size: 1.8rem; font-weight: bold;">🔍 Quick Radar Search Engine</h2>
+        <p style="margin: 5px 0 0 0; color: #555; font-size: 0.95rem;">Multi-parameter transaction scanner with custom date-range routing.</p>
     </div>
 
-    <div style="display: flex; gap: 25px; flex-wrap: wrap; margin-bottom: 25px; text-align: left;">
+    <div style="background: #ffffff; padding: 25px; border-radius: 6px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); border-top: 5px solid #7d0022; margin-bottom: 25px;">
         
-        <div style="flex: 1; min-width: 320px; background: #ffffff; padding: 20px; border-radius: 6px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); border-top: 5px solid #7d0022; text-align: left;">
-            <h3 style="margin-top: 0; margin-bottom: 10px; color: #7d0022; font-size: 1.3rem;">KO Code Merger (Withdrawal)</h3>
-            <p style="color: #666; font-size: 0.85rem; line-height: 1.4; margin-bottom: 15px;">यदि आप एक ही काउंटर/दुकान में एक ही पासबुक प्रिंटर पर 2 अलग-अलग सिस्टम से काम कर रहे हैं, तो यहाँ दूसरे ऑपरेटर का KO कोड डालकर मर्ज रिक्वेस्ट भेजें।</p>
-            
-            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-                <input type="text" id="merger-target-ko" placeholder="Enter Target KO Code (e.g., K200XXXX)" style="flex: 1; padding: 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.95rem; box-sizing: border-box;">
-                <button type="button" id="btn-search-merger-ko" onclick="searchKOForMerger()" style="padding: 12px 20px; background: #7d0022; color: #ffffff; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.95rem;">Search</button>
-            </div>
-
-            <div id="merger-verification-box" style="display: none; padding: 15px; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; margin-bottom: 15px; text-align: left;">
-                <span style="font-weight: bold; font-size: 0.85rem; color: #6c757d; display: block; margin-bottom: 5px;">Target Counter Details:</span>
-                <div style="font-weight: bold; color: #212529; font-size: 1.1rem;" id="lbl-merger-target-name">--</div>
-                <div style="font-size: 0.9rem; color: #495057; margin-top: 3px;" id="lbl-merger-target-address">--</div>
-            </div>
-
-            <div id="merger-status-alert" style="display: none; padding: 12px; background: #fff3cd; border: 1px solid #ffeeba; color: #856404; border-radius: 4px; font-size: 0.9rem; margin-bottom: 15px; text-align: left; line-height: 1.4;"></div>
-
-            <button type="button" id="btn-submit-merger" disabled onclick="submitMergerRequest()" style="width: 100%; padding: 12px; font-weight: bold; border-radius: 4px; border: none; cursor: not-allowed; background: #e9ecef; color: #6c757d; font-size: 1rem;">
-                Submit Merger Request
-            </button>
-        </div>
-
-        <div style="flex: 1; min-width: 320px; background: #ffffff; padding: 20px; border-radius: 6px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); border-top: 5px solid #343a40; text-align: left; display: flex; flex-direction: column; justify-content: space-between;">
-            <div>
-                <h3 style="margin-top: 0; margin-bottom: 10px; color: #343a40; font-size: 1.3rem;">Configure Hardware Printer's</h3>
-                <p style="color: #666; font-size: 0.85rem; line-height: 1.4; margin-bottom: 15px;">आपके सिस्टम में मौजूद असली प्रिंटर्स नीचे ड्रॉपडाउन में लोड हो गए हैं, सही प्रिंटर चुनकर प्राथमिकता सुरक्षित करें।</p>
-                
-                <div style="margin-bottom: 15px; text-align: left;">
-                    <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 6px; color: #495057;">Deposit Receipt Printer Name (Thermal)</label>
-                    <select id="cfg-deposit-printer-name" style="width: 100%; padding: 12px; border: 1px solid #ced4da; border-radius: 4px; font-size: 0.95rem; box-sizing: border-box; background-color: #fff; color: #212529; cursor: pointer;">
-                        <option value="">🔍 लोडिंग प्रिंटर्स लिस्ट...</option>
-                    </select>
-                </div>
-
-                <div style="margin-bottom: 15px; text-align: left;">
-                    <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 6px; color: #495057;">Withdrawal Passbook Printer Name (Matrix)</label>
-                    <select id="cfg-withdrawal-printer-name" style="width: 100%; padding: 12px; border: 1px solid #ced4da; border-radius: 4px; font-size: 0.95rem; box-sizing: border-box; background-color: #fff; color: #212529; cursor: pointer;">
-                        <option value="">🔍 लोडिंग प्रिंटर्स लिस्ट...</option>
-                    </select>
+        <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 20px;">
+            <div style="flex: 2; min-width: 300px;">
+                <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 8px; color: #495057;">Universal Search Box</label>
+                <div style="position: relative;">
+                    <input type="text" id="srch-universal-input" placeholder="Type Account, Name, Phone or Identifier Ref..." style="width: 100%; padding: 12px 12px 12px 40px; border: 1px solid #ced4da; border-radius: 4px; font-size: 1rem; box-sizing: border-box;">
+                    <span style="position: absolute; left: 15px; top: 12px; color: #6c757d; font-size: 1.1rem;">🔍</span>
                 </div>
             </div>
 
-            <div style="margin-top: 15px; text-align: right; width: 100%;">
-                <button type="button" style="padding: 10px 20px; background: #343a40; color: #ffffff; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.9rem;" onclick="window.savePrinterPreferences()">
-                    Save Preferences
-                </button>
+            <div style="flex: 1; min-width: 180px;">
+                <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 8px; color: #495057;">From Date</label>
+                <input type="date" id="srch-from-date" style="width: 100%; padding: 11px; border: 1px solid #ced4da; border-radius: 4px; font-size: 0.95rem; box-sizing: border-box;">
             </div>
+
+            <div style="flex: 1; min-width: 180px;">
+                <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 8px; color: #495057;">To Date</label>
+                <input type="date" id="srch-to-date" style="width: 100%; padding: 11px; border: 1px solid #ced4da; border-radius: 4px; font-size: 0.95rem; box-sizing: border-box;">
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 15px; justify-content: flex-end; align-items: center; border-top: 1px dashed #dee2e6; padding-top: 15px;">
+            <button type="button" id="btn-srch-reset" style="padding: 11px 25px; background: #6c757d; color: #ffffff; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.95rem;">❌ Reset Filters</button>
+            <button type="button" id="btn-srch-execute" style="padding: 11px 35px; background: #7d0022; color: #ffffff; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.95rem; box-shadow: 0 2px 4px rgba(0,0,0,0.15);">⚡ Execute Query</button>
         </div>
     </div>
 
-    <div style="background: #ffffff; padding: 25px; border-radius: 6px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); border-top: 5px solid #7d0022; text-align: left; margin-bottom: 25px;">
-        <h3 style="margin-top: 0; margin-bottom: 10px; color: #7d0022; font-size: 1.4rem;">📥 System Pre-requisites & Setup Files</h3>
-        <p style="color: #555; font-size: 0.9rem; line-height: 1.5; margin-bottom: 20px;">इस काउंटर पर साइलेंट पासबुक और थर्मल प्रिंटिंग चालू करने के लिए नीचे दिए गए दोनों पैकेजेस का होना अनिवार्य है।</p>
+    <div style="background: #ffffff; padding: 20px; border-radius: 6px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); border-top: 3px solid #7d0022;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+            <h3 style="margin: 0; color: #343a40; font-size: 1.2rem; font-weight: bold;">📊 Matching Transaction Logs</h3>
+            <span id="srch-counter-badge" style="background: #e9ecef; color: #495057; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: bold;">Found: 0 records</span>
+        </div>
         
-        <div style="display: flex; gap: 20px; flex-wrap: wrap;">
-            
-            <div style="flex: 1; min-width: 280px; border: 1px solid #dee2e6; border-radius: 6px; padding: 20px; background: #f8f9fa;">
-                <div style="font-size: 2rem; margin-bottom: 10px;">🐍</div>
-                <h4 style="margin: 0 0 8px 0; color: #212529; font-size: 1.1rem;">1. Python Runtime Installer</h4>
-                <p style="margin: 0 0 20px 0; color: #666; font-size: 0.85rem; line-height: 1.4;">यदि सिस्टम में पहले से पाइथन इंस्टॉल नहीं है, तो इसे डाउनलोड करें। इंस्टॉल करते समय <b>"Add Python to PATH"</b> पर टिक करना न भूलें।</p>
-                <a href="https://www.python.org/ftp/python/3.11.9/python-3.11.9-amd64.exe" style="display: inline-block; width: 100%; text-align: center; padding: 10px 0; background: #495057; color: #ffffff; text-decoration: none; border-radius: 4px; font-weight: bold; font-size: 0.9rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                    📥 Download Python (.EXE)
-                </a>
-            </div>
-
-            <div style="flex: 1; min-width: 280px; border: 1px solid #dee2e6; border-radius: 6px; padding: 20px; background: #f8f9fa; border-left: 4px solid #7d0022;">
-                <div style="font-size: 2rem; margin-bottom: 10px;">🖨️</div>
-                <h4 style="margin: 0 0 8px 0; color: #7d0022; font-size: 1.1rem;">2. HisaabMitra Printer Agent</h4>
-                <p style="margin: 0 0 20px 0; color: #666; font-size: 0.85rem; line-height: 1.4;">इसमें <code>app.py</code>, बैकग्राउंड हाइड स्क्रिप्ट, और सेटअप निर्देश शामिल हैं। इसे अनज़िप करके निर्देशानुसार रन करें।</p>
-                <a href="./assets/downloads/hisaabmitra-printer-agent.zip" download style="display: inline-block; width: 100%; text-align: center; padding: 10px 0; background: #7d0022; color: #ffffff; text-decoration: none; border-radius: 4px; font-weight: bold; font-size: 0.9rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                    📥 Download Agent ZIP
-                </a>
-            </div>
-
+        <div style="overflow-x: auto; width: 100%;">
+            <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
+                <thead>
+                    <tr style="background: #f8f9fa; border-bottom: 2px solid #dee2e6;">
+                        <th style="padding:12px; width: 6%; text-align:center;">Sr.No</th>
+                        <th style="padding:12px; width: 14%;">Type</th>
+                        <th style="padding:12px; width: 25%;">Customer Details</th>
+                        <th style="padding:12px; width: 18%;">Amount (₹)</th>
+                        <th style="padding:12px; width: 17%;">Date & Time</th>
+                        <th style="padding:12px; width: 20%;">Remarks / Notes</th>
+                    </tr>
+                </thead>
+                <tbody id="search-results-body">
+                    <tr><td colspan="6" style="text-align:center; padding:20px; color:#6c757d; font-style: italic;">Enter search parameters and click Execute Query...</td></tr>
+                </tbody>
+            </table>
         </div>
-    </div>
-
-    <div style="background: #ffffff; padding: 25px; border-radius: 6px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); border-top: 5px solid #6c757d; text-align: left; margin-bottom: 25px;">
-        <h3 style="margin-top: 0; margin-bottom: 15px; color: #6c757d; font-size: 1.3rem;">User Profile Update Setting</h3>
-        <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 20px; text-align: left;">
-            <div style="flex: 1; min-width: 220px;">
-                <label style="display:block; font-size:0.9rem; font-weight:bold; margin-bottom:6px; color: #495057;">Operator Name</label>
-                <input type="text" id="prof-display-name" readonly style="width: 100%; padding: 12px; background: #e9ecef; border: 1px solid #ced4da; border-radius: 4px; color: #495057; font-size: 0.95rem; box-sizing: border-box;">
-            </div>
-            <div style="flex: 1; min-width: 220px;">
-                <label style="display:block; font-size:0.9rem; font-weight:bold; margin-bottom:6px; color: #495057;">KO Code</label>
-                <input type="text" id="prof-ko-code" readonly style="width: 100%; padding: 12px; background: #e9ecef; border: 1px solid #ced4da; border-radius: 4px; color: #495057; font-size: 0.95rem; box-sizing: border-box;">
-            </div>
-            <div style="flex: 1; min-width: 220px;">
-                <label style="display:block; font-size:0.9rem; font-weight:bold; margin-bottom:6px; color: #495057;">Outlet Address</label>
-                <input type="text" id="prof-address" style="width: 100%; padding: 12px; border: 1px solid #ced4da; border-radius: 4px; font-size: 0.95rem; box-sizing: border-box; background-color: #fff;">
-            </div>
-        </div>
-        <button type="button" onclick="window.updateProfileSettings()" style="padding: 12px 25px; background: #6c757d; color: #ffffff; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.95rem;">Update Profile Info</button>
     </div>
 </div>
