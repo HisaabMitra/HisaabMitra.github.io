@@ -1,12 +1,12 @@
 // ========================================================
-// 🖨️ ULTRA-COMPACT 58MM POS THERMAL PRINT ENGINE (DEPOSIT)
+// 🖨️ ULTRA-COMPACT 58MM POS THERMAL PRINT ENGINE (DEPOSIT - SILENT MODE)
 // ========================================================
 
-window.executeDepositPrintReceipt = function(encodedTx) {
+window.executeDepositPrintReceipt = async function(encodedTx) {
     try {
         // १. बेस 64 डेटा को डिकोड करें
         const txData = JSON.parse(atob(encodedTx));
-        console.log("🖨️ Initializing Ultra-Compact POS Print:", txData);
+        console.log("🖨️ Initializing Silent POS Print via Python Agent:", txData);
 
         // २. तारीख को DD-MM-YYYY फॉर्मेट में बदलें
         const txDate = new Date(txData.transaction_date);
@@ -21,119 +21,39 @@ window.executeDepositPrintReceipt = function(encodedTx) {
         // अमाउंट इन वर्ड्स ( utils.js हिन्दी कनवर्टर सिंक )
         const amountInWords = window.numberToHindiWords ? `${window.numberToHindiWords(parseInt(txData.amount))} रुपए मात्र` : "Rupees Only";
 
-        // ४. प्रिंट के लिए हिडन Iframe हुक मैकेनिज्म
-        let printFrame = document.getElementById('pos-print-iframe');
-        if (!printFrame) {
-            printFrame = document.createElement('iframe');
-            printFrame.id = 'pos-print-iframe';
-            printFrame.style.position = 'fixed';
-            printFrame.style.bottom = '0';
-            printFrame.style.right = '0';
-            printFrame.style.width = '0';
-            printFrame.style.height = '0';
-            printFrame.style.border = 'none';
-            document.body.appendChild(printFrame);
+        // 💾 🖨️ STEP 4: LocalStorage se counter ka select kiya hua deposit printer uthayein
+        const selectedPrinter = localStorage.getItem('jarvis_default_deposit_printer');
+
+        if (!selectedPrinter) {
+            if (window.showSystemAlert) {
+                window.showSystemAlert("कृपया पहले सेटिंग्स में जाकर इस काउंटर के लिए डिपॉजिट प्रिंटर सेलेक्ट करें!", "Printer Not Set", "⚠️");
+            } else {
+                alert("⚠️ कृपया पहले सेटिंग्स में जाकर इस काउंटर के लिए डिपॉजिट प्रिंटर सेलेक्ट करें!");
+            }
+            return;
         }
 
-        const frameDoc = printFrame.contentWindow || printFrame.contentDocument;
-        const doc = frameDoc.document || frameDoc;
-
-        // 📊 58mm थर्मल प्रिंटर के लिए ज़ीरो-गैप और बॉर्डर-लेस HTML लेआउट
+        // 📊 58mm थर्मल प्रिंटर के लिए ज़ीरो-गैप और बॉर्डर-लेस HTML लेआउट (Python Parsing ke liye ready)
         const receiptHTML = `
             <!DOCTYPE html>
             <html>
             <head>
                 <meta charset="UTF-8">
                 <style>
-    /* 🚨 ब्राउज़र के प्रिंटर ड्राइवर को सीधे 58mm पेज पर लॉक करने का नियम */
-    @page { 
-        size: 58mm auto; /* पेज की चौड़ाई 58mm और लंबाई डेटा के हिसाब से ऑटो */
-        margin: 0;       /* ब्राउज़र के डिफ़ॉल्ट हेडर/फुटर (तारीख, URL) को हटाने के लिए */
-    }
-    
-    html, body {
-        margin: 0;
-        padding: 0;
-        width: 58mm;    /* पूरे HTML पेज की चौड़ाई ही 58mm फिक्स कर दी */
-        background: #fff;
-    }
-
-    body {
-        padding: 4px 2mm; /* दाएं-बाएं से 2mm का सेफ मार्जिन ताकि टेक्स्ट कटे नहीं */
-        box-sizing: border-box;
-        font-family: 'Courier New', Courier, monospace;
-        font-size: 11px;
-        line-height: 1.1;
-        color: #000;
-    }
-
-    .header {
-        font-weight: bold;
-        font-size: 14px;
-        margin: 0;
-        text-align: center;
-        text-transform: uppercase;
-    }
-
-    .address {
-        font-size: 10px;
-        margin: 2px 0;
-        padding-bottom: 3px;
-        border-bottom: 1px dashed #000;
-        text-align: center;
-        text-transform: uppercase;
-    }
-
-    .date-line {
-        text-align: center;
-        margin: 3px 0;
-        font-weight: bold;
-    }
-
-    .info-container {
-        margin: 4px 0;
-    }
-
-    .info-row {
-        display: flex;
-        justify-content: space-between;
-        margin-bottom: 2px;
-    }
-
-    .label {
-        font-weight: bold;
-    }
-
-    .value {
-        text-align: right;
-        text-transform: uppercase;
-    }
-
-    .amount-highlight {
-        font-size: 13px;
-        font-weight: bold;
-        border-top: 1px dashed #000;
-        margin-top: 3px;
-        padding-top: 3px;
-    }
-
-    .words-section {
-        text-align: left;
-        font-size: 10px;
-        font-style: italic;
-        margin: 4px 0;
-        border-bottom: 1px dashed #000;
-        padding-bottom: 3px;
-    }
-
-    .footer {
-        font-size: 9px;
-        font-weight: bold;
-        margin-top: 3px;
-        line-height: 1.1;
-        text-align: center;
-    }
-</style>
+                    @page { size: 58mm auto; margin: 0; }
+                    html, body { margin: 0; padding: 0; width: 58mm; background: #fff; }
+                    body { padding: 4px 2mm; box-sizing: border-box; font-family: 'Courier New', Courier, monospace; font-size: 11px; line-height: 1.1; color: #000; }
+                    .header { font-weight: bold; font-size: 14px; margin: 0; text-align: center; text-transform: uppercase; }
+                    .address { font-size: 10px; margin: 2px 0; padding-bottom: 3px; border-bottom: 1px dashed #000; text-align: center; text-transform: uppercase; }
+                    .date-line { text-align: center; margin: 3px 0; font-weight: bold; }
+                    .info-container { margin: 4px 0; }
+                    .info-row { display: flex; justify-content: space-between; margin-bottom: 2px; }
+                    .label { font-weight: bold; }
+                    .value { text-align: right; text-transform: uppercase; }
+                    .amount-highlight { font-size: 13px; font-weight: bold; border-top: 1px dashed #000; margin-top: 3px; padding-top: 3px; }
+                    .words-section { text-align: left; font-size: 10px; font-style: italic; margin: 4px 0; border-bottom: 1px dashed #000; padding-bottom: 3px; }
+                    .footer { font-size: 9px; font-weight: bold; margin-top: 3px; line-height: 1.1; text-align: center; }
+                </style>
             </head>
             <body>
                 <div class="header">Kiosk Banking System</div>
@@ -169,20 +89,35 @@ window.executeDepositPrintReceipt = function(encodedTx) {
             </html>
         `;
 
-        // ५. Iframe में कंटेंट इंजेक्ट करें और प्रिंट ट्रिगर करें
-        doc.open();
-        doc.write(receiptHTML);
-        doc.close();
+        // 🚀 STEP 5: Hidden iframe ki jagah seedha Python Local Agent ko data hit karein
+        const response = await fetch("http://127.0.0.1:5000/print", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                printer_name: selectedPrinter,
+                content: receiptHTML // HTML format data python printer handle ko transfer kiya
+            })
+        });
 
-        setTimeout(() => {
-            printFrame.contentWindow.focus();
-            printFrame.contentWindow.print();
-        }, 150);
+        const result = await response.json();
+
+        if (result.success) {
+            console.log(`🚀 Receipt printed silently on: ${selectedPrinter}`);
+            if (window.showSystemAlert) {
+                window.showSystemAlert("रसीद सफलतापूर्वक प्रिंटर पर भेज दी गई है।", "Print Successful", "✅");
+            }
+        } else {
+            throw new Error(result.message || "Unknown error from agent");
+        }
 
     } catch (err) {
         console.error("POS Receipt Printing Fatal Failure:", err);
         if (window.showSystemAlert) {
-            window.showSystemAlert("रसीद प्रिंट करने में त्रुटि: " + err.message, "Print Error", "❌");
+            window.showSystemAlert("प्रिंट सर्विस ऑफलाइन है या कोई त्रुटि है। कृपया HisaabMitra Agent चेक करें।", "Print Error", "❌");
+        } else {
+            alert("❌ रसीद प्रिंट करने में त्रुटि: " + err.message);
         }
     }
 };
