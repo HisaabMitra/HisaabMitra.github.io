@@ -174,6 +174,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error("❌ initJarvisSettingsEngine function missing in settings.js scope!");
             }
         }
+
+
+            if (pageName === 'settlement') {
+            if (typeof window.initSettlementPage === 'function') {
+            console.log("🏢 Triggering Jarvis Settlement Engine...");
+                window.initSettlementPage(currentLoggedInUser);
+            } else {
+        console.error("❌ initSettlementPage function missing in settlement.js scope!");
+            }
+        }
     }
                         
     if (logoutBtn) {
