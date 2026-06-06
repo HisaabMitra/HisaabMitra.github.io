@@ -7,6 +7,9 @@
 
     <div style="display: flex; gap: 25px; flex-wrap: wrap; align-items: flex-start; width: 100%;">
         
+        <!-- ======================================================== -->
+        <!-- 👈 LEFT SIDEBAR: ACCOUNT DETAILS, BALANCE & CONTROL SWITCHES -->
+        <!-- ======================================================== -->
         <div style="flex: 1; min-width: 300px; display: flex; flex-direction: column; gap: 15px;">
             
             <div style="background: #343a40; color: #ffffff; padding: 18px; border-radius: 6px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); border-left: 5px solid #7d0022;">
@@ -36,60 +39,69 @@
             </div>
         </div>
 
-        <div style="flex: 2.2; min-width: 320px; display: flex; flex-direction: column;">
+        <!-- ======================================================== -->
+        <!-- 👉 RIGHT PANEL: WORKSPACE PANEL (COMPACT & CONTROLLED WIDTH) -->
+        <!-- ======================================================== -->
+        <!-- 🌟 LOOK FIX: flex-basis ko compact karke max-width: 540px lagaya h taaki text fields aur tables failen nahi -->
+        <div style="flex: 1.5; min-width: 320px; max-width: 540px; display: flex; flex-direction: column;">
             
-            <div id="panel-settle-deposit" class="settle-panel" style="display: block; background: #ffffff; padding: 25px; border-radius: 6px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-top: 5px solid #7d0022; border: 1px solid #dee2e6; border-top-width: 5px; width: 100%; box-sizing: border-box;">
+            <!-- 📥 WORKSPACE 1: DEPOSIT ACTION FRAME -->
+            <div id="panel-settle-deposit" class="settle-panel" style="display: block; background: #ffffff; padding: 22px; border-radius: 6px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-top: 5px solid #7d0022; border: 1px solid #dee2e6; border-top-width: 5px; width: 100%; box-sizing: border-box;">
                 <h3 style="margin-top: 0; margin-bottom: 20px; color: #7d0022; font-size: 1.2rem; font-weight: bold; border-bottom: 1px dashed #eee; padding-bottom: 10px;">📥 Deposit Amount & Denomination</h3>
                 
-                <div style="margin-bottom: 25px; max-width: 100%;">
+                <div style="margin-bottom: 20px; width: 100%;">
                     <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 8px; color: #495057;">जमा राशि (₹)</label>
-                    <input type="number" id="settle-dep-amount" class="settle-amount-input" placeholder="Enter cash amount sent to bank" style="width: 100%; max-width: 450px; padding: 12px; border: 1px solid #ced4da; border-radius: 4px; font-size: 1.1rem; font-weight: bold; box-sizing: border-box;">
+                    <input type="number" id="settle-dep-amount" class="settle-amount-input" placeholder="Enter cash amount sent to bank" style="width: 100%; padding: 12px; border: 1px solid #ced4da; border-radius: 4px; font-size: 1.1rem; font-weight: bold; box-sizing: border-box;">
                     <span id="settle-dep-words" style="display:block; margin-top:6px; font-size:0.85rem; color:#7d0022; font-weight:bold; font-style:italic;">Zero Rupees Only</span>
                 </div>
                 
                 <div id="settle-deposit-denom-container" style="margin-top: 20px; background: #fafafa; padding: 15px; border-radius: 4px; border: 1px solid #eef0f2;"></div>
 
                 <div style="display: flex; gap: 15px; justify-content: flex-end; margin-top: 25px; border-top: 1px dashed #dee2e6; padding-top: 15px;">
-                    <button type="button" id="btn-settle-dep-save" style="padding: 13px 35px; background: #7d0022; color: #ffffff; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.95rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">📥 Save Bank Deposit</button>
+                    <!-- Full-width visual action target style -->
+                    <button type="button" id="btn-settle-dep-save" style="width: 100%; padding: 13px 35px; background: #7d0022; color: #ffffff; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.95rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">📥 Save Bank Deposit</button>
                 </div>
             </div>
 
-            <div id="panel-settle-withdrawal" class="settle-panel" style="display: none; background: #ffffff; padding: 25px; border-radius: 6px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-top: 5px solid #27ae60; border: 1px solid #dee2e6; border-top-width: 5px; width: 100%; box-sizing: border-box;">
+            <!-- 📤 WORKSPACE 2: WITHDRAWAL ACTION FRAME -->
+            <div id="panel-settle-withdrawal" class="settle-panel" style="display: none; background: #ffffff; padding: 22px; border-radius: 6px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-top: 5px solid #27ae60; border: 1px solid #dee2e6; border-top-width: 5px; width: 100%; box-sizing: border-box;">
                 <h3 style="margin-top: 0; margin-bottom: 20px; color: #27ae60; font-size: 1.2rem; font-weight: bold; border-bottom: 1px dashed #eee; padding-bottom: 10px;">📤 Withdrawal Amount & Denomination</h3>
                 
-                <div style="margin-bottom: 25px; max-width: 100%;">
+                <div style="margin-bottom: 20px; width: 100%;">
                     <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 8px; color: #495057;">निकासी राशि (₹)</label>
-                    <input type="number" id="settle-wit-amount" class="settle-amount-input" placeholder="Enter cash amount drawn from bank" style="width: 100%; max-width: 450px; padding: 12px; border: 1px solid #ced4da; border-radius: 4px; font-size: 1.1rem; font-weight: bold; box-sizing: border-box;">
+                    <input type="number" id="settle-wit-amount" class="settle-amount-input" placeholder="Enter cash amount drawn from bank" style="width: 100%; padding: 12px; border: 1px solid #ced4da; border-radius: 4px; font-size: 1.1rem; font-weight: bold; box-sizing: border-box;">
                     <span id="settle-wit-words" style="display:block; margin-top:6px; font-size:0.85rem; color:#27ae60; font-weight:bold; font-style:italic;">Zero Rupees Only</span>
                 </div>
 
                 <div id="settle-withdrawal-denom-container" style="margin-top: 20px; background: #fafafa; padding: 15px; border-radius: 4px; border: 1px solid #eef0f2;"></div>
 
                 <div style="display: flex; gap: 15px; justify-content: flex-end; margin-top: 25px; border-top: 1px dashed #dee2e6; padding-top: 15px;">
-                    <button type="button" id="btn-settle-wit-save" style="padding: 13px 35px; background: #27ae60; color: #ffffff; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.95rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">📤 Save Bank Withdrawal</button>
+                    <button type="button" id="btn-settle-wit-save" style="width: 100%; padding: 13px 35px; background: #27ae60; color: #ffffff; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.95rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">📤 Save Bank Withdrawal</button>
                 </div>
             </div>
 
-            <div id="panel-settle-contra" class="settle-panel" style="display: none; background: #ffffff; padding: 25px; border-radius: 6px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-top: 5px solid #343a40; border: 1px solid #dee2e6; border-top-width: 5px; width: 100%; box-sizing: border-box;">
+            <!-- 🔄 WORKSPACE 3: CONTRA ACTION FRAME -->
+            <div id="panel-settle-contra" class="settle-panel" style="display: none; background: #ffffff; padding: 22px; border-radius: 6px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-top: 5px solid #343a40; border: 1px solid #dee2e6; border-top-width: 5px; width: 100%; box-sizing: border-box;">
                 <h3 style="margin-top: 0; margin-bottom: 20px; color: #343a40; font-size: 1.2rem; font-weight: bold; border-bottom: 1px dashed #eee; padding-bottom: 10px;">🔄 Direct Contra Balance Adjustment</h3>
-                <p style="color: #6c757d; font-size: 0.85rem; margin-bottom: 20px; background: #f8f9fa; padding: 10px; border-radius: 4px; border-left: 3px solid #6c757d;">Directly credit or debit the bank settlement account balance without note tracking logs.</p>
+                <p style="color: #6c757d; font-size: 0.85rem; margin-bottom: 20px; background: #f8f9fa; padding: 10px; border-radius: 4px; border-left: 3px solid #6c757d; line-height: 1.4;">Directly credit or debit the bank settlement account balance without note tracking logs.</p>
                 
-                <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 15px;">
-                    <div style="flex: 1; min-width: 240px;">
+                <!-- 🌟 COMPACT FIX: fields ko row ke bjaay vertical column stacked kiya h taaki compact look tight rahe -->
+                <div style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 15px;">
+                    <div style="width: 100%;">
                         <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 8px; color: #495057;">समायोजन प्रकार (Action Type)</label>
                         <select id="settle-contra-type" style="width: 100%; padding: 12px; border: 1px solid #ced4da; border-radius: 4px; font-weight: 600; font-size: 0.95rem; box-sizing: border-box;">
                             <option value="credit" style="color: #27ae60; font-weight: bold;">➕ CREDIT</option>
                             <option value="debit" style="color: #c0392b; font-weight: bold;">➖ DEBIT </option>
                         </select>
                     </div>
-                    <div style="flex: 1; min-width: 240px;">
+                    <div style="width: 100%;">
                         <label style="display: block; font-weight: bold; font-size: 0.9rem; margin-bottom: 8px; color: #495057;">कॉन्ट्रा राशि (₹)</label>
                         <input type="number" id="settle-contra-amount" placeholder="Enter adjustment amount" style="width: 100%; padding: 11px; border: 1px solid #ced4da; border-radius: 4px; font-size: 1.1rem; font-weight: bold; box-sizing: border-box;">
                     </div>
                 </div>
                 
                 <div style="display: flex; gap: 15px; justify-content: flex-end; margin-top: 30px; border-top: 1px dashed #dee2e6; padding-top: 15px;">
-                    <button type="button" id="btn-settle-contra-save" style="padding: 13px 35px; background: #343a40; color: #ffffff; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.95rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">🔄 Execute Contra Adjustment</button>
+                    <button type="button" id="btn-settle-contra-save" style="width: 100%; padding: 13px 35px; background: #343a40; color: #ffffff; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.95rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">🔄 Execute Contra Adjustment</button>
                 </div>
             </div>
 
