@@ -55,13 +55,14 @@ window.initCashManagerPage = async function(currentUser) {
                 return;
             }
 
+            // Keval row ID pass karenge onclick me, koi temporary memory object nahi!
             tableBody.innerHTML = entries.map(item => `
                 <tr style="border-bottom: 1px solid #dee2e6;">
                     <td style="padding: 10px; font-weight: 500;">${item.reason || 'Contra'}</td>
                     <td style="padding: 10px; color: #555;">${item.particular || '-'}</td>
                     <td style="padding: 10px; font-weight: bold; color: #7d0022;">₹${item.amount || 0}</td>
                     <td style="padding: 10px; text-align: center;">
-                        <button onclick="window.editCashEntry(${JSON.stringify(item).replace(/"/g, '&quot;')})" style="background:#007bff; color:white; border:none; padding:4px 8px; border-radius:3px; cursor:pointer; margin-right:5px; font-size:0.8rem;">✏️ Edit</button>
+                        <button onclick="window.editCashEntry('${item.id}')" style="background:#007bff; color:white; border:none; padding:4px 8px; border-radius:3px; cursor:pointer; margin-right:5px; font-size:0.8rem;">✏️ Edit</button>
                         <button onclick="window.deleteCashEntry('${item.id}')" style="background:#dc3545; color:white; border:none; padding:4px 8px; border-radius:3px; cursor:pointer; font-size:0.8rem;">🗑️ Delete</button>
                     </td>
                 </tr>
@@ -97,14 +98,13 @@ window.initCashManagerPage = async function(currentUser) {
                     created_at: new Date().toISOString()
                 };
 
-                // Inject dynamic notes maps into table row directly
                 const noteDenoms = [500, 200, 100, 50, 20, 10, 5];
                 noteDenoms.forEach(d => {
-                    transactionPayload[`in_${d}`] = inputNotes[`in_${d}`] || 0;
-                    transactionPayload[`out_${d}`] = inputNotes[`out_${d}`] || 0;
+                    transactionPayload[`in_${d}`] = parseInt(inputNotes[`in_${d}`]) || 0;
+                    transactionPayload[`out_${d}`] = parseInt(inputNotes[`out_${d}`]) || 0;
                 });
-                transactionPayload[`in_coins`] = inputNotes[`in_coins`] || 0;
-                transactionPayload[`out_coins`] = inputNotes[`out_coins`] || 0;
+                transactionPayload[`in_coins`] = parseInt(inputNotes[`in_coins`]) || 0;
+                transactionPayload[`out_coins`] = parseInt(inputNotes[`out_coins`]) || 0;
 
                 await window.supabaseClient
                     .from('cash_transactions')
@@ -219,52 +219,68 @@ window.initCashManagerPage = async function(currentUser) {
         };
     }
 
-    // ✏️ [EDIT ENTRY FUNCTION]: Loads data back into input fields & Refreshes UI Grid
-    window.editCashEntry = function(item) {
-        if (!item) return;
+    // ✏️ [EDIT ENTRY FUNCTION]: Pure Dynamic Database Fetch Mechanism
+    window.editCashEntry = async function(id) {
+        if (!id) return;
         
-        // 1. Form controls me values wapas fill karein
-        if (inputReason) inputReason.value = item.reason || "Contra";
-        if (inputParticular) inputParticular.value = item.particular || "";
-        if (inputAmount) inputAmount.value = item.amount || "";
+        try {
+            // Memory se nahi, seedha data table se live row fetch karein
+            const { data: item, error } = await window.supabaseClient
+                .from('cash_transactions')
+                .select('*')
+                .eq('id', id)
+                .maybeSingle();
 
-        // 2. Core plugin map me breakdown values back-inject karein
-        if (window.MasterDenom1stIn2ndOut) {
-            const valuesToSet = {};
-            const noteDenoms = [500, 200, 100, 50, 20, 10, 5];
-            
-            noteDenoms.forEach(d => {
-                valuesToSet[`in_${d}`] = parseInt(item[`in_${d}`]) || 0;
-                valuesToSet[`out_${d}`] = parseInt(item[`out_${d}`]) || 0;
-            });
-            valuesToSet[`in_coins`] = parseInt(item['in_coins']) || 0;
-            valuesToSet[`out_coins`] = parseInt(item['out_coins']) || 0;
-            
-            // Core values push handler
-            if (typeof window.MasterDenom1stIn2ndOut.setValues === 'function') {
-                window.MasterDenom1stIn2ndOut.setValues(valuesToSet);
-            } else if (window.MasterDenom1stIn2ndOut.values) {
-                window.MasterDenom1stIn2ndOut.values = { ...window.MasterDenom1stIn2ndOut.values, ...valuesToSet };
+            if (error || !item) {
+                window.showSystemAlert("डेटाबेस से ट्रांजैक्शन रिकॉर्ड लोड करने में विफलता।", "Fetch Error", "❌");
+                return;
             }
 
-            // ⭐ UI REFRESH: Component ko force re-render karein taaki screen pe live values chhap jayein
-            if (typeof window.MasterDenom1stIn2ndOut.render === 'function') {
-                window.MasterDenom1stIn2ndOut.render('cash-manager-unified-container');
-            }
+            // 1. Form fields populate karein
+            if (inputReason) inputReason.value = item.reason || "Contra";
+            if (inputParticular) inputParticular.value = item.particular || "";
+            if (inputAmount) inputAmount.value = item.amount || "";
 
-            window.showSystemAlert("ट्रांजैक्शन डेटा फॉर्म में लोड कर दिया गया है। बदलाव करके दोबारा सेव करें।", "Edit Mode", "ℹ️");
+            // 2. Core plugin values setup mapping
+            if (window.MasterDenom1stIn2ndOut) {
+                const valuesToSet = {};
+                const noteDenoms = [500, 200, 100, 50, 20, 10, 5];
+                
+                noteDenoms.forEach(d => {
+                    valuesToSet[`in_${d}`] = parseInt(item[`in_${d}`]) || 0;
+                    valuesToSet[`out_${d}`] = parseInt(item[`out_${d}`]) || 0;
+                });
+                valuesToSet[`in_coins`] = parseInt(item['in_coins']) || 0;
+                valuesToSet[`out_coins`] = parseInt(item['out_coins']) || 0;
+                
+                // Plugin state values apply
+                if (typeof window.MasterDenom1stIn2ndOut.setValues === 'function') {
+                    window.MasterDenom1stIn2ndOut.setValues(valuesToSet);
+                } else if (window.MasterDenom1stIn2ndOut.values) {
+                    window.MasterDenom1stIn2ndOut.values = { ...window.MasterDenom1stIn2ndOut.values, ...valuesToSet };
+                }
+
+                // UI REFRESH: Grid ko force re-render karein taaki data screen pe dikhe
+                if (typeof window.MasterDenom1stIn2ndOut.render === 'function') {
+                    window.MasterDenom1stIn2ndOut.render('cash-manager-unified-container');
+                }
+
+                window.showSystemAlert("डेटाबेस से लाइव नोट काउंट फॉर्म में लोड कर दिए गए हैं।", "Edit Mode Live", "ℹ️");
+            }
+        } catch(err) {
+            console.error("Direct table fetch fail stack:", err);
+            window.showSystemAlert("एडिट प्रोसेस क्रैश हुआ।", "Error", "❌");
         }
     };
 
-    // 🗑️ [DELETE & ROLLBACK SYSTEM]: Fully Fixed With Custom App Signature
+    // 🗑️ [DELETE & ROLLBACK SYSTEM]
     window.deleteCashEntry = async function(id) {
         if (window.showSystemConfirm) {
             window.showSystemConfirm(
-                "क्या आप इस Cash Entry को डिलीट करना चाहते हैं? इससे स्टॉक वापस पहले जैसा रोल-बैक हो जाएगा।", 
+                "क्या आप इस Cash Entry को डिलीट करना चाहते हैं? इससे स्टॉक वापस पहले जैसा हो जाएगा।", 
                 "Rollback Confirmation", 
                 async function() {
                     try {
-                        // 1. Fetch targeted old row details first
                         const { data: targetTx, error: txErr } = await window.supabaseClient
                             .from('cash_transactions')
                             .select('*')
@@ -273,14 +289,12 @@ window.initCashManagerPage = async function(currentUser) {
 
                         if (txErr || !targetTx) throw new Error("Transaction log not found");
 
-                        // 2. Fetch live stocks
                         const { data: liveUser } = await window.supabaseClient
                             .from('user_roles')
                             .select('*')
                             .eq('ko_code', currentUser.ko_code)
                             .maybeSingle();
 
-                        // 3. Compute dynamic rollback matrix payload
                         let rollbackPayload = {};
                         const noteDenoms = [500, 200, 100, 50, 20, 10, 5];
                         
@@ -290,20 +304,16 @@ window.initCashManagerPage = async function(currentUser) {
                             const oldIn = parseInt(targetTx[`in_${d}`]) || 0;
                             const oldOut = parseInt(targetTx[`out_${d}`]) || 0;
                             
-                            // Rollback Formula: Minus the old dynamic IN additions, add back the old OUT subtractions
                             rollbackPayload[dbKey] = curStock - oldIn + oldOut;
                         });
 
                         const curCoins = parseInt(liveUser['cash_coins']) || 0;
                         rollbackPayload['cash_coins'] = curCoins - (parseInt(targetTx['in_coins']) || 0) + (parseInt(targetTx['out_coins']) || 0);
 
-                        // 4. Update core vault with rollback matrix
                         await window.supabaseClient.from('user_roles').update(rollbackPayload).eq('ko_code', currentUser.ko_code);
-
-                        // 5. Delete transaction entry safely
                         await window.supabaseClient.from('cash_transactions').delete().eq('id', id);
 
-                        window.showSystemAlert("एंट्री डिलीट कर दी गई है और स्टॉक रोल-बैक हो चुका है।", "Deleted Successfully", "✅");
+                        window.showSystemAlert("एंट्री डिलीट कर दी गई है!", "Deleted Successfully", "✅");
                         bootUnifiedCashGrid();
 
                     } catch(e) { 
