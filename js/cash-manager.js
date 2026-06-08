@@ -45,8 +45,7 @@ window.initCashManagerPage = async function(currentUser) {
                 .order('created_at', { ascending: false });
 
             if (error) {
-                // Agar table nahi bani toh console par error dikhe par UI crash na ho
-                console.warn("Table 'cash_transactions' missing or fetch error:", error.message);
+                console.warn("Table missing or fetch error:", error.message);
                 tableBody.innerHTML = `<tr><td colspan="4" style="padding: 20px; text-align: center; color: #888; font-style: italic;">No database table found. Create 'cash_transactions' table to view logs.</td></tr>`;
                 return;
             }
@@ -62,7 +61,7 @@ window.initCashManagerPage = async function(currentUser) {
                     <td style="padding: 10px; color: #555;">${item.particular || '-'}</td>
                     <td style="padding: 10px; font-weight: bold; color: #7d0022;">₹${item.amount || 0}</td>
                     <td style="padding: 10px; text-align: center;">
-                        <button onclick="window.editCashEntry('${item.id}')" style="background:#007bff; color:white; border:none; padding:4px 8px; border-radius:3px; cursor:pointer; margin-right:5px; font-size:0.8rem;">✏️ Edit</button>
+                        <button onclick="window.editCashEntry(${JSON.stringify(item).replace(/"/g, '&quot;')})" style="background:#007bff; color:white; border:none; padding:4px 8px; border-radius:3px; cursor:pointer; margin-right:5px; font-size:0.8rem;">✏️ Edit</button>
                         <button onclick="window.deleteCashEntry('${item.id}')" style="background:#dc3545; color:white; border:none; padding:4px 8px; border-radius:3px; cursor:pointer; font-size:0.8rem;">🗑️ Delete</button>
                     </td>
                 </tr>
@@ -74,8 +73,8 @@ window.initCashManagerPage = async function(currentUser) {
         }
     }
 
-    // 🚀 [EXECUTE ATOMIC SAVE TRANSACTION]: Saves to DB safely
-    async function executeSaveWorkflow(finalParticular, finalAmount, updatedNotesPayload) {
+    // 🚀 [EXECUTE ATOMIC SAVE TRANSACTION]
+    async function executeSaveWorkflow(finalParticular, finalAmount, updatedNotesPayload, inputNotes) {
         try {
             btnMasterSave.disabled = true;
             btnMasterSave.innerText = "Processing Cash Sync...";
@@ -88,26 +87,37 @@ window.initCashManagerPage = async function(currentUser) {
 
             if (updateErr) throw updateErr;
 
-            // 2. Transaction ledger table history insertion (Try block safe for missing table)
+            // 2. Transaction ledger table history insertion with full breakdown structure
             try {
+                const transactionPayload = {
+                    ko_code: currentUser.ko_code,
+                    reason: inputReason.value,
+                    particular: finalParticular,
+                    amount: finalAmount,
+                    created_at: new Date().toISOString()
+                };
+
+                // Inject dynamic notes maps into table row directly
+                const noteDenoms = [500, 200, 100, 50, 20, 10, 5];
+                noteDenoms.forEach(d => {
+                    transactionPayload[`in_${d}`] = inputNotes[`in_${d}`] || 0;
+                    transactionPayload[`out_${d}`] = inputNotes[`out_${d}`] || 0;
+                });
+                transactionPayload[`in_coins`] = inputNotes[`in_coins`] || 0;
+                transactionPayload[`out_coins`] = inputNotes[`out_coins`] || 0;
+
                 await window.supabaseClient
                     .from('cash_transactions')
-                    .insert([{
-                        ko_code: currentUser.ko_code,
-                        reason: inputReason.value,
-                        particular: finalParticular,
-                        amount: finalAmount,
-                        created_at: new Date().toISOString()
-                    }]);
+                    .insert([transactionPayload]);
             } catch(tblErr) {
-                console.error("Ledger log insertion bypassed due to table absence:", tblErr);
+                console.error("Ledger log insertion bypassed:", tblErr);
             }
 
             window.showSystemAlert("काउंटर का फिजिकल कैश स्टॉक सफलतापूर्वक अपडेट कर दिया गया है।", "Stock Updated", "✅");
             bootUnifiedCashGrid();
 
         } catch (err) {
-            console.error("Master cash manager core failure stack:", err);
+            console.error("Master cash manager failure:", err);
             window.showSystemAlert("डेटाबेस स्टॉक अपडेट विफल हुआ।", "Error", "❌");
         } finally {
             btnMasterSave.disabled = false;
@@ -120,31 +130,23 @@ window.initCashManagerPage = async function(currentUser) {
         btnMasterSave.onclick = async function() {
             if (!window.MasterDenom1stIn2ndOut) return;
 
-            // Calculate live totals from plugin grid
             const metrics = window.MasterDenom1stIn2ndOut.calculate();
             let particularVal = inputParticular.value.trim();
             const amountVal = parseFloat(inputAmount.value) || 0;
 
             const isDenominationEmpty = (metrics.totalIn === 0 && metrics.totalOut === 0);
-            
-            // ⭐ LOGIC: Calculate net absolute change gap between total IN flow and OUT flow
             const netAdjustment = Math.abs(metrics.totalIn - metrics.totalOut);
 
-            // 🛑 RULE 0: Agar sab kuch zero hai toh roko
             if (isDenominationEmpty && amountVal === 0) {
                 window.showSystemAlert("कोई बदलाव नहीं मिला (Amount & Denominations are zero)।", "No Change", "ℹ️");
                 return;
             }
 
-            // 🛑 RULE 1: Agar Net Adjustment plus ya minus me hai (Not Zero), toh Amount aur Particular dono Mandatory hain!
-            if (netAdjustment > 0) {
-                if (amountVal === 0 || !particularVal) {
-                    window.showSystemAlert("Denomination में अंतर (Plus/Minus) होने के कारण Amount और Particular दोनों भरना अनिवार्य है!", "Fields Required", "⚠️");
-                    return;
-                }
+            if (netAdjustment > 0 && (amountVal === 0 || !particularVal)) {
+                window.showSystemAlert("Denomination में अंतर (Plus/Minus) होने के कारण Amount और Particular दोनों भरना अनिवार्य है!", "Fields Required", "⚠️");
+                return;
             }
 
-            // Fetch live stocks data row mapping inside database
             let liveUser, fetchErr;
             try {
                 const response = await window.supabaseClient
@@ -166,19 +168,16 @@ window.initCashManagerPage = async function(currentUser) {
             let hasSufficientStock = true;
             const noteDenoms = [500, 200, 100, 50, 20, 10, 5];
 
-            // 🌟 ATOMIC MUTATION LOOP
             for (let i = 0; i < noteDenoms.length; i++) {
                 const d = noteDenoms[i];
                 const dbColumnKey = `cash_${d}`;
-                
                 const currentStock = parseInt(liveUser[dbColumnKey]) || 0;
                 const inQty = inputNotes[`in_${d}`] || 0;
                 const outQty = inputNotes[`out_${d}`] || 0;
 
                 const adjustedStock = currentStock + inQty - outQty;
-
                 if (adjustedStock < 0) {
-                    window.showSystemAlert(`आपके काउंटर पर ₹${d} के नोट पर्याप्त मात्रा में उपलब्ध नहीं हैं कि इतने OUT किए जा सकें!`, "Stock Alert", "⚠️");
+                    window.showSystemAlert(`आपके काउंटर पर ₹${d} के नोट पर्याप्त मात्रा में उपलब्ध नहीं हैं!`, "Stock Alert", "⚠️");
                     hasSufficientStock = false;
                     break;
                 }
@@ -189,11 +188,10 @@ window.initCashManagerPage = async function(currentUser) {
                 const currentCoins = parseInt(liveUser['cash_coins']) || 0;
                 const coinIn = inputNotes['in_coins'] || 0;
                 const coinOut = inputNotes['out_coins'] || 0;
-                
                 const adjustedCoins = currentCoins + coinIn - coinOut;
 
                 if (adjustedCoins < 0) {
-                    window.showSystemAlert("काउंटर तिजोरी में सिक्के कम हैं, इतने OUT नहीं किए जा सकते!", "Stock Alert", "⚠️");
+                    window.showSystemAlert("काउंटर तिजोरी में सिक्के कम हैं!", "Stock Alert", "⚠️");
                     hasSufficientStock = false;
                 } else {
                     updatedNotesPayload['cash_coins'] = adjustedCoins;
@@ -202,61 +200,106 @@ window.initCashManagerPage = async function(currentUser) {
 
             if (!hasSufficientStock) return;
 
-         // 🛑 RULE 2: Agar Net Adjustment 0 hai, par Particular khali hai -> Pop-up confirmation alert trigger
+            // 🛑 RULE 2: Confirmation Handle
             if (!particularVal) {
                 if (window.showSystemConfirm) {
-                    // Correct Parameters: 1. Message, 2. Title (String), 3. Callback Function
                     window.showSystemConfirm(
                         "Particular से transaction का reason clear hota hai. क्या आप आगे बढ़ना चाहते हैं?", 
                         "Confirmation Required", 
                         async function() {
-                            // Yeh tabhi chalega jab user "Yes, Proceed" par click karega
                             particularVal = "Contra";
                             if (inputParticular) inputParticular.value = "Contra";
-                            await executeSaveWorkflow(particularVal, amountVal, updatedNotesPayload);
+                            await executeSaveWorkflow(particularVal, amountVal, updatedNotesPayload, inputNotes);
                         }
                     );
-                } else {
-                    // Safe UI Fallback
-                    const userChoice = confirm("Particular से transaction ka reason clear hota hai. क्या आप आगे बढ़ना चाहते हैं?");
-                    if (userChoice) {
-                        particularVal = "Contra";
-                        if (inputParticular) inputParticular.value = "Contra";
-                        await executeSaveWorkflow(particularVal, amountVal, updatedNotesPayload);
-                    }
                 }
             } else {
-                // Agar Particular pehle se bhara hai, toh bina kisi rukavat ke save karein
-                await executeSaveWorkflow(particularVal, amountVal, updatedNotesPayload);
+                await executeSaveWorkflow(particularVal, amountVal, updatedNotesPayload, inputNotes);
             }
         };
     }
 
-    // Global scopes functions for table action updates
-    window.editCashEntry = async function(id) {
-        window.showSystemAlert("Edit function clicked for transaction: " + id, "Edit Trigger", "ℹ️");
+    // ✏️ [EDIT ENTRY FUNCTION]: Loads data back into input fields
+    window.editCashEntry = function(item) {
+        if (!item) return;
+        
+        // Form controls me value wapas fill karein
+        if (inputReason) inputReason.value = item.reason || "Contra";
+        if (inputParticular) inputParticular.value = item.particular || "";
+        if (inputAmount) inputAmount.value = item.amount || "";
+
+        // Core plugin map me breakdown values back-inject karein
+        if (window.MasterDenom1stIn2ndOut && typeof window.MasterDenom1stIn2ndOut.setValues === 'function') {
+            const valuesToSet = {};
+            const noteDenoms = [500, 200, 100, 50, 20, 10, 5];
+            noteDenoms.forEach(d => {
+                valuesToSet[`in_${d}`] = item[`in_${d}`] || 0;
+                valuesToSet[`out_${d}`] = item[`out_${d}`] || 0;
+            });
+            valuesToSet[`in_coins`] = item[`in_coins`] || 0;
+            valuesToSet[`out_coins`] = item[`out_coins`] || 0;
+            
+            window.MasterDenom1stIn2ndOut.setValues(valuesToSet);
+            window.showSystemAlert("ट्रांजैक्शन डेटा फॉर्म में लोड कर दिया गया है। बदलाव करके दोबारा सेव करें।", "Edit Mode", "ℹ️");
+        }
     };
 
+    // 🗑️ [DELETE & ROLLBACK SYSTEM]: Fully Fixed With Dynamic Core Signature
     window.deleteCashEntry = async function(id) {
         if (window.showSystemConfirm) {
             window.showSystemConfirm(
-                "क्या आप इस Cash Entry को डिलीट करना चाहते हैं?", 
-                async function(confirmed) {
-                    if (confirmed) {
-                        try {
-                            await window.supabaseClient.from('cash_transactions').delete().eq('id', id);
-                            bootUnifiedCashGrid();
-                        } catch(e) { console.error(e); }
+                "क्या आप इस Cash Entry को डिलीट करना चाहते हैं? इससे स्टॉक वापस पहले जैसा रोल-बैक हो जाएगा।", 
+                "Rollback Confirmation", 
+                async function() {
+                    try {
+                        // 1. Fetch targeted old row details first
+                        const { data: targetTx, error: txErr } = await window.supabaseClient
+                            .from('cash_transactions')
+                            .select('*')
+                            .eq('id', id)
+                            .maybeSingle();
+
+                        if (txErr || !targetTx) throw new Error("Transaction log not found");
+
+                        // 2. Fetch live stocks
+                        const { data: liveUser } = await window.supabaseClient
+                            .from('user_roles')
+                            .select('*')
+                            .eq('ko_code', currentUser.ko_code)
+                            .maybeSingle();
+
+                        // 3. Compute dynamic rollback matrix payload
+                        let rollbackPayload = {};
+                        const noteDenoms = [500, 200, 100, 50, 20, 10, 5];
+                        
+                        noteDenoms.forEach(d => {
+                            const dbKey = `cash_${d}`;
+                            const curStock = parseInt(liveUser[dbKey]) || 0;
+                            const oldIn = parseInt(targetTx[`in_${d}`]) || 0;
+                            const oldOut = parseInt(targetTx[`out_${d}`]) || 0;
+                            
+                            // Rollback Formula: Minus the old dynamic IN additions, add back the old OUT subtractions
+                            rollbackPayload[dbKey] = curStock - oldIn + oldOut;
+                        });
+
+                        const curCoins = parseInt(liveUser['cash_coins']) || 0;
+                        rollbackPayload['cash_coins'] = curCoins - (parseInt(targetTx['in_coins']) || 0) + (parseInt(targetTx['out_coins']) || 0);
+
+                        // 4. Update core vault with rollback matrix
+                        await window.supabaseClient.from('user_roles').update(rollbackPayload).eq('ko_code', currentUser.ko_code);
+
+                        // 5. Delete transaction entry safely
+                        await window.supabaseClient.from('cash_transactions').delete().eq('id', id);
+
+                        window.showSystemAlert("एंट्री डिलीट कर दी गई है और स्टॉक रोल-बैक हो चुका है।", "Deleted Successfully", "✅");
+                        bootUnifiedCashGrid();
+
+                    } catch(e) { 
+                        console.error("Rollback fail status:", e); 
+                        window.showSystemAlert("रोल-बैक या डिलीट प्रक्रिया विफल हुई।", "Error", "❌");
                     }
                 }
             );
-        } else {
-            if(confirm("क्या आप इस Cash Entry को डिलीट करना चाहते हैं?")) {
-                try {
-                    await window.supabaseClient.from('cash_transactions').delete().eq('id', id);
-                    bootUnifiedCashGrid();
-                } catch(e) { console.error(e); }
-            }
         }
     };
 
