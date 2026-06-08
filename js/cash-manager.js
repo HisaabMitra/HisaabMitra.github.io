@@ -10,6 +10,9 @@ window.initCashManagerPage = async function(currentUser) {
     const inputParticular = document.getElementById('cash-manager-particular');
     const inputAmount = document.getElementById('cash-manager-amount');
 
+    // 🔄 Current Editing Transaction ID track karne ke liye state holder
+    let currentEditingTxId = null;
+
     // 🧮 [DIRECT INJECTION]: Kholte hi naya 1stIn 2ndOut plugin load karein
     function bootUnifiedCashGrid() {
         if (!window.MasterDenom1stIn2ndOut) {
@@ -20,9 +23,11 @@ window.initCashManagerPage = async function(currentUser) {
         window.MasterDenom1stIn2ndOut.clear();
         window.MasterDenom1stIn2ndOut.render('cash-manager-unified-container');
         
-        // Reset inputs
+        // Reset inputs & state
         if(inputParticular) inputParticular.value = "";
         if(inputAmount) inputAmount.value = "";
+        currentEditingTxId = null;
+        if(btnMasterSave) btnMasterSave.innerText = "💾 Save Cash Adjustments";
         
         // Refresh Today's Table Data View
         renderTodayEntriesTable();
@@ -34,14 +39,13 @@ window.initCashManagerPage = async function(currentUser) {
         if (!tableBody) return;
 
         try {
-            const todayStart = new Date();
-            todayStart.setHours(0,0,0,0);
+            const today = new Date().toISOString().split('T')[0];
 
             const { data: entries, error } = await window.supabaseClient
                 .from('cash_transactions')
                 .select('*')
                 .eq('ko_code', currentUser.ko_code)
-                .gte('created_at', todayStart.toISOString())
+                .gte('created_at', `${today}T00:00:00`)
                 .order('created_at', { ascending: false });
 
             if (error) {
@@ -55,9 +59,8 @@ window.initCashManagerPage = async function(currentUser) {
                 return;
             }
 
-            // Keval row ID pass karenge onclick me, koi temporary memory object nahi!
             tableBody.innerHTML = entries.map(item => `
-                <tr style="border-bottom: 1px solid #dee2e6;">
+                <tr style="border-bottom: 1px solid #dee2e6; background: ${currentEditingTxId === item.id ? '#fff3cd' : 'transparent'};">
                     <td style="padding: 10px; font-weight: 500;">${item.reason || 'Contra'}</td>
                     <td style="padding: 10px; color: #555;">${item.particular || '-'}</td>
                     <td style="padding: 10px; font-weight: bold; color: #7d0022;">₹${item.amount || 0}</td>
@@ -74,54 +77,135 @@ window.initCashManagerPage = async function(currentUser) {
         }
     }
 
-    // 🚀 [EXECUTE ATOMIC SAVE TRANSACTION]
-    async function executeSaveWorkflow(finalParticular, finalAmount, updatedNotesPayload, inputNotes) {
+    // 🚀 [EXECUTE ATOMIC SAVE / UPDATE WORKFLOW]
+    async function executeSaveWorkflow(finalParticular, finalAmount, inputNotes) {
         try {
             btnMasterSave.disabled = true;
             btnMasterSave.innerText = "Processing Cash Sync...";
 
-            // 1. Update user_roles mapping stock counter vault
-            const { error: updateErr } = await window.supabaseClient
+            // 1. Fetch live stocks before mutating
+            const { data: liveUser, error: userFetchErr } = await window.supabaseClient
                 .from('user_roles')
-                .update(updatedNotesPayload)
-                .eq('ko_code', currentUser.ko_code);
+                .select('*')
+                .eq('ko_code', currentUser.ko_code)
+                .maybeSingle();
 
-            if (updateErr) throw updateErr;
+            if (userFetchErr || !liveUser) throw new Error("तिजोरी स्टॉक फ़ेच विफल!");
 
-            // 2. Transaction ledger table history insertion with full breakdown structure
-            try {
-                const transactionPayload = {
-                    ko_code: currentUser.ko_code,
-                    reason: inputReason.value,
-                    particular: finalParticular,
-                    amount: finalAmount,
-                    created_at: new Date().toISOString()
-                };
-
-                const noteDenoms = [500, 200, 100, 50, 20, 10, 5];
-                noteDenoms.forEach(d => {
-                    transactionPayload[`in_${d}`] = parseInt(inputNotes[`in_${d}`]) || 0;
-                    transactionPayload[`out_${d}`] = parseInt(inputNotes[`out_${d}`]) || 0;
-                });
-                transactionPayload[`in_coins`] = parseInt(inputNotes[`in_coins`]) || 0;
-                transactionPayload[`out_coins`] = parseInt(inputNotes[`out_coins`]) || 0;
-
-                await window.supabaseClient
+            let oldTx = null;
+            // Edit mode active hai toh purani transaction uthao taaki real atomic reversal updates kar sakein
+            if (currentEditingTxId) {
+                const { data: foundTx } = await window.supabaseClient
                     .from('cash_transactions')
-                    .insert([transactionPayload]);
-            } catch(tblErr) {
-                console.error("Ledger log insertion bypassed:", tblErr);
+                    .select('*')
+                    .eq('id', currentEditingTxId)
+                    .maybeSingle();
+                oldTx = foundTx;
             }
 
-            window.showSystemAlert("काउंटर का फिजिकल कैश स्टॉक सफलतापूर्वक अपडेट कर दिया गया है।", "Stock Updated", "✅");
+            // 2. 🌟 ATOMIC MUTATION LOOP (Aapke standard algorithm ke mutabik)
+            let nextVaultData = {};
+            const noteDenoms = [500, 200, 100, 50, 20, 10, 5];
+            let hasSufficientStock = true;
+
+            for (let i = 0; i < noteDenoms.length; i++) {
+                const d = noteDenoms[i];
+                const dbColumnKey = `cash_${d}`;
+                const currentCount = parseInt(liveUser[dbColumnKey]) || 0;
+
+                // Naye input values
+                const newIn = parseInt(inputNotes[`in_${d}`]) || 0;
+                const newOut = parseInt(inputNotes[`out_${d}`]) || 0;
+
+                // Purani values rollback ke liye (sirf tab jab Edit update cycle chal raha ho)
+                const oldIn = oldTx ? (parseInt(oldTx[`in_${d}`]) || 0) : 0;
+                const oldOut = oldTx ? (parseInt(oldTx[`out_${d}`]) || 0) : 0;
+
+                // 🔄 Formula: Current Wallet Count - Old_In + Old_Out (Reversal done) + New_In - New_Out (New data done)
+                const adjustedStock = currentCount - oldIn + oldOut + newIn - newOut;
+
+                if (adjustedStock < 0) {
+                    window.showSystemAlert(`आपके काउंटर पर ₹${d} के नोट पर्याप्त मात्रा में उपलब्ध नहीं हैं!`, "Stock Alert", "⚠️");
+                    hasSufficientStock = false;
+                    break;
+                }
+                nextVaultData[dbColumnKey] = adjustedStock;
+            }
+
+            // Coins handling sync
+            if (hasSufficientStock) {
+                const currentCoins = parseInt(liveUser['cash_coins']) || 0;
+                const newCoinsIn = parseInt(inputNotes['in_coins']) || 0;
+                const newCoinsOut = parseInt(inputNotes['out_coins']) || 0;
+                const oldCoinsIn = oldTx ? (parseInt(oldTx['in_coins']) || 0) : 0;
+                const oldCoinsOut = oldTx ? (parseInt(oldTx['out_coins']) || 0) : 0;
+
+                const adjustedCoins = currentCoins - oldCoinsIn + oldCoinsOut + newCoinsIn - newCoinsOut;
+
+                if (adjustedCoins < 0) {
+                    window.showSystemAlert("काउंटर तिजोरी में सिक्के कम हैं!", "Stock Alert", "⚠️");
+                    hasSufficientStock = false;
+                } else {
+                    nextVaultData['cash_coins'] = adjustedCoins;
+                }
+            }
+
+            if (!hasSufficientStock) {
+                btnMasterSave.disabled = false;
+                btnMasterSave.innerText = currentEditingTxId ? "🔄 Update Cash Adjustments" : "💾 Save Cash Adjustments";
+                return;
+            }
+
+            // 3. Update core user_roles stock
+            const { error: userUpdateErr } = await window.supabaseClient
+                .from('user_roles')
+                .update(nextVaultData)
+                .eq('ko_code', currentUser.ko_code);
+
+            if (userUpdateErr) throw userUpdateErr;
+
+            // 4. Update or Insert inside cash_transactions table exactly with native columns (in_X / out_X)
+            const transactionPayload = {
+                ko_code: currentUser.ko_code,
+                reason: inputReason.value,
+                particular: finalParticular,
+                amount: finalAmount
+            };
+
+            noteDenoms.forEach(d => {
+                transactionPayload[`in_${d}`] = parseInt(inputNotes[`in_${d}`]) || 0;
+                transactionPayload[`out_${d}`] = parseInt(inputNotes[`out_${d}`]) || 0;
+            });
+            transactionPayload[`in_coins`] = parseInt(inputNotes[`in_coins`]) || 0;
+            transactionPayload[`out_coins`] = parseInt(inputNotes[`out_coins`]) || 0;
+
+            if (currentEditingTxId) {
+                // Modification flow
+                const { error: txUpdateErr } = await window.supabaseClient
+                    .from('cash_transactions')
+                    .update(transactionPayload)
+                    .eq('id', currentEditingTxId);
+                
+                if (txUpdateErr) throw txUpdateErr;
+                window.showSystemAlert("🔄 ट्रांजैक्शन सफलतापूर्वक संशोधित और तिजोरी सिंक हो गई!", "Update Success", "✅");
+            } else {
+                // New transaction flow
+                transactionPayload.created_at = new Date().toISOString();
+                const { error: txInsertErr } = await window.supabaseClient
+                    .from('cash_transactions')
+                    .insert([transactionPayload]);
+
+                if (txInsertErr) throw txInsertErr;
+                window.showSystemAlert("काउंटर का फिजिकल कैश स्टॉक सफलतापूर्वक अपडेट कर दिया गया है।", "Stock Updated", "✅");
+            }
+
             bootUnifiedCashGrid();
 
         } catch (err) {
             console.error("Master cash manager failure:", err);
-            window.showSystemAlert("डेटाबेस स्टॉक अपडेट विफल हुआ।", "Error", "❌");
+            window.showSystemAlert("डेटाबेस सिंक प्रक्रिया विफल हुई: " + err.message, "Error", "❌");
         } finally {
             btnMasterSave.disabled = false;
-            btnMasterSave.innerText = "💾 Save Cash Adjustments";
         }
     }
 
@@ -147,60 +231,8 @@ window.initCashManagerPage = async function(currentUser) {
                 return;
             }
 
-            let liveUser, fetchErr;
-            try {
-                const response = await window.supabaseClient
-                    .from('user_roles')
-                    .select('*')
-                    .eq('ko_code', currentUser.ko_code)
-                    .maybeSingle();
-                liveUser = response.data;
-                fetchErr = response.error;
-            } catch(e) { fetchErr = e; }
-
-            if (fetchErr || !liveUser) {
-                window.showSystemAlert("डेटाबेस से स्टॉक फ़ेच करने में विफलता।", "Error", "❌");
-                return;
-            }
-
             const inputNotes = window.MasterDenom1stIn2ndOut.getValues();
-            let updatedNotesPayload = {};
-            let hasSufficientStock = true;
-            const noteDenoms = [500, 200, 100, 50, 20, 10, 5];
 
-            for (let i = 0; i < noteDenoms.length; i++) {
-                const d = noteDenoms[i];
-                const dbColumnKey = `cash_${d}`;
-                const currentStock = parseInt(liveUser[dbColumnKey]) || 0;
-                const inQty = inputNotes[`in_${d}`] || 0;
-                const outQty = inputNotes[`out_${d}`] || 0;
-
-                const adjustedStock = currentStock + inQty - outQty;
-                if (adjustedStock < 0) {
-                    window.showSystemAlert(`आपके काउंटर पर ₹${d} के नोट पर्याप्त मात्रा में उपलब्ध नहीं हैं!`, "Stock Alert", "⚠️");
-                    hasSufficientStock = false;
-                    break;
-                }
-                updatedNotesPayload[dbColumnKey] = adjustedStock;
-            }
-
-            if (hasSufficientStock) {
-                const currentCoins = parseInt(liveUser['cash_coins']) || 0;
-                const coinIn = inputNotes['in_coins'] || 0;
-                const coinOut = inputNotes['out_coins'] || 0;
-                const adjustedCoins = currentCoins + coinIn - coinOut;
-
-                if (adjustedCoins < 0) {
-                    window.showSystemAlert("काउंटर तिजोरी में सिक्के कम हैं!", "Stock Alert", "⚠️");
-                    hasSufficientStock = false;
-                } else {
-                    updatedNotesPayload['cash_coins'] = adjustedCoins;
-                }
-            }
-
-            if (!hasSufficientStock) return;
-
-            // 🛑 RULE 2: Confirmation Handle
             if (!particularVal) {
                 if (window.showSystemConfirm) {
                     window.showSystemConfirm(
@@ -209,22 +241,22 @@ window.initCashManagerPage = async function(currentUser) {
                         async function() {
                             particularVal = "Contra";
                             if (inputParticular) inputParticular.value = "Contra";
-                            await executeSaveWorkflow(particularVal, amountVal, updatedNotesPayload, inputNotes);
+                            await executeSaveWorkflow(particularVal, amountVal, inputNotes);
                         }
                     );
                 }
             } else {
-                await executeSaveWorkflow(particularVal, amountVal, updatedNotesPayload, inputNotes);
+                await executeSaveWorkflow(particularVal, amountVal, inputNotes);
             }
         };
     }
 
-    // ✏️ [EDIT ENTRY FUNCTION]: Pure Dynamic Database Fetch Mechanism
+    // ✏️ [EDIT ENTRY FUNCTION]: Pure Dynamic Table Fetch with Exact Column Matching (in_X / out_X)
     window.editCashEntry = async function(id) {
         if (!id) return;
         
         try {
-            // Memory se nahi, seedha data table se live row fetch karein
+            // Memory se nahi, direct table se live row data pull
             const { data: item, error } = await window.supabaseClient
                 .from('cash_transactions')
                 .select('*')
@@ -236,48 +268,55 @@ window.initCashManagerPage = async function(currentUser) {
                 return;
             }
 
-            // 1. Form fields populate karein
+            // State sets
+            currentEditingTxId = id;
+            btnMasterSave.innerText = "🔄 Update Cash Adjustments";
+
+            // 1. Controls configuration loading
             if (inputReason) inputReason.value = item.reason || "Contra";
             if (inputParticular) inputParticular.value = item.particular || "";
             if (inputAmount) inputAmount.value = item.amount || "";
 
-            // 2. Core plugin values setup mapping
+            // 2. ⭐ EXACT MAPPING WITH NATIVE COLUMNS (in_500, out_500, etc.)
             if (window.MasterDenom1stIn2ndOut) {
                 const valuesToSet = {};
                 const noteDenoms = [500, 200, 100, 50, 20, 10, 5];
                 
                 noteDenoms.forEach(d => {
+                    // Direct key injection maps matching your specific alter table structure
                     valuesToSet[`in_${d}`] = parseInt(item[`in_${d}`]) || 0;
                     valuesToSet[`out_${d}`] = parseInt(item[`out_${d}`]) || 0;
                 });
                 valuesToSet[`in_coins`] = parseInt(item['in_coins']) || 0;
                 valuesToSet[`out_coins`] = parseInt(item['out_coins']) || 0;
                 
-                // Plugin state values apply
+                // Form layout plugin update
                 if (typeof window.MasterDenom1stIn2ndOut.setValues === 'function') {
                     window.MasterDenom1stIn2ndOut.setValues(valuesToSet);
                 } else if (window.MasterDenom1stIn2ndOut.values) {
                     window.MasterDenom1stIn2ndOut.values = { ...window.MasterDenom1stIn2ndOut.values, ...valuesToSet };
                 }
 
-                // UI REFRESH: Grid ko force re-render karein taaki data screen pe dikhe
+                // Force layout trigger refresh rendering screen
                 if (typeof window.MasterDenom1stIn2ndOut.render === 'function') {
                     window.MasterDenom1stIn2ndOut.render('cash-manager-unified-container');
                 }
 
-                window.showSystemAlert("डेटाबेस से लाइव नोट काउंट फॉर्म में लोड कर दिए गए हैं।", "Edit Mode Live", "ℹ️");
+                // Highlight background color update
+                renderTodayEntriesTable();
+                window.showSystemAlert("ट्रांजैक्शन संशोधन मोड सक्रिय। डेटा लोड कर दिया गया है।", "Edit Mode Live", "ℹ️");
             }
         } catch(err) {
             console.error("Direct table fetch fail stack:", err);
-            window.showSystemAlert("एडिट प्रोसेस क्रैश हुआ।", "Error", "❌");
+            window.showSystemAlert("एडिट प्रक्रिया विफल हुई।", "Error", "❌");
         }
     };
 
-    // 🗑️ [DELETE & ROLLBACK SYSTEM]
+    // 🗑️ [DELETE & ROLLBACK SYSTEM]: Sync with native columns
     window.deleteCashEntry = async function(id) {
         if (window.showSystemConfirm) {
             window.showSystemConfirm(
-                "क्या आप इस Cash Entry को डिलीट करना चाहते हैं? इससे स्टॉक वापस पहले जैसा हो जाएगा।", 
+                "क्या आप इस Cash Entry को डिलीट करना चाहते हैं? इससे स्टॉक वापस पहले जैसा रोल-बैक हो जाएगा।", 
                 "Rollback Confirmation", 
                 async function() {
                     try {
@@ -301,6 +340,8 @@ window.initCashManagerPage = async function(currentUser) {
                         noteDenoms.forEach(d => {
                             const dbKey = `cash_${d}`;
                             const curStock = parseInt(liveUser[dbKey]) || 0;
+                            
+                            // Rollback using correct schema keys: in_X and out_X
                             const oldIn = parseInt(targetTx[`in_${d}`]) || 0;
                             const oldOut = parseInt(targetTx[`out_${d}`]) || 0;
                             
@@ -313,7 +354,7 @@ window.initCashManagerPage = async function(currentUser) {
                         await window.supabaseClient.from('user_roles').update(rollbackPayload).eq('ko_code', currentUser.ko_code);
                         await window.supabaseClient.from('cash_transactions').delete().eq('id', id);
 
-                        window.showSystemAlert("एंट्री डिलीट कर दी गई है!", "Deleted Successfully", "✅");
+                        window.showSystemAlert("एंट्री डिलीट कर दी गई है और स्टॉक रोल-बैक हो चुका है।", "Deleted Successfully", "✅");
                         bootUnifiedCashGrid();
 
                     } catch(e) { 
