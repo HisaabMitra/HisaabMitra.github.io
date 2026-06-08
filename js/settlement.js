@@ -22,7 +22,7 @@ window.initSettlementPage = async function(currentUser) {
     // Alphabetical Words Indicators
     const depWords = document.getElementById('settle-dep-words');
     const witWords = document.getElementById('settle-wit-words');
-    const historyTbody = document.getElementById('settle-history-body'); 
+    const historyTbody = document.getElementById('settle-history-body');
 
     // Global Vault State Cache Variables
     let currentSettlementBalance = 0;
@@ -50,18 +50,17 @@ window.initSettlementPage = async function(currentUser) {
                 
                 window.currentUser = { ...window.currentUser, ...data };
             }
-            // Sync database logs down table view immediately
+            // Standalone safe table refresher call
             await fetchTodayHistoryLogs();
         } catch (err) {
             console.error("❌ Failed to sync settlement balances from cloud node:", err);
         }
     }
 
-    // 📊 [TODAY LEDGER GENERATOR ENGINE]: Pull ONLY current date logs and render
+    // 📊 [TODAY ONLY HISTORY LEDGER]: Pull logs only for current date timeline
     async function fetchTodayHistoryLogs() {
         if (!historyTbody) return;
         try {
-            // 🌟 FIX: Aaj ki date calculations lock ki (Subah 00:00:00 se Raat 23:59:59 tak)
             const todayStr = new Date().toISOString().split('T')[0];
             const startOfToday = `${todayStr}T00:00:00.000Z`;
             const endOfToday = `${todayStr}T23:59:59.999Z`;
@@ -76,13 +75,9 @@ window.initSettlementPage = async function(currentUser) {
 
             if (error) throw error;
 
-            // Update UI Table Header Label for Operator view clarity
-            const historyTitle = document.querySelector('#jarvis-settlement-wrapper h3');
-            if (historyTitle) historyTitle.innerText = "📊 Aaj ki Settlement History (Today's Logs)";
-
             historyTbody.innerHTML = "";
             if (!data || data.length === 0) {
-                historyTbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:18px; color:#888; font-style:italic;">आज की तिथि में कोई सेटलमेंट एंट्री नहीं मिली है।</td></tr>`;
+                historyTbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:15px; color:#888; font-style:italic;">आज की तिथि में कोई सेटलमेंट एंट्री नहीं मिली है।</td></tr>`;
                 return;
             }
 
@@ -101,16 +96,16 @@ window.initSettlementPage = async function(currentUser) {
                         <td style="padding:10px; font-weight:600; color:${badgeColor};">₹${parseFloat(log.new_balance).toFixed(2)}</td>
                         <td style="padding:10px; color:#555; font-size:0.85rem;">${log.narration || ''}</td>
                         <td style="padding:10px; text-align:center; white-space:nowrap;">
-                            <button class="settle-edit-btn" data-id="${log.id}" style="padding:5px 8px; background:#f39c12; color:#fff; border:none; border-radius:3px; cursor:pointer; font-size:0.8rem; margin-right:5px; font-weight:bold;" title="Edit Entry">📝</button>
-                            <button class="settle-del-btn" data-id="${log.id}" style="padding:5px 8px; background:#e74c3c; color:#fff; border:none; border-radius:3px; cursor:pointer; font-size:0.8rem; font-weight:bold;" title="Delete Entry">🗑️</button>
+                            <button class="settle-edit-btn" data-id="${log.id}" style="padding:5px 8px; background:#f39c12; color:#fff; border:none; border-radius:3px; cursor:pointer; font-size:0.8rem; margin-right:5px; font-weight:bold;">📝</button>
+                            <button class="settle-del-btn" data-id="${log.id}" style="padding:5px 8px; background:#e74c3c; color:#fff; border:none; border-radius:3px; cursor:pointer; font-size:0.8rem; font-weight:bold;">🗑️</button>
                         </td>
                     </tr>
                 `);
             });
 
-            attachHistoryActionListeners();
+            attachTableActionListeners();
         } catch (err) {
-            console.error("Error drawing ledger display frame rows:", err);
+            console.error("History loading failure:", err);
         }
     }
 
@@ -118,56 +113,47 @@ window.initSettlementPage = async function(currentUser) {
     optButtons.forEach(btn => {
         btn.addEventListener('click', (e) => {
             const targetPanel = btn.getAttribute('data-panel');
-            resetSettleFormStates();
-            switchTabTo(targetPanel);
+
+            // Form clean resets on swap
+            if (editIdInput) editIdInput.value = "";
+            depAmountInput.value = "";
+            witAmountInput.value = "";
+            contraAmountInput.value = "";
+            if (depWords) depWords.innerText = "Zero Rupees Only";
+            if (witWords) witWords.innerText = "Zero Rupees Only";
+            
+            document.getElementById('dep-panel-title').innerText = "📥 Deposit Amount & Denomination";
+            document.getElementById('wit-panel-title').innerText = "📤 Withdrawal Amount & Denomination";
+            document.getElementById('contra-panel-title').innerText = "🔄 Direct Contra Balance Adjustment";
+            document.getElementById('btn-settle-dep-save').innerText = "📥 Save Bank Deposit";
+            document.getElementById('btn-settle-wit-save').innerText = "📤 Save Bank Withdrawal";
+
+            // Set Premium Left Sidebar active state styles
+            optButtons.forEach(b => {
+                b.style.background = '#ffffff';
+                b.style.color = '#495057';
+                b.style.border = '1px solid #ced4da';
+            });
+            btn.style.background = targetPanel === 'withdrawal' ? '#27ae60' : (targetPanel === 'contra' ? '#343a40' : '#7d0022');
+            btn.style.color = '#ffffff';
+            btn.style.border = 'none';
+
+            // Toggle active panels viewport display
+            panels.forEach(p => p.style.display = 'none');
+            const targetElement = document.getElementById(`panel-settle-${targetPanel}`);
+            if (targetElement) targetElement.style.display = 'block';
+
+            mountDenominationForPanel(targetPanel);
         });
     });
 
-    function switchTabTo(panelType) {
-        optButtons.forEach(b => {
-            b.style.background = '#ffffff';
-            b.style.color = '#495057';
-            b.style.border = '1px solid #ced4da';
-        });
-        const targetBtn = document.querySelector(`.settle-opt-btn[data-panel="${panelType}"]`);
-        if (targetBtn) {
-            targetBtn.style.background = panelType === 'withdrawal' ? '#27ae60' : (targetPanel === 'contra' ? '#343a40' : '#7d0022');
-            targetBtn.style.color = '#ffffff';
-            targetBtn.style.border = 'none';
-        }
-
-        panels.forEach(p => p.style.display = 'none');
-        const targetElement = document.getElementById(`panel-settle-${panelType}`);
-        if (targetElement) targetElement.style.display = 'block';
-
-        mountDenominationForPanel(panelType);
-    }
-
-    // 🧮 [DENOMINATION MOUNT ENGINE]
+    // 🧮 [DENOMINATION MOUNT ENGINE] - RESTORED ORIGINAL
     function mountDenominationForPanel(panelType) {
         if (panelType === 'deposit' && window.DenominationOutInComponent) {
             window.DenominationOutInComponent.render('settle-deposit-denom-container');
         } else if (panelType === 'withdrawal' && window.DenominationInOutComponent) {
             window.DenominationInOutComponent.render('settle-withdrawal-denom-container');
         }
-    }
-
-    // 🧹 [FORM RESET ENGINE]
-    function resetSettleFormStates() {
-        if (editIdInput) editIdInput.value = "";
-        depAmountInput.value = "";
-        witAmountInput.value = "";
-        contraAmountInput.value = "";
-        if (depWords) depWords.innerText = "Zero Rupees Only";
-        if (witWords) witWords.innerText = "Zero Rupees Only";
-        
-        document.getElementById('dep-panel-title').innerText = "📥 Deposit Amount & Denomination";
-        document.getElementById('wit-panel-title').innerText = "📤 Withdrawal Amount & Denomination";
-        document.getElementById('contra-panel-title').innerText = "🔄 Direct Contra Balance Adjustment";
-        
-        document.getElementById('btn-settle-dep-save').innerText = "📥 Save Bank Deposit";
-        document.getElementById('btn-settle-wit-save').innerText = "📤 Save Bank Withdrawal";
-        document.getElementById('btn-settle-contra-save').innerText = "🔄 Execute Contra Adjustment";
     }
 
     // 🔢 Live Word Translators
@@ -190,12 +176,12 @@ window.initSettlementPage = async function(currentUser) {
     attachWordTranslator(depAmountInput, depWords);
     attachWordTranslator(witAmountInput, witWords);
 
-    // 🚀 [DEPOSIT ROUTINE]
+    // 🚀 [DEPOSIT ROUTINE]: Settle Balance (+), Counter Cash Notes (-)
     const btnDepSave = document.getElementById('btn-settle-dep-save');
     if (btnDepSave) {
         btnDepSave.onclick = async function() {
             const amount = parseFloat(depAmountInput.value) || 0;
-            const isEditMode = editIdInput.value !== "";
+            const isEditMode = editIdInput && editIdInput.value !== "";
 
             if (amount <= 0) {
                 window.showSystemAlert("कृपया एक वैध जमा राशि दर्ज करें।", "Validation Missing", "❌");
@@ -248,26 +234,30 @@ window.initSettlementPage = async function(currentUser) {
                     window.showSystemAlert(`₹${amount.toFixed(2)} सफलतापूर्वक सेटलमेंट खाते में जोड़े गए।`, "सफलता", "✅");
                 }
 
-                resetSettleFormStates();
+                if (editIdInput) editIdInput.value = "";
+                depAmountInput.value = "";
+                if (depWords) depWords.innerText = "Zero Rupees Only";
+                document.getElementById('dep-panel-title').innerText = "📥 Deposit Amount & Denomination";
+                btnDepSave.innerText = "📥 Save Bank Deposit";
+                
                 await syncLiveSettlementVault();
-                switchTabTo('deposit');
+                mountDenominationForPanel('deposit');
 
             } catch (err) {
                 console.error(err);
                 window.showSystemAlert("डेटाबेस अपडेट विफल हुआ।", "त्रुटि", "❌");
             } finally {
                 btnDepSave.disabled = false;
-                btnDepSave.innerText = "📥 Save Bank Deposit";
             }
         };
     }
 
-    // 🚀 [WITHDRAWAL ROUTINE]
+    // 🚀 [WITHDRAWAL ROUTINE]: Settle Balance (-), Counter Cash Notes (+)
     const btnWitSave = document.getElementById('btn-settle-wit-save');
     if (btnWitSave) {
         btnWitSave.onclick = async function() {
             const amount = parseFloat(witAmountInput.value) || 0;
-            const isEditMode = editIdInput.value !== "";
+            const isEditMode = editIdInput && editIdInput.value !== "";
 
             if (amount <= 0) {
                 window.showSystemAlert("कृपया एक वैध निकासी राशि दर्ज करें।", "Validation Missing", "❌");
@@ -325,16 +315,20 @@ window.initSettlementPage = async function(currentUser) {
                     window.showSystemAlert(`₹${amount.toFixed(2)} सेटलमेंट खाते से काट कर काउंटर पर जोड़ दिए गए हैं।`, "सफलता", "✅");
                 }
 
-                resetSettleFormStates();
+                if (editIdInput) editIdInput.value = "";
+                witAmountInput.value = "";
+                if (witWords) witWords.innerText = "Zero Rupees Only";
+                document.getElementById('wit-panel-title').innerText = "📤 Withdrawal Amount & Denomination";
+                btnWitSave.innerText = "📤 Save Bank Withdrawal";
+
                 await syncLiveSettlementVault();
-                switchTabTo('withdrawal');
+                mountDenominationForPanel('withdrawal');
 
             } catch (err) {
                 console.error(err);
                 window.showSystemAlert("डेटाबेस अपडेट विफल हुआ।", "त्रुटि", "❌");
             } finally {
                 btnWitSave.disabled = false;
-                btnWitSave.innerText = "📤 Save Bank Withdrawal";
             }
         };
     }
@@ -345,7 +339,6 @@ window.initSettlementPage = async function(currentUser) {
         btnContraSave.onclick = async function() {
             const type = document.getElementById('settle-contra-type').value;
             const amount = parseFloat(contraAmountInput.value) || 0;
-            const isEditMode = editIdInput.value !== "";
 
             if (amount <= 0) {
                 window.showSystemAlert("कृपया एक वैध कॉन्ट्रा राशि दर्ज करें।", "Validation Missing", "❌");
@@ -357,15 +350,10 @@ window.initSettlementPage = async function(currentUser) {
                 btnContraSave.innerText = "सहेज रहे हैं...";
 
                 const { data: liveUser } = await window.supabaseClient.from('user_roles').select('settlement_balance').eq('ko_code', currentUser.ko_code).maybeSingle();
-                let currentDBBal = parseFloat(liveUser.settlement_balance) || 0;
-
-                if (isEditMode) {
-                    const { data: oldLog } = await window.supabaseClient.from('settlement_logs').select('*').eq('id', editIdInput.value).maybeSingle();
-                    if (oldLog.narration && oldLog.narration.includes('CREDIT')) currentDBBal -= parseFloat(oldLog.amount);
-                    else if (oldLog.narration && oldLog.narration.includes('DEBIT')) currentDBBal += parseFloat(oldLog.amount);
-                }
+                const currentDBBal = parseFloat(liveUser.settlement_balance) || 0;
 
                 let computedNewBalance = currentDBBal;
+
                 if (type === 'credit') {
                     computedNewBalance = currentDBBal + amount;
                 } else if (type === 'debit') {
@@ -383,23 +371,18 @@ window.initSettlementPage = async function(currentUser) {
 
                 if (updateError) throw updateError;
 
-                if (isEditMode) {
-                    await window.supabaseClient.from('settlement_logs').update({ amount: amount, new_balance: computedNewBalance, narration: `Direct Contra ${type.toUpperCase()}` }).eq('id', editIdInput.value);
-                } else {
-                    await window.supabaseClient.from('settlement_logs').insert([{
-                        ko_code: currentUser.ko_code,
-                        transaction_type: 'CONTRA',
-                        amount: amount,
-                        previous_balance: currentDBBal,
-                        new_balance: computedNewBalance,
-                        narration: `Direct Contra ${type.toUpperCase()}`
-                    }]);
-                }
+                await window.supabaseClient.from('settlement_logs').insert([{
+                    ko_code: currentUser.ko_code,
+                    transaction_type: 'CONTRA',
+                    amount: amount,
+                    previous_balance: currentDBBal,
+                    new_balance: computedNewBalance,
+                    narration: `Direct Contra ${type.toUpperCase()}`
+                }]);
 
                 window.showSystemAlert(`₹${amount.toFixed(2)} का डायरेक्ट कॉन्ट्रा समायोजन सफलतापूर्वक पूरा हुआ।`, "सफलता", "✅");
-                resetSettleFormStates();
+                contraAmountInput.value = "";
                 await syncLiveSettlementVault();
-                switchTabTo('contra');
 
             } catch (err) {
                 console.error("Critical Contra direct balance fault:", err);
@@ -411,8 +394,9 @@ window.initSettlementPage = async function(currentUser) {
         };
     }
 
-    // 🔧 [HISTORY EVENT LISTENERS ATTACHER]
-    function attachHistoryActionListeners() {
+    // 🔧 [TABLE ACTIONS HANDLERS]: Safe edit and rollbacks listeners
+    function attachTableActionListeners() {
+        // Edit Operation Hook 📝
         document.querySelectorAll('.settle-edit-btn').forEach(btn => {
             btn.onclick = async function() {
                 const logId = this.getAttribute('data-id');
@@ -421,30 +405,38 @@ window.initSettlementPage = async function(currentUser) {
 
                 if (editIdInput) editIdInput.value = log.id;
 
+                optButtons.forEach(b => {
+                    b.style.background = '#ffffff';
+                    b.style.color = '#495057';
+                    b.style.border = '1px solid #ced4da';
+                });
+
+                panels.forEach(p => p.style.display = 'none');
+
                 if (log.transaction_type === 'DEPOSIT') {
-                    switchTabTo('deposit');
+                    const dBtn = document.querySelector('.settle-opt-btn[data-panel="deposit"]');
+                    if (dBtn) { dBtn.style.background = '#7d0022'; dBtn.style.color = '#fff'; dBtn.style.border = 'none'; }
+                    document.getElementById('panel-settle-deposit').style.display = 'block';
+                    mountDenominationForPanel('deposit');
                     depAmountInput.value = log.amount;
                     depAmountInput.dispatchEvent(new Event('input'));
                     document.getElementById('dep-panel-title').innerText = "📝 Edit Deposit Entry";
-                    document.getElementById('btn-settle-dep-save').innerText = "⚙️ Update Deposit Entry";
+                    btnDepSave.innerText = "⚙️ Update Deposit Entry";
                 } else if (log.transaction_type === 'WITHDRAWAL') {
-                    switchTabTo('withdrawal');
+                    const wBtn = document.querySelector('.settle-opt-btn[data-panel="withdrawal"]');
+                    if (wBtn) { wBtn.style.background = '#27ae60'; wBtn.style.color = '#fff'; wBtn.style.border = 'none'; }
+                    document.getElementById('panel-settle-withdrawal').style.display = 'block';
+                    mountDenominationForPanel('withdrawal');
                     witAmountInput.value = log.amount;
                     witAmountInput.dispatchEvent(new Event('input'));
                     document.getElementById('wit-panel-title').innerText = "📝 Edit Withdrawal Entry";
-                    document.getElementById('btn-settle-wit-save').innerText = "⚙️ Update Withdrawal Entry";
-                } else if (log.transaction_type === 'CONTRA') {
-                    switchTabTo('contra');
-                    contraAmountInput.value = log.amount;
-                    const cType = (log.narration && log.narration.includes('DEBIT')) ? 'debit' : 'credit';
-                    document.getElementById('settle-contra-type').value = cType;
-                    document.getElementById('contra-panel-title').innerText = "📝 Edit Contra Entry";
-                    document.getElementById('btn-settle-contra-save').innerText = "⚙️ Update Contra Entry";
+                    btnWitSave.innerText = "⚙️ Update Withdrawal Entry";
                 }
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             };
         });
 
+        // Delete & Rollback Balance Operation Hook 🗑️
         document.querySelectorAll('.settle-del-btn').forEach(btn => {
             btn.onclick = async function() {
                 const logId = this.getAttribute('data-id');
@@ -468,23 +460,24 @@ window.initSettlementPage = async function(currentUser) {
                     }
 
                     if (rolledBackBal < 0) {
-                        window.showSystemAlert("रोलबैक रद्द! डिलीट करने से बैलेंस नेगेटिव (ऋणात्मक) हो रहा है।", "Rollback Prohibited", "❌");
+                        window.showSystemAlert("रोलबैक रद्द! डिलीट करने से बैलेंस नेगेटिव हो रहा है।", "Rollback Prohibited", "❌");
                         return;
                     }
 
                     await window.supabaseClient.from('user_roles').update({ settlement_balance: rolledBackBal }).eq('ko_code', currentUser.ko_code);
                     await window.supabaseClient.from('settlement_logs').delete().eq('id', logId);
 
-                    window.showSystemAlert("एंट्री सफलतापूर्वक डिलीट कर दी गई है और बैलेंस रोलबैक हो गया है।", "Deleted", "✅");
+                    window.showSystemAlert("एंट्री डिलीट कर दी गई है और बैलेंस रोलबैक हो गया है।", "Deleted", "✅");
                     await syncLiveSettlementVault();
 
                 } catch (e) {
-                    console.error("Deletion task crashed:", e);
+                    console.error("Deletion crash:", e);
                 }
             };
         });
     }
 
-    // Launch Setup Procedures
+    // Initial load syncs
     await syncLiveSettlementVault();
+    mountDenominationForPanel('deposit');
 };
