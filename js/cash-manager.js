@@ -7,33 +7,35 @@ window.initCashManagerPage = async function(currentUser) {
 
     const btnMasterSave = document.getElementById('btn-cash-manager-master-save');
 
-    // 🧮 [DIRECT INJECTION ROUTINE]: Khulate hi seedha plugin load karein
+    // 🧮 [DIRECT INJECTION]: Kholte hi seedha naya 1stIn 2ndOut plugin load karein
     function bootUnifiedCashGrid() {
-        if (!window.DenominationInOutComponent) {
-            console.error("❌ Generic DenominationInOutComponent asset reference missing from global scope!");
+        if (!window.MasterDenom1stIn2ndOut) {
+            console.error("❌ MasterDenom1stIn2ndOut plugin missing from global scope map!");
             return;
         }
 
-        window.DenominationInOutComponent.clear();
-        window.DenominationInOutComponent.render('cash-manager-unified-container');
-        
-        // Technical headers clean up right away
-        setTimeout(() => {
-            const h4Title = document.querySelector('#cash-manager-unified-container h4');
-            if (h4Title) h4Title.innerText = "📊 काउंटर नोट विवरण (IN / OUT)";
-        }, 50);
+        window.MasterDenom1stIn2ndOut.clear();
+        window.MasterDenom1stIn2ndOut.render('cash-manager-unified-container');
     }
 
-    // 🚀 [MASTER SAVE ACTION ROUTINE]: Syncs both IN and OUT fields simultaneously
+    // 🚀 [MASTER SAVE ACTION ROUTINE]: Syncs both IN and OUT fields seamlessly
     if (btnMasterSave) {
         btnMasterSave.onclick = async function() {
-            if (!window.DenominationInOutComponent) return;
+            if (!window.MasterDenom1stIn2ndOut) return;
+
+            // Get live calculation summary matrix array
+            const metrics = window.MasterDenom1stIn2ndOut.calculate();
+
+            if (metrics.totalIn === 0 && metrics.totalOut === 0) {
+                window.showSystemAlert("कृपया तालिका में नोटों की संख्या दर्ज करें।", "Empty Fields", "⚠️");
+                return;
+            }
 
             try {
                 btnMasterSave.disabled = true;
                 btnMasterSave.innerText = "Processing Cash Sync...";
 
-                // Fetch current absolute live cash stocks from data vault node
+                // Fetch current absolute live cash stocks from user_roles
                 const { data: liveUser, error: fetchErr } = await window.supabaseClient
                     .from('user_roles')
                     .select('*')
@@ -42,26 +44,22 @@ window.initCashManagerPage = async function(currentUser) {
 
                 if (fetchErr) throw fetchErr;
 
-                // Grab live values mapped from inside active component fields array
-                const inputNotes = window.DenominationInOutComponent.getValues();
+                const inputNotes = window.MasterDenom1stIn2ndOut.getValues();
                 let updatedNotesPayload = {};
                 let hasSufficientStock = true;
 
                 const noteDenoms = [500, 200, 100, 50, 20, 10, 5];
-                let processedAnyNote = false;
 
-                // 🌟 ATOMIC ARITHMETIC LOOP: Calculate Net cash columns mutation mapping
+                // 🌟 ATOMIC MUTATION LOOP
                 for (let i = 0; i < noteDenoms.length; i++) {
                     const d = noteDenoms[i];
                     const dbColumnKey = `cash_${d}`;
                     
                     const currentStock = parseInt(liveUser[dbColumnKey]) || 0;
-                    const inQty = inputNotes[`denom_in_${d}`] || 0;
-                    const outQty = inputNotes[`denom_out_${d}`] || 0;
+                    const inQty = inputNotes[`in_${d}`] || 0;
+                    const outQty = inputNotes[`out_${d}`] || 0;
 
-                    if (inQty > 0 || outQty > 0) processedAnyNote = true;
-
-                    // Core Formula: Naya Stock = Purana Stock + Aaya Hua Note (IN) - Gaya Hua Note (OUT)
+                    // Core Sync Formula: Naya Stock = Purana Stock + Inflow (IN) - Outflow (OUT)
                     const adjustedStock = currentStock + inQty - outQty;
 
                     if (adjustedStock < 0) {
@@ -72,19 +70,19 @@ window.initCashManagerPage = async function(currentUser) {
                     updatedNotesPayload[dbColumnKey] = adjustedStock;
                 }
 
-                // Coins Flow processing segment
+                // Coins verification segment
                 if (hasSufficientStock) {
                     const currentCoins = parseInt(liveUser['cash_coins']) || 0;
-                    const cIn = inputNotes['denom_in_coins'] || 0;
-                    const cOut = inputNotes['denom_out_coins'] || 0;
+                    const coinIn = inputNotes['in_coins'] || 0;
+                    const coinOut = inputNotes['out_coins'] || 0;
                     
-                    if (cIn > 0 || cOut > 0) processedAnyNote = true;
+                    const adjustedCoins = currentCoins + coinIn - coinOut;
 
-                    if ((currentCoins + cIn - cOut) < 0) {
+                    if (adjustedCoins < 0) {
                         window.showSystemAlert("काउंटर तिजोरी में सिक्के कम हैं, इतने OUT नहीं किए जा सकते!", "Stock Alert", "⚠️");
                         hasSufficientStock = false;
                     } else {
-                        updatedNotesPayload['cash_coins'] = currentCoins + cIn - cOut;
+                        updatedNotesPayload['cash_coins'] = adjustedCoins;
                     }
                 }
 
@@ -94,14 +92,7 @@ window.initCashManagerPage = async function(currentUser) {
                     return;
                 }
 
-                if (!processedAnyNote) {
-                    window.showSystemAlert("कृपया तालिका में कम से कम एक नोट की मात्रा दर्ज करें।", "Empty Fields", "⚠️");
-                    btnMasterSave.disabled = false;
-                    btnMasterSave.innerText = "💾 Save Cash Adjustments";
-                    return;
-                }
-
-                // Commit the atomic merged payload directly into user_roles row profile
+                // Fire direct update command profile inside user_roles row mapping
                 const { error: updateErr } = await window.supabaseClient
                     .from('user_roles')
                     .update(updatedNotesPayload)
