@@ -6,11 +6,11 @@ window.JarvisDenominationEngine = {
     containerId: null,
     noteValues: [500, 200, 100, 50, 20, 10, 5, 2, 1],
     state: {
-        out: {}, // Storage for OUT notes quantity {500: 0, 200: 0...}
-        in: {}   // Storage for IN notes quantity {500: 0, 200: 0...}
+        out: {}, // Storage memory loop for OUT notes quantity {500: 0, 200: 0...}
+        in: {}   // Storage memory loop for IN notes quantity {500: 0, 200: 0...}
     },
 
-    // 🛠️ [INITIALIZE & RENDER THE MATRIX]
+    // 🛠️ [INITIALIZE & RENDER THE MATRIX - PREMIUM UI DESIGN]
     render: function(targetContainerId, initialData = null) {
         this.containerId = targetContainerId;
         const container = document.getElementById(targetContainerId);
@@ -19,7 +19,7 @@ window.JarvisDenominationEngine = {
             return;
         }
 
-        // State reset or back-load logic (Crucial for EDIT mode stability)
+        // State reset baseline matrix initialization
         this.state.out = {};
         this.state.in = {};
         this.noteValues.forEach(v => {
@@ -27,21 +27,22 @@ window.JarvisDenominationEngine = {
             this.state.in[v] = 0;
         });
 
-        // ⭐ THE EDIT RECOVERY FIX: Agar puraana data milta h toh state me load karein
+        // ⭐ THE EDIT HYDRATION RECOVERY ROAD: Auto back-load data if available inside record rows
         if (initialData) {
             if (initialData.out) this.state.out = { ...this.state.out, ...initialData.out };
             if (initialData.in) this.state.in = { ...this.state.in, ...initialData.in };
         }
 
-        // Generate Dual Column Layout HTML Grid
+        // Generate Ultra-Clean Layout HTML Grid with Protected Spacings
         let html = `
-        <div style="background: #fdfdfd; border: 1px solid #dee2e6; border-radius: 6px; padding: 15px; font-family: sans-serif; box-sizing: border-box; width: 100%;">
-            <div style="display: flex; background: #7d0022; color: white; font-weight: bold; padding: 10px; border-radius: 4px; font-size: 0.9rem; text-align: center; margin-bottom: 10px;">
-                <div style="flex: 1;">Denom VALUE</div>
-                <div style="flex: 1.5; background: #940028; border-radius: 3px 0 0 3px;">1st OUT (Gaya) Qty</div>
-                <div style="flex: 1.5; background: #28a745; border-radius: 0 3px 3px 0;">2nd IN (Aaya) Qty</div>
+        <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; font-family: system-ui, -apple-system, sans-serif; box-sizing: border-box; width: 100%; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02); margin-top: 10px;">
+            <div style="display: flex; background: #7d0022; color: #ffffff; font-weight: 700; padding: 12px; border-radius: 6px; font-size: 0.85rem; text-align: center; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; box-sizing: border-box;">
+                <div style="flex: 1; text-align: left; padding-left: 8px;">Denom</div>
+                <div style="flex: 1.5; background: rgba(255,255,255,0.12); border-radius: 4px; padding: 3px 0; margin-right: 4px;">1st OUT (Gaya)</div>
+                <div style="flex: 1.5; background: rgba(255,255,255,0.12); border-radius: 4px; padding: 3px 0; margin-left: 4px;">2nd IN (Aaya)</div>
             </div>
-            <div style="max-height: 280px; overflow-y: auto; padding-right: 2px;">
+            
+            <div style="max-height: 285px; overflow-y: auto; padding-right: 6px; box-sizing: border-box;">
         `;
 
         this.noteValues.forEach(value => {
@@ -51,46 +52,43 @@ window.JarvisDenominationEngine = {
             const inTotal = (this.state.in[value] || 0) * value;
 
             html += `
-            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; border-bottom: 1px dashed #efefef; padding-bottom: 5px; font-size: 0.88rem;">
-                <!-- Denomination Rate Label -->
-                <div style="flex: 1; font-weight: bold; color: #495057; text-align: left; padding-left: 5px;">
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 10px; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px; box-sizing: border-box;">
+                <div style="flex: 1; font-weight: 700; color: #334155; text-align: left; padding-left: 6px; font-size: 0.95rem; user-select: none;">
                     ₹${value}
                 </div>
                 
-                <!-- 1st OUT COLUMN INPUT & DISPLAY -->
-                <div style="flex: 1.5; display: flex; flex-direction: column; align-items: flex-end; gap: 2px;">
-                    <input type="number" class="denom-out-input" data-rate="${value}" value="${outQty}" placeholder="0" min="0" oninput="window.JarvisDenominationEngine.updateValue(${value}, 'out', this.value)" style="width: 100%; padding: 6px; border: 1px solid #ced4da; border-radius: 4px; text-align: right; box-sizing: border-box; font-weight: 600; color: #7d0022; outline: none;">
-                    <span id="lbl-out-total-${value}" style="font-size: 0.75rem; color: #888; font-weight: 500;">₹${outTotal.toFixed(2)}</span>
+                <div style="flex: 1.5; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; box-sizing: border-box;">
+                    <input type="number" class="denom-out-input" data-rate="${value}" value="${outQty}" placeholder="0" min="0" oninput="window.JarvisDenominationEngine.updateValue(${value}, 'out', this.value)" style="width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 5px; text-align: right; box-sizing: border-box; font-weight: 700; color: #7d0022; font-size: 0.95rem; background: #fffcfc; outline: none; transition: border-color 0.2s;">
+                    <span id="lbl-out-total-${value}" style="font-size: 0.75rem; color: #64748b; font-weight: 600; padding-right: 2px;">₹${outTotal.toFixed(2)}</span>
                 </div>
 
-                <!-- 2nd IN COLUMN INPUT & DISPLAY -->
-                <div style="flex: 1.5; display: flex; flex-direction: column; align-items: flex-end; gap: 2px;">
-                    <input type="number" class="denom-in-input" data-rate="${value}" value="${inQty}" placeholder="0" min="0" oninput="window.JarvisDenominationEngine.updateValue(${value}, 'in', this.value)" style="width: 100%; padding: 6px; border: 1px solid #ced4da; border-radius: 4px; text-align: right; box-sizing: border-box; font-weight: 600; color: #28a745; outline: none;">
-                    <span id="lbl-in-total-${value}" style="font-size: 0.75rem; color: #888; font-weight: 500;">₹${inTotal.toFixed(2)}</span>
+                <div style="flex: 1.5; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; box-sizing: border-box;">
+                    <input type="number" class="denom-in-input" data-rate="${value}" value="${inQty}" placeholder="0" min="0" oninput="window.JarvisDenominationEngine.updateValue(${value}, 'in', this.value)" style="width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 5px; text-align: right; box-sizing: border-box; font-weight: 700; color: #28a745; font-size: 0.95rem; background: #fafdfa; outline: none; transition: border-color 0.2s;">
+                    <span id="lbl-in-total-${value}" style="font-size: 0.75rem; color: #64748b; font-weight: 600; padding-right: 2px;">₹${inTotal.toFixed(2)}</span>
                 </div>
             </div>
             `;
         });
 
-        // Sticky Bottom Summary Calculator Banner Bar
+        // Sticky Bottom Balanced Summary Banner Bar
         html += `
             </div>
-            <div style="display: flex; justify-content: space-between; background: #e9ecef; padding: 12px; border-radius: 4px; margin-top: 10px; font-weight: bold; font-size: 0.9rem; border: 1px solid #dee2e6;">
-                <div style="color: #7d0022;">Total OUT: <span id="denom-final-out-amt">₹0.00</span></div>
-                <div style="color: #28a745;">Total IN: <span id="denom-final-in-amt">₹0.00</span></div>
+            <div style="display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 14px 16px; border-radius: 6px; margin-top: 12px; font-weight: 700; font-size: 0.92rem; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.02); box-sizing: border-box;">
+                <div style="color: #7d0022; font-weight: 700;">Total OUT: <span id="denom-final-out-amt" style="font-size: 1.05rem; font-weight: 800; margin-left: 3px;">₹0.00</span></div>
+                <div style="color: #28a745; font-weight: 700;">Total IN: <span id="denom-final-in-amt" style="font-size: 1.05rem; font-weight: 800; margin-left: 3px;">₹0.00</span></div>
             </div>
         </div>
         `;
 
         container.innerHTML = html;
-        this.calculateTotals(); // Initial math build
+        this.calculateTotals(); // Initial runtime computation execution
     },
 
-    // 🔄 [REAL-TIME VALUE MATRIC TRACKER]
+    // 🔄 [REAL-TIME LIVE VALUE UPDATE MATRIX TRACKER]
     updateValue: function(rate, type, value) {
-        const parsedQty = parseInt(value) || 0;
+        const parsedQty = Math.max(0, parseInt(value) || 0);
         
-        // Update local object state memory
+        // Synchronizing values inside internal memory arrays objects
         if (type === 'out') {
             this.state.out[rate] = parsedQty;
             const subLabel = document.getElementById(`lbl-out-total-${rate}`);
@@ -104,7 +102,7 @@ window.JarvisDenominationEngine = {
         this.calculateTotals();
     },
 
-    // 🧮 [CALCULATE MATH AGGREGATES SUMMARY]
+    // 🧮 [COMPUTE AGGREGATES SUMMARY CALCULATORS]
     calculateTotals: function() {
         let totalOut = 0;
         let totalIn = 0;
@@ -121,7 +119,7 @@ window.JarvisDenominationEngine = {
         if (inDisplay) inDisplay.innerText = `₹${totalIn.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
     },
 
-    // 📤 [EXPORT LIVE STATE DATA PACKS TO CONTROLLER]
+    // 📤 [EXPORT CONTEXT ATTRIBUTES TO INTERCEPTOR]
     getValues: function() {
         let finalOutSum = 0;
         let finalInSum = 0;
@@ -136,11 +134,11 @@ window.JarvisDenominationEngine = {
             inBreakdown: { ...this.state.in },
             totalOutAmount: finalOutSum,
             totalInAmount: finalInSum,
-            netAdjustment: finalInSum - finalOutSum // Live differentiation check metric
+            netAdjustment: finalInSum - finalOutSum // Differentiation checking parameter
         };
     },
 
-    // 🧹 [WIPE CONTROLS RESET]
+    // 🧹 [WIPE SYSTEM INPUTS MATRIX CONTEXT]
     clear: function() {
         this.state.out = {};
         this.state.in = {};
@@ -149,7 +147,6 @@ window.JarvisDenominationEngine = {
             this.state.in[v] = 0;
         });
         
-        // Re-inject pristine fields mapping
         if (this.containerId) {
             this.render(this.containerId);
         }
