@@ -202,22 +202,23 @@ window.initCashManagerPage = async function(currentUser) {
 
             if (!hasSufficientStock) return;
 
-            // 🛑 RULE 2: Agar Net Adjustment 0 hai, par Particular khali hai -> Pop-up confirmation alert trigger
+         // 🛑 RULE 2: Agar Net Adjustment 0 hai, par Particular khali hai -> Pop-up confirmation alert trigger
             if (!particularVal) {
                 if (window.showSystemConfirm) {
+                    // Correct Parameters: 1. Message, 2. Title (String), 3. Callback Function
                     window.showSystemConfirm(
                         "Particular से transaction का reason clear hota hai. क्या आप आगे बढ़ना चाहते हैं?", 
-                        async function(confirmed) {
-                            if (confirmed) {
-                                particularVal = "Contra";
-                                if (inputParticular) inputParticular.value = "Contra";
-                                await executeSaveWorkflow(particularVal, amountVal, updatedNotesPayload);
-                            }
+                        "Confirmation Required", 
+                        async function() {
+                            // Yeh tabhi chalega jab user "Yes, Proceed" par click karega
+                            particularVal = "Contra";
+                            if (inputParticular) inputParticular.value = "Contra";
+                            await executeSaveWorkflow(particularVal, amountVal, updatedNotesPayload);
                         }
                     );
                 } else {
-                    // Failback custom confirm mock layout system integration
-                    const userChoice = confirm("Particular से transaction का reason clear hota hai. क्या आप आगे बढ़ना चाहते हैं?");
+                    // Safe UI Fallback
+                    const userChoice = confirm("Particular से transaction ka reason clear hota hai. क्या आप आगे बढ़ना चाहते हैं?");
                     if (userChoice) {
                         particularVal = "Contra";
                         if (inputParticular) inputParticular.value = "Contra";
@@ -225,7 +226,7 @@ window.initCashManagerPage = async function(currentUser) {
                     }
                 }
             } else {
-                // Agar Particular pehle se bhara hai, ya fir rule 1 pass ho chuka hai
+                // Agar Particular pehle se bhara hai, toh bina kisi rukavat ke save karein
                 await executeSaveWorkflow(particularVal, amountVal, updatedNotesPayload);
             }
         };
