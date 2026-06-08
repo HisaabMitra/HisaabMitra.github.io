@@ -94,6 +94,25 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!btnTarget) return;
 
             const pageName = btnTarget.getAttribute('data-page');
+            
+            // 🔐 [SECURITY INTERCEPTOR]: Accounts Manager ke liye PIN check gate lagaya
+            if (pageName === 'accounts-manager') {
+                if (window.JarvisSecureGate && typeof window.JarvisSecureGate.gatekeep === 'function') {
+                    console.log("🔒 Security Intercept: Redirecting session frame to secure PIN validation gate...");
+                    
+                    // Nav highlight handle karne ke liye class manipulation
+                    document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+                    if (btnTarget.classList.contains('nav-btn')) btnTarget.classList.add('active');
+                    
+                    // Gatekeeper initialize karein, valid hone par ye khud loadPage('accounts-manager') call karega
+                    window.JarvisSecureGate.gatekeep(pageName, currentLoggedInUser);
+                    return; // Normal execution loop yahin rokein
+                } else {
+                    console.error("❌ Critical Security Failure: JarvisSecureGate engine missing from scope.");
+                }
+            }
+
+            // Baki saare normal pages bina kisi interceptor ke chalenge
             document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
             if (btnTarget.classList.contains('nav-btn')) btnTarget.classList.add('active');
             
@@ -117,6 +136,9 @@ document.addEventListener('DOMContentLoaded', () => {
             workspace.innerHTML = `<div style="padding: 20px; color: var(--color-maroon-main); text-align: center;"><h3>⚠️ Component Failure</h3></div>`;
         }
     }
+
+    // Expose loadPage to window scope so secure-gate.js can call it upon successful authentication
+    window.loadPage = loadPage;
 
     // 🌟 [CRITICAL SYNCHRONIZATION HUB] 🌟
     function initializePageModules(pageName) {
