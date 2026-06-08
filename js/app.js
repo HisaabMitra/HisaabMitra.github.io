@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const logoutBtn = document.getElementById('logout-btn');
     const goToRegister = document.getElementById('go-to-register');
     const goToLogin = document.getElementById('go-to-login');
-    const navButtons = document.querySelectorAll('.nav-btn, .footer-btn');
+    const navButtons = document.querySelectorAll('.nav-btn, .footer-btn, #btn-nav-accounts-manager'); // ⭐ Added specific selector for accounts manager check
 
     if(goToRegister) {
         goToRegister.addEventListener('click', (e) => {
@@ -165,15 +165,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (pageName === 'search' && typeof initSearchModule === 'function') initSearchModule();
         if (pageName === 'super-admin' && typeof initSuperAdminModule === 'function') initSuperAdminModule();
 
-
-
-
+        // 🏦 ACCOUNTS MANAGER NODE SWITCH-CASE ROUTER HOOK
         if (pageName === 'accounts-manager') {
-        if (typeof window.initAccountsManagerPage === 'function') {
-        window.initAccountsManagerPage(currentLoggedInUser);
+            if (typeof window.initAccountsManagerPage === 'function') {
+                console.log("🏦 Triggering Jarvis Accounts Manager Engine...");
+                window.initAccountsManagerPage(currentLoggedInUser);
             } else {
-        console.error("initAccountsManagerPage function missing in accounts-manager.js");
-        }
+                console.error("initAccountsManagerPage function missing in accounts-manager.js");
+            }
         }
         
         // 🖨️ SETTINGS GATEWAY: Jarvis Boot Engine Trigger
@@ -197,14 +196,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // 💼 COUNTER CASH MANAGER ACTIVE VIEW ROUTER HOOK
-if (pageName === 'cash-manager') {
-    if (typeof window.initCashManagerPage === 'function') {
-        console.log("💼 Triggering Jarvis Cash Manager Engine...");
-        window.initCashManagerPage(currentLoggedInUser);
-    } else {
-        console.error("❌ initCashManagerPage function missing in cash-manager.js scope!");
-    }
-}
+        if (pageName === 'cash-manager') {
+            if (typeof window.initCashManagerPage === 'function') {
+                console.log("💼 Triggering Jarvis Cash Manager Engine...");
+                window.initCashManagerPage(currentLoggedInUser);
+            } else {
+                console.error("❌ initCashManagerPage function missing in cash-manager.js scope!");
+            }
+        }
         
         // ⚡ SAFETY FALLBACK FOR UNBUILT PARTS (IMPS, REPORTS, EXPENSES)
         if (['imps', 'report', 'expense'].includes(pageName)) {
