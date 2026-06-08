@@ -238,6 +238,44 @@
 </div>
 
 
+
+
+<!-- ======================================================== -->
+<!-- 🔐 SECURITY HUB: 4-DIGIT AUTO-SUBMIT PIN MODAL -->
+<!-- ======================================================== -->
+<div id="jarvis-secure-pin-modal" class="hidden" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); display: flex; justify-content: center; align-items: center; z-index: 9999; backdrop-filter: blur(4px); font-family: sans-serif; box-sizing: border-box;">
+    
+    <div style="background: #ffffff; width: 100%; max-width: 400px; padding: 30px; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); border-top: 6px solid #7d0022; text-align: center; position: relative; box-sizing: border-box; margin: 15px;">
+        
+        <!-- Icon & Header -->
+        <div style="margin-bottom: 20px;">
+            <div id="pin-modal-icon" style="font-size: 2.8rem; margin-bottom: 10px; color: #7d0022;">🔒</div>
+            <h3 id="pin-modal-title" style="margin: 0; color: #7d0022; font-size: 1.3rem; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">Security PIN Required</h3>
+            <p id="pin-modal-desc" style="margin: 6px 0 0 0; color: #555; font-size: 0.85rem; line-height: 1.4;">Enter your 4-digit authorization PIN to unlock the Accounts Manager terminal.</p>
+        </div>
+
+        <!-- 🔢 4-DIGIT SERIALIZED INPUT BOXES -->
+        <div id="pin-inputs-container" style="display: flex; justify-content: center; gap: 15px; margin: 25px 0;">
+            <input type="password" class="pin-digit-box" data-index="1" maxlength="1" pattern="\d*" inputmode="numeric" style="width: 50px; height: 50px; font-size: 1.6rem; text-align: center; font-weight: bold; border: 2px solid #ccc; border-radius: 6px; color: #7d0022; outline: none; transition: 0.2s;" autocomplete="off">
+            <input type="password" class="pin-digit-box" data-index="2" maxlength="1" pattern="\d*" inputmode="numeric" style="width: 50px; height: 50px; font-size: 1.6rem; text-align: center; font-weight: bold; border: 2px solid #ccc; border-radius: 6px; color: #7d0022; outline: none; transition: 0.2s;" autocomplete="off">
+            <input type="password" class="pin-digit-box" data-index="3" maxlength="1" pattern="\d*" inputmode="numeric" style="width: 50px; height: 50px; font-size: 1.6rem; text-align: center; font-weight: bold; border: 2px solid #ccc; border-radius: 6px; color: #7d0022; outline: none; transition: 0.2s;" autocomplete="off">
+            <input type="password" class="pin-digit-box" data-index="4" maxlength="1" pattern="\d*" inputmode="numeric" style="width: 50px; height: 50px; font-size: 1.6rem; text-align: center; font-weight: bold; border: 2px solid #ccc; border-radius: 6px; color: #7d0022; outline: none; transition: 0.2s;" autocomplete="off">
+        </div>
+
+        <!-- Status Message Indicator (Wrong PIN flashes here) -->
+        <div id="pin-modal-status-msg" style="height: 20px; font-size: 0.85rem; font-weight: 600; color: #dc3545; margin-bottom: 15px;"></div>
+
+        <!-- Footer Escape Guide Text -->
+        <div style="border-top: 1px dashed #dee2e6; padding-top: 12px; color: #888; font-size: 0.78rem;">
+            Press <kbd style="background: #e9ecef; border: 1px solid #adb5bd; padding: 2px 5px; border-radius: 3px; font-weight: bold; color: #495057;">ESC</kbd> or click outside to abort execution safely.
+        </div>
+    </div>
+</div>
+
+
+
+    
+
     
     
     <div id="missing-detail-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 99997; align-items: center; justify-content: center;">
