@@ -1,5 +1,5 @@
 // ========================================================
-// 🧮 MASTER PLUGIN: TWO-COLUMN UI (1st IN / 2nd OUT)
+// 🧮 MASTER PLUGIN: TWO-COLUMN UI (1st IN / 2nd OUT
 // ========================================================
 
 window.MasterDenom1stIn2ndOut = {
