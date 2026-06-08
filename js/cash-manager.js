@@ -10,7 +10,7 @@ window.initCashManagerPage = async function(currentUser) {
     const inputParticular = document.getElementById('cash-manager-particular');
     const inputAmount = document.getElementById('cash-manager-amount');
 
-    // 🧮 [DIRECT INJECTION]: Kholte hi seedha naya 1stIn 2ndOut plugin load karein
+    // 🧮 [DIRECT INJECTION]: Kholte hi naya 1stIn 2ndOut plugin load karein
     function bootUnifiedCashGrid() {
         if (!window.MasterDenom1stIn2ndOut) {
             console.error("❌ MasterDenom1stIn2ndOut plugin missing from global scope map!");
@@ -34,12 +34,11 @@ window.initCashManagerPage = async function(currentUser) {
         if (!tableBody) return;
 
         try {
-            // Hum safe-side ke liye aaj ki entries pull kar rahe hain schema se
             const todayStart = new Date();
             todayStart.setHours(0,0,0,0);
 
             const { data: entries, error } = await window.supabaseClient
-                .from('cash_transactions') // Aapki real dynamic table ka naam yahan likhein agar badalna ho
+                .from('cash_transactions')
                 .select('*')
                 .eq('ko_code', currentUser.ko_code)
                 .gte('created_at', todayStart.toISOString())
@@ -70,138 +69,163 @@ window.initCashManagerPage = async function(currentUser) {
         }
     }
 
-    // 🚀 [MASTER SAVE ACTION ROUTINE]: Syncs fields seamlessly
+    // 🚀 [EXECUTE ATOMIC SAVE TRANSACTION]: actual database injection routine logic split
+    async function executeSaveWorkflow(finalParticular, finalAmount, updatedNotesPayload) {
+        try {
+            btnMasterSave.disabled = true;
+            btnMasterSave.innerText = "Processing Cash Sync...";
+
+            // 1. Update user_roles mapping stock counter vault
+            const { error: updateErr } = await window.supabaseClient
+                .from('user_roles')
+                .update(updatedNotesPayload)
+                .eq('ko_code', currentUser.ko_code);
+
+            if (updateErr) throw updateErr;
+
+            // 2. Transaction ledger table history insertion
+            await window.supabaseClient
+                .from('cash_transactions')
+                .insert([{
+                    ko_code: currentUser.ko_code,
+                    reason: inputReason.value,
+                    particular: finalParticular,
+                    amount: finalAmount,
+                    created_at: new Date().toISOString()
+                }]);
+
+            window.showSystemAlert("काउंटर का फिजिकल कैश स्टॉक सफलतापूर्वक अपडेट कर दिया गया है।", "Stock Updated", "✅");
+            bootUnifiedCashGrid();
+
+        } catch (err) {
+            console.error("Master cash manager core failure stack:", err);
+            window.showSystemAlert("डेटाबेस स्टॉक अपडेट विफल हुआ।", "Error", "❌");
+        } finally {
+            btnMasterSave.disabled = false;
+            btnMasterSave.innerText = "💾 Save Cash Adjustments";
+        }
+    }
+
+    // 🚀 [MASTER SAVE ACTION ROUTINE]
     if (btnMasterSave) {
         btnMasterSave.onclick = async function() {
             if (!window.MasterDenom1stIn2ndOut) return;
 
-            // Get live calculation summary matrix array
+            // Calculate live calculation matrices summary array
             const metrics = window.MasterDenom1stIn2ndOut.calculate();
             let particularVal = inputParticular.value.trim();
             const amountVal = parseFloat(inputAmount.value) || 0;
 
+            // Donomination grid entry elements dynamic absolute totals evaluate
             const isDenominationEmpty = (metrics.totalIn === 0 && metrics.totalOut === 0);
+            
+            // ⭐ LOGIC RULE: Calculate true "Net Change" / Net Adjustment
+            const netAdjustment = Math.abs(metrics.totalIn - metrics.totalOut);
 
-            // 🛑 CRITICAL LOGIC RULE 1: Particular empty check
-            if (!particularVal) {
-                const userChoice = confirm("Particular भरना भविष्य में इस transaction को याद रखने के लिए ज़रूरी है! क्या आप आगे बढ़ना चाहते हैं?");
-                if (!userChoice) {
-                    return; // Stop transaction process right here
-                } else {
-                    particularVal = "Contra";
-                    inputParticular.value = "Contra"; // Form interface me set kiya
-                }
-            }
-
-            // 🛑 CRITICAL LOGIC RULE 2: Amount strict verification
+            // 🛑 CRITICAL VALIDATION: Agar user ne kuch bhi note change nahi kiya aur na hi amount dala
             if (isDenominationEmpty && amountVal === 0) {
-                // Denomination empty hai aur amount bhi 0 hai -> Save silently absolute standard
                 window.showSystemAlert("कोई बदलाव नहीं मिला (Amount & Denominations are zero)।", "No Change", "ℹ️");
                 return;
             }
 
-            if (!isDenominationEmpty && amountVal === 0) {
-                // Denomination entered hai lekin input amount field 0 hai -> block execute
-                window.showSystemAlert("Denomination में वैल्यू होने के कारण Amount दर्ज करना आवश्यक है!", "Validation Error", "⚠️");
+            // 🛑 CRITICAL VALIDATION: Agar Net Adjustment 0 se upar hai par Amount abhi bhi 0 hai -> tabhi block lagao
+            if (netAdjustment > 0 && amountVal === 0) {
+                window.showSystemAlert("Denomination में Net Adjustment होने के कारण Amount दर्ज करना आवश्यक है!", "Validation Error", "⚠️");
                 return;
             }
 
+            // Fetch current absolute live cash stocks from user_roles beforehand
+            let liveUser, fetchErr;
             try {
-                btnMasterSave.disabled = true;
-                btnMasterSave.innerText = "Processing Cash Sync...";
-
-                // Fetch current absolute live cash stocks from user_roles
-                const { data: liveUser, error: fetchErr } = await window.supabaseClient
+                const response = await window.supabaseClient
                     .from('user_roles')
                     .select('*')
                     .eq('ko_code', currentUser.ko_code)
                     .maybeSingle();
+                liveUser = response.data;
+                fetchErr = response.error;
+            } catch(e) { fetchErr = e; }
 
-                if (fetchErr) throw fetchErr;
+            if (fetchErr || !liveUser) {
+                window.showSystemAlert("डेटाबेस से स्टॉक फ़ेच करने में विफलता।", "Error", "❌");
+                return;
+            }
 
-                const inputNotes = window.MasterDenom1stIn2ndOut.getValues();
-                let updatedNotesPayload = {};
-                let hasSufficientStock = true;
+            const inputNotes = window.MasterDenom1stIn2ndOut.getValues();
+            let updatedNotesPayload = {};
+            let hasSufficientStock = true;
+            const noteDenoms = [500, 200, 100, 50, 20, 10, 5];
 
-                const noteDenoms = [500, 200, 100, 50, 20, 10, 5];
+            // 🌟 ATOMIC MUTATION STOCK CALCULATION LOOP
+            for (let i = 0; i < noteDenoms.length; i++) {
+                const d = noteDenoms[i];
+                const dbColumnKey = `cash_${d}`;
+                
+                const currentStock = parseInt(liveUser[dbColumnKey]) || 0;
+                const inQty = inputNotes[`in_${d}`] || 0;
+                const outQty = inputNotes[`out_${d}`] || 0;
 
-                // 🌟 ATOMIC MUTATION LOOP
-                for (let i = 0; i < noteDenoms.length; i++) {
-                    const d = noteDenoms[i];
-                    const dbColumnKey = `cash_${d}`;
-                    
-                    const currentStock = parseInt(liveUser[dbColumnKey]) || 0;
-                    const inQty = inputNotes[`in_${d}`] || 0;
-                    const outQty = inputNotes[`out_${d}`] || 0;
+                const adjustedStock = currentStock + inQty - outQty;
 
-                    // Core Sync Formula: Naya Stock = Purana Stock + Inflow (IN) - Outflow (OUT)
-                    const adjustedStock = currentStock + inQty - outQty;
+                if (adjustedStock < 0) {
+                    window.showSystemAlert(`आपके काउंटर पर ₹${d} के नोट पर्याप्त मात्रा में उपलब्ध नहीं हैं कि इतने OUT किए जा सकें!`, "Stock Alert", "⚠️");
+                    hasSufficientStock = false;
+                    break;
+                }
+                updatedNotesPayload[dbColumnKey] = adjustedStock;
+            }
 
-                    if (adjustedStock < 0) {
-                        window.showSystemAlert(`आपके काउंटर पर ₹${d} के नोट पर्याप्त मात्रा में उपलब्ध नहीं हैं कि इतने OUT किए जा सकें!`, "Stock Alert", "⚠️");
-                        hasSufficientStock = false;
-                        break;
+            // Coins verification segment
+            if (hasSufficientStock) {
+                const currentCoins = parseInt(liveUser['cash_coins']) || 0;
+                const coinIn = inputNotes['in_coins'] || 0;
+                const coinOut = inputNotes['out_coins'] || 0;
+                
+                const adjustedCoins = currentCoins + coinIn - coinOut;
+
+                if (adjustedCoins < 0) {
+                    window.showSystemAlert("काउंटर तिजोरी में सिक्के कम हैं, इतने OUT नहीं किए जा सकते!", "Stock Alert", "⚠️");
+                    hasSufficientStock = false;
+                } else {
+                    updatedNotesPayload['cash_coins'] = adjustedCoins;
+                }
+            }
+
+            if (!hasSufficientStock) return;
+
+            // 🛑 CUSTOM APP ALERT IMPLEMENTATION: Particular empty warning handler inside app standard panel
+            if (!particularVal) {
+                // Agar aapke system me custom dynamic confirm system window h, toh usko toggle karein. 
+                // Alternatively, custom modal injection style fallback trigger wrapper element inside code:
+                if (window.showSystemConfirm) {
+                    window.showSystemConfirm(
+                        "Particular भरना भविष्य में इस transaction को याद रखने के लिए ज़रूरी है! क्या आप आगे बढ़ना चाहते हैं?", 
+                        async function(confirmed) {
+                            if (confirmed) {
+                                particularVal = "Contra";
+                                inputParticular.value = "Contra";
+                                await executeSaveWorkflow(particularVal, amountVal, updatedNotesPayload);
+                            }
+                        }
+                    );
+                } else {
+                    // Failback dynamic UI alert framework to match style panel
+                    const userConfirmation = confirm("Particular भरना भविष्य में इस transaction को याद रखने के लिए ज़रूरी है! क्या आप आगे बढ़ना चाहते हैं?");
+                    if (userConfirmation) {
+                        particularVal = "Contra";
+                        inputParticular.value = "Contra";
+                        await executeSaveWorkflow(particularVal, amountVal, updatedNotesPayload);
                     }
-                    updatedNotesPayload[dbColumnKey] = adjustedStock;
                 }
-
-                // Coins verification segment
-                if (hasSufficientStock) {
-                    const currentCoins = parseInt(liveUser['cash_coins']) || 0;
-                    const coinIn = inputNotes['in_coins'] || 0;
-                    const coinOut = inputNotes['out_coins'] || 0;
-                    
-                    const adjustedCoins = currentCoins + coinIn - coinOut;
-
-                    if (adjustedCoins < 0) {
-                        window.showSystemAlert("काउंटर तिजोरी में सिक्के कम हैं, इतने OUT नहीं किए जा सकते!", "Stock Alert", "⚠️");
-                        hasSufficientStock = false;
-                    } else {
-                        updatedNotesPayload['cash_coins'] = adjustedCoins;
-                    }
-                }
-
-                if (!hasSufficientStock) {
-                    btnMasterSave.disabled = false;
-                    btnMasterSave.innerText = "💾 Save Cash Adjustments";
-                    return;
-                }
-
-                // 1. Update user_roles mapping stock
-                const { error: updateErr } = await window.supabaseClient
-                    .from('user_roles')
-                    .update(updatedNotesPayload)
-                    .eq('ko_code', currentUser.ko_code);
-
-                if (updateErr) throw updateErr;
-
-                // 2. [EXTRA BONUS RUNTIME]: Transaction log mapping context table me entry record karein
-                await window.supabaseClient
-                    .from('cash_transactions')
-                    .insert([{
-                        ko_code: currentUser.ko_code,
-                        reason: inputReason.value,
-                        particular: particularVal,
-                        amount: amountVal,
-                        created_at: new Date().toISOString()
-                    }]);
-
-                window.showSystemAlert("काउंटर का फिजिकल कैश स्टॉक सफलतापूर्वक अपडेट कर दिया गया है।", "Stock Updated", "✅");
-                bootUnifiedCashGrid();
-
-            } catch (err) {
-                console.error("Master cash manager core failure stack:", err);
-                window.showSystemAlert("डेटाबेस स्टॉक अपडेट विफल हुआ।", "Error", "❌");
-            } finally {
-                btnMasterSave.disabled = false;
-                btnMasterSave.innerText = "💾 Save Cash Adjustments";
+            } else {
+                // Agar particular already populated fill hai toh seedha execute hoga entry loop workflow
+                await executeSaveWorkflow(particularVal, amountVal, updatedNotesPayload);
             }
         };
     }
 
-    // Global scopes functions so table buttons triggers directly click handle
     window.editCashEntry = async function(id) {
-        alert("Edit function trigger for transaction ID: " + id + ". Setup custom inline input logic as per requirements.");
+        alert("Edit function trigger for transaction ID: " + id);
     };
 
     window.deleteCashEntry = async function(id) {
@@ -213,6 +237,5 @@ window.initCashManagerPage = async function(currentUser) {
         }
     };
 
-    // Run direct initial load synchronization procedures on boot trigger
     bootUnifiedCashGrid();
 };
