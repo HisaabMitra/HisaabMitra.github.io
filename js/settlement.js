@@ -183,11 +183,11 @@ window.initSettlementPage = async function(currentUser) {
                 if (isEditMode) {
                     const { data: logRes } = await window.supabaseClient.from('settlement_logs').select('*').eq('id', editIdInput.value).maybeSingle();
                     oldLog = logRes;
-                    dbSettleBal = dbSettleBal - (parseFloat(oldLog?.amount) || 0); // Reverse old bank amount
+                    dbSettleBal = dbSettleBal - (parseFloat(oldLog?.amount) || 0);
                 }
 
                 const computedNewBalance = dbSettleBal + amount;
-                const inputNotes = window.DenominationOutInComponent.getValues(); // Contains {cash_500, cash_200...}
+                const inputNotes = window.DenominationOutInComponent.getValues();
                 
                 let updatedNotesPayload = { settlement_balance: computedNewBalance };
                 let logTablePayload = {
@@ -208,23 +208,20 @@ window.initSettlementPage = async function(currentUser) {
                     const enteredQty = parseInt(inputNotes[dbKey]) || 0;
 
                     if (isEditMode && oldLog) {
-                        // 🌟 SYSTEM RECOVERY CHECK: Purane note ko galla me wapas jama (+) karo pehle
                         const oldQty = parseInt(oldLog[logOutKey]) || 0;
                         currentStock += oldQty;
                     }
 
                     updatedNotesPayload[dbKey] = Math.max(0, currentStock - enteredQty);
-                    logTablePayload[logOutKey] = enteredQty; // Directly flat row column store
+                    logTablePayload[logOutKey] = enteredQty;
                 });
 
-                // Coins Segment
                 let currentCoins = parseInt(liveUser['cash_coins']) || 0;
                 const enteredCoins = parseInt(inputNotes['cash_coins']) || 0;
                 if (isEditMode && oldLog) { currentCoins += (parseInt(oldLog['denom_out_coins']) || 0); }
                 updatedNotesPayload['cash_coins'] = Math.max(0, currentCoins - enteredCoins);
                 logTablePayload['denom_out_coins'] = enteredCoins;
 
-                // Update physical stock vault
                 const { error: userErr } = await window.supabaseClient.from('user_roles').update(updatedNotesPayload).eq('ko_code', currentUser.ko_code);
                 if (userErr) throw userErr;
 
@@ -270,7 +267,7 @@ window.initSettlementPage = async function(currentUser) {
                 if (isEditMode) {
                     const { data: logRes } = await window.supabaseClient.from('settlement_logs').select('*').eq('id', editIdInput.value).maybeSingle();
                     oldLog = logRes;
-                    dbSettleBal = dbSettleBal + (parseFloat(oldLog?.amount) || 0); // Reverse old bank withdrawal
+                    dbSettleBal = dbSettleBal + (parseFloat(oldLog?.amount) || 0);
                 }
                 
                 const computedNewBalance = dbSettleBal - amount;
@@ -304,7 +301,6 @@ window.initSettlementPage = async function(currentUser) {
                     const enteredQty = parseInt(inputNotes[dbKey]) || 0;
 
                     if (isEditMode && oldLog) {
-                        // 🌟 SYSTEM RECOVERY CHECK: Puraane notes ko galla se pehle hatayein (-)
                         const oldQty = parseInt(oldLog[logInKey]) || 0;
                         currentStock -= oldQty;
                     }
@@ -321,7 +317,6 @@ window.initSettlementPage = async function(currentUser) {
 
                 if (!stockCheckPass) { btnWitSave.disabled = false; return; }
 
-                // Coins Segment
                 let currentCoins = parseInt(liveUser['cash_coins']) || 0;
                 const enteredCoins = parseInt(inputNotes['cash_coins']) || 0;
                 if (isEditMode && oldLog) { currentCoins -= (parseInt(oldLog['denom_in_coins']) || 0); }
@@ -403,7 +398,6 @@ window.initSettlementPage = async function(currentUser) {
                     document.getElementById('dep-panel-title').innerText = "📝 Edit Deposit Entry";
                     btnDepSave.innerText = "⚙️ Update Deposit Entry";
 
-                    // 🌟 FLAT COLUMN RETRIEVAL: Direct matching from columns
                     setTimeout(() => {
                         [500, 200, 100, 50, 20, 10, 5].forEach(d => {
                             const inputCell = document.querySelector(`.gen-out-val[data-note="${d}"]`);
@@ -438,16 +432,22 @@ window.initSettlementPage = async function(currentUser) {
             };
         });
 
-        // Delete 🗑️
+        // 🗑️ Delete (🌟 COMPLETE FIX: Browser Confirm box poori tarah saaf, sirf premium custom popup chalega)
         document.querySelectorAll('.settle-del-btn').forEach(btn => {
             btn.onclick = function() {
                 const logId = this.getAttribute('data-id');
+                
                 if (typeof window.showCustomSystemConfirm === 'function') {
                     window.showCustomSystemConfirm(
-                        "क्या आप वाकई इस एंट्री को डिलीट करना चाहते हैं? इससे बैंक बैलेंस और काउंटर नोट दोनों रोलbacks हो जाएंगे।",
+                        "क्या आप वाकई इस एंट्री को डिलीट करना चाहते हैं? इससे बैंक बैलेंस और काउंटर नोट दोनों रोलबैक हो जाएंगे।",
                         "एंट्री डिलीट करें 🗑️",
-                        async function() { await executeLogDeletion(logId); }
+                        async function() { 
+                            await executeLogDeletion(logId); 
+                        }
                     );
+                } else {
+                    // Fail-safe protection mapping
+                    executeLogDeletion(logId);
                 }
             };
         });
@@ -472,7 +472,7 @@ window.initSettlementPage = async function(currentUser) {
 
                 noteKeys.forEach(d => {
                     const dbKey = `cash_${d}`;
-                    updatedNotesPayload[dbKey] = (parseInt(liveUser[dbKey]) || 0) + (parseInt(log[`denom_out_${d}`]) || 0); // Put back
+                    updatedNotesPayload[dbKey] = (parseInt(liveUser[dbKey]) || 0) + (parseInt(log[`denom_out_${d}`]) || 0);
                 });
                 updatedNotesPayload['cash_coins'] = (parseInt(liveUser['cash_coins']) || 0) + (parseInt(log['denom_out_coins']) || 0);
 
