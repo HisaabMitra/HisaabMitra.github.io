@@ -1,78 +1,107 @@
-<div id="jarvis-fundtransfer-wrapper" style="padding: 20px; max-width: 1100px; margin: 0 auto; font-family: sans-serif; text-align: left; box-sizing: border-box;">
+<div id="jarvis-fundtransfer-wrapper" style="padding: 20px; max-width: 1200px; margin: 0 auto; font-family: sans-serif; text-align: left; box-sizing: border-box;">
     
+    <!-- HEADER BRANDING BANNER (Jarvis Maroon Theme) -->
     <div style="border-bottom: 3px solid #7d0022; padding-bottom: 12px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center;">
         <div>
-            <h2 style="color: #7d0022; margin: 0; font-size: 1.5rem; font-weight: bold;">💸 फंड ट्रांसफर गेटवे (Fund Transfer Hub)</h2>
-            <p style="margin: 5px 0 0 0; color: #555; font-size: 0.88rem;">Execute intra-ledger terminal movements and peer-to-peer secure node distribution.</p>
+            <h2 style="color: #7d0022; margin: 0; font-size: 1.5rem; font-weight: bold;">💸 फंड ट्रांसफर गेटवे (Direct Customer-to-Customer)</h2>
+            <p style="margin: 5px 0 0 0; color: #555; font-size: 0.88rem;">Execute secure peer-to-peer intra-ledger movements across registered terminal nodes.</p>
         </div>
-        <div id="ft-live-vault-indicator" style="background: #e9ecef; border: 1px solid #ced4da; padding: 6px 12px; border-radius: 4px; font-weight: bold; font-size: 0.85rem; color: #495057;">
+        <div style="background: #e9ecef; border: 1px solid #ced4da; padding: 6px 12px; border-radius: 4px; font-weight: bold; font-size: 0.85rem; color: #495057;">
             Vault Linked 🔗
         </div>
     </div>
 
     <div style="display: flex; gap: 25px; flex-wrap: wrap;">
         
-        <div style="flex: 1.2; min-width: 400px; background: #ffffff; padding: 25px; border-radius: 6px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); border: 1px solid #dee2e6; box-sizing: border-box;">
+        <!-- LEFT WING: CORE TRANSACTION INTAKE FORM -->
+        <div style="flex: 1.1; min-width: 420px; background: #ffffff; padding: 25px; border-radius: 6px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); border: 1px solid #dee2e6; border-top: 5px solid #7d0022; box-sizing: border-box;">
             
             <form id="form-jarvis-fundtransfer-master" onsubmit="return false;">
                 
-                <div style="margin-bottom: 18px;">
-                    <label style="display: block; font-weight: bold; margin-bottom: 8px; font-size: 0.85rem; color: #333;">Select Transfer Route:</label>
-                    <div style="display: flex; gap: 10px;">
-                        <button type="button" id="ft-route-account" class="ft-route-btn active" data-route="account" style="flex: 1; padding: 10px; background: #7d0022; color: white; border: 1px solid #7d0022; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 0.85rem; transition: 0.2s;">To Account</button>
-                        <button type="button" id="ft-route-aadhar" class="ft-route-btn" data-route="aadhar" style="flex: 1; padding: 10px; background: #e9ecef; color: #333; border: 1px solid #ced4da; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 0.85rem; transition: 0.2s;">To Aadhaar</button>
+                <!-- SENDER DATA FIELD (FROM AADHAAR) -->
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.85rem; color: #333;">Sender (भेजने वाला) Aadhaar Number:</label>
+                    <input type="text" id="ft-from-aadhaar" placeholder="Enter 12-digit sender Aadhaar..." maxlength="12" required style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem; box-sizing: border-box; font-weight: 600; letter-spacing: 0.5px;">
+                    <div style="margin-top: 4px; font-size: 0.8rem; color: #555; font-weight: 600;">
+                        Remitter Name: <span id="lbl-ft-from-name" style="color: #7d0022; font-weight: bold;">--</span>
                     </div>
                 </div>
 
+                <!-- RECEIVER DATA FIELD (TO AADHAAR) -->
                 <div style="margin-bottom: 15px;">
-                    <label id="lbl-ft-destination-target" style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.85rem; color: #333;">Beneficiary Account Number:</label>
-                    <input type="text" id="ft-destination-input" placeholder="Enter bank account number..." required style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem; box-sizing: border-box;">
+                    <label style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.85rem; color: #333;">Receiver (पाने वाला) Aadhaar Number:</label>
+                    <input type="text" id="ft-to-aadhaar" placeholder="Enter 12-digit receiver Aadhaar..." maxlength="12" required style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem; box-sizing: border-box; font-weight: 600; letter-spacing: 0.5px;">
+                    <div style="margin-top: 4px; font-size: 0.8rem; color: #555; font-weight: 600;">
+                        Beneficiary Name: <span id="lbl-ft-to-name" style="color: #27ae60; font-weight: bold;">--</span>
+                    </div>
                     
-                    <div id="ft-live-telly-status-node" style="margin-top: 5px; font-size: 0.82rem; font-weight: bold; minimum-height: 18px;"></div>
+                    <!-- ⭐ THE LIVE CRITICAL STATUS RADAR ALERT NODE -->
+                    <div id="ft-live-telly-status-node" style="margin-top: 6px; font-size: 0.82rem; font-weight: bold; min-height: 15px;"></div>
                 </div>
 
+                <!-- TRANSFER AMOUNT CONFIGURATION -->
                 <div style="margin-bottom: 15px;">
-                    <label style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.85rem; color: #333;">Beneficiary Full Name:</label>
-                    <input type="text" id="ft-beneficiary-name" placeholder="Name will auto-fetch or enter manually..." required style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem; box-sizing: border-box; background: #f8f9fa;">
+                    <label style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.85rem; color: #333;">Transfer Amount (₹):</label>
+                    <input type="number" id="ft-amount" placeholder="0.00" min="1" step="0.01" required style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 1rem; box-sizing: border-box; font-weight: bold; color: #7d0022;">
+                    <!-- 🔢 Live Words Translate Interface Display Row -->
+                    <div id="ft-amount-words" style="margin-top: 4px; font-size: 0.8rem; color: #6c757d; font-weight: 600; font-style: italic;">Zero Rupees Only</div>
                 </div>
 
-                <div style="display: flex; gap: 15px; margin-bottom: 15px;">
-                    <div style="flex: 1;">
-                        <label style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.85rem; color: #333;">Transfer Amount (₹):</label>
-                        <input type="number" id="ft-transfer-amount" placeholder="0.00" min="1" step="0.01" required style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem; box-sizing: border-box; font-weight: bold;">
-                    </div>
-                    <div style="flex: 1.2;">
-                        <label style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.85rem; color: #333;">Remarks / Narration:</label>
-                        <input type="text" id="ft-transfer-remarks" placeholder="Reason for transfer..." style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem; box-sizing: border-box;">
-                    </div>
+                <!-- REMARKS / NARRATION -->
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.85rem; color: #333;">Remarks / Narration:</label>
+                    <input type="text" id="ft-remarks" placeholder="Reason for transaction transfer..." style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem; box-sizing: border-box;">
                 </div>
 
-                <div id="ft-denomination-wrapper-node" class="hidden" style="margin-top: 20px; border-top: 2px dashed #7d0022; padding-top: 15px; flex-direction: column; gap: 10px;">
+                <!-- ⭐ THE DYNAMIC ADAPTIVE DENOMINATION WRAPPER NODE -->
+                <!-- Script processing handles visibility display switch states -->
+                <div id="ft-denomination-wrapper-node" style="display: none; margin-top: 20px; border-top: 2px dashed #7d0022; padding-top: 15px; flex-direction: column; gap: 10px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
-                        <span style="font-size: 0.9rem; font-weight: bold; color: #7d0022;">📊 Ledger Physical Denomination Adjustments</span>
-                        <button type="button" id="btn-ft-bypass-denom" style="background: #6c757d; color: white; border: none; padding: 4px 8px; border-radius: 3px; font-size: 0.75rem; cursor: pointer;">Remove Denomination</button>
+                        <span style="font-size: 0.88rem; font-weight: bold; color: #7d0022;">📊 Ledger Physical Denomination Matrix Adjustment</span>
+                        <button type="button" id="btn-ft-bypass-denom" style="background: #6c757d; color: white; border: none; padding: 4px 8px; border-radius: 3px; font-size: 0.72rem; cursor: pointer; font-weight: bold;">Remove Denomination</button>
                     </div>
-                    <div id="ft-injected-matrix-anchor">
-                        </div>
+                    <div id="ft-injected-matrix-anchor" style="width: 100%;">
+                        <!-- JarvisDenominationEngine.render() injects framework here -->
+                    </div>
                 </div>
 
+                <!-- FORM BUTTON ACTIONS FOOTER -->
                 <div style="display: flex; gap: 10px; margin-top: 25px; border-top: 1px solid #dee2e6; padding-top: 18px;">
-                    <button type="submit" id="btn-ft-master-submit" style="flex: 2; padding: 12px; background: #7d0022; color: #ffffff; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.98rem; box-shadow: 0 2px 5px rgba(0,0,0,0.15); transition: 0.2s;">
-                        🚀 Execute Fund Transfer
+                    <button type="button" id="btn-ft-save" style="flex: 2; padding: 12px; background: #7d0022; color: #ffffff; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.98rem; box-shadow: 0 2px 5px rgba(0,0,0,0.15); transition: 0.2s;">
+                        🚀 Execute Transfer
                     </button>
-                    <button type="button" id="btn-ft-master-clear" style="flex: 1; padding: 12px; background: #e9ecef; color: #333; border: 1px solid #ced4da; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.95rem; transition: 0.2s;">
+                    <button type="button" id="btn-ft-clear" style="flex: 1; padding: 12px; background: #e9ecef; color: #333; border: 1px solid #ced4da; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.95rem; transition: 0.2s;">
                         Reset
                     </button>
                 </div>
             </form>
         </div>
 
-        <div style="flex: 1; min-width: 350px; background: #ffffff; padding: 25px; border-radius: 6px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); border: 1px solid #dee2e6; box-sizing: border-box; display: flex; flex-direction: column;">
-            <div style="border-bottom: 2px solid #6c757d; padding-bottom: 10px; margin-bottom: 15px;">
-                <h3 style="margin: 0; color: #333; font-size: 1.1rem; font-weight: bold;">📜 Recent Gateway Logs</h3>
+        <!-- RIGHT WING: RECENT COUNTER HISTORICAL LEDGER GRID -->
+        <div style="flex: 1.3; min-width: 450px; background: #ffffff; padding: 22px; border-radius: 6px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); border: 1px solid #dee2e6; border-top: 5px solid #27ae60; box-sizing: border-box; display: flex; flex-direction: column;">
+            <div style="border-bottom: 3px solid #27ae60; padding-bottom: 12px; margin-bottom: 15px;">
+                <h3 style="margin: 0; color: #27ae60; font-size: 1.2rem; font-weight: bold;">📜 Aaj Ke Fund Transfer Logs</h3>
+                <p style="margin: 4px 0 0 0; color: #666; font-size: 0.8rem;">Real-time execution streams tracking local loop transmissions inside counter terminals.</p>
             </div>
-            <div id="ft-recent-logs-tbody" style="flex: 1; overflow-y: auto; max-height: 450px; font-size: 0.85rem; color: #555;">
-                <div style="text-align: center; color: #999; font-style: italic; padding-top: 40px;">No recent ledger nodes loaded.</div>
+            
+            <div style="overflow-x: auto; flex: 1;">
+                <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.88rem;">
+                    <thead>
+                        <tr style="background: #f8f9fa; border-bottom: 2px solid #dee2e6;">
+                            <th style="padding: 10px; color: #495057; text-align: center; width: 40px;">S.No</th>
+                            <th style="padding: 10px; color: #495057;">Sender Details</th>
+                            <th style="padding: 10px; color: #495057;">Receiver Details</th>
+                            <th style="padding: 10px; color: #495057;">Amount</th>
+                            <th style="padding: 10px; color: #495057;">Time</th>
+                            <th style="padding: 10px; color: #495057; text-align: center; width: 100px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="today-ft-body">
+                        <tr>
+                            <td colspan="6" style="text-align:center; padding:30px; color:#999; font-style:italic;">आज काउंटर पर कोई फंड ट्रांसफर नहीं मिला</td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
 
