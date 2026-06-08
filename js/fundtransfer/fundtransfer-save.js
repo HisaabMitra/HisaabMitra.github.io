@@ -4,6 +4,7 @@
 
 window.executeFundTransferSave = async function(saveBtn, currentUser, flags) {
     try {
+        // Extracting elements context safely from structural DOM nodes
         const fromAadhaarInput = document.getElementById('ft-from-aadhaar');
         const toAadhaarInput = document.getElementById('ft-to-aadhaar');
         const ftAmountInput = document.getElementById('ft-amount');
@@ -23,6 +24,7 @@ window.executeFundTransferSave = async function(saveBtn, currentUser, flags) {
         const amount = parseFloat(ftAmountInput.value) || 0;
         const remarks = ftRemarksInput.value.trim();
 
+        // 🛡️ Safe Guardrails validation boundary parameters
         if (!fromAadhaar || !toAadhaar || amount <= 0) {
             if (window.showSystemAlert) {
                 window.showSystemAlert("कृपया प्रेषक/प्राप्तकर्ता आधार और वैध राशि दर्ज करें।", "Validation Error", "❌");
@@ -39,34 +41,40 @@ window.executeFundTransferSave = async function(saveBtn, currentUser, flags) {
 
         const isEditMode = saveBtn.dataset.mode === "edit";
 
-        // ⭐ INTERCEPTOR ENGINE: Prompt integration with immediate asynchronous macro-task delay rendering
+        // ⭐ THE RESOLUTION INTERCEPTOR: Asynchronous runtime render delay lock frame 
         if (window.matchedSavingAccountObj && !window.denomInjectedActive && !isEditMode) {
             if (window.showSystemConfirm) {
                 window.showSystemConfirm(
                     `🛡️ Authorized Account Holder Detected! Kya aap is transaction ke liye physical notes Denomination adjustments check karna chahte hain?`,
                     "Denomination Routing Verification",
                     function() {
-                        if (denomWrapper) denomWrapper.style.display = 'flex';
+                        // First step: Unhide structural envelope wrapper layout node instantly
+                        if (denomWrapper) {
+                            denomWrapper.style.setProperty('display', 'flex', 'important');
+                        }
                         window.denomInjectedActive = true;
                         
-                        // ⭐ FIX: Added layout rendering macro-task delay to prevent DOM collision injection drops
+                        // Second step: Force separation into thread execution pools via explicit macro-task delay
                         setTimeout(() => {
-                            if (window.JarvisDenominationEngine && typeof window.JarvisDenominationEngine.render === 'function') {
-                                console.log("📊 Injecting 1stOut-2ndIn Denomination grid inside anchor layout bounds...");
+                            const anchorNode = document.getElementById('ft-injected-matrix-anchor');
+                            if (anchorNode && window.JarvisDenominationEngine && typeof window.JarvisDenominationEngine.render === 'function') {
+                                console.log("📊 Rendering the 1stOut-2ndIn functional grids into active DOM wrapper layout.");
                                 window.JarvisDenominationEngine.render('ft-injected-matrix-anchor');
                             } else {
-                                console.error("❌ Critical Failure: JarvisDenominationEngine missing from background matrix environment.");
+                                console.error("❌ Critical Connection Failure: Target injection element or JarvisDenominationEngine scope variable missing.");
                             }
-                        }, 60);
+                        }, 120); // Guaranteed macro task rendering cycle buffer interval
                     },
                     function() {
+                        // Action callback line if operation manually bypassed
                         proceedWithDatabasePersistence(saveBtn, currentUser, fromAadhaar, toAadhaar, amount, remarks, isEditMode, null, lblFromName, lblToName);
                     }
                 );
-                return; 
+                return; // Stop cascade processing thread loops safely here
             }
         }
 
+        // Gathering packed data elements if matrix injection layout block is functional
         let finalDenomJSON = null;
         if (window.denomInjectedActive && window.JarvisDenominationEngine) {
             const dataPack = window.JarvisDenominationEngine.getValues();
@@ -91,6 +99,7 @@ window.executeFundTransferSave = async function(saveBtn, currentUser, flags) {
     }
 };
 
+// Internal persistent core worker thread routine
 async function proceedWithDatabasePersistence(saveBtn, currentUser, fromAadhaar, toAadhaar, amount, remarks, isEditMode, denomPayload, lblFromName, lblToName) {
     try {
         saveBtn.disabled = true;
@@ -143,7 +152,7 @@ async function proceedWithDatabasePersistence(saveBtn, currentUser, fromAadhaar,
                         amount: amount,
                         old_balance: oldBalanceVal,
                         new_balance: newBalanceVal,
-                        particulars: `Fund Transfer Received from Remitter Aadhaar: [Redacted]. Remarks: ${remarks}`
+                        particulars: `Fund Transfer Received from Remitter. Remarks: ${remarks}`
                     }]);
             }
         }
@@ -152,7 +161,7 @@ async function proceedWithDatabasePersistence(saveBtn, currentUser, fromAadhaar,
 
         if (window.showSystemAlert) {
             window.showSystemAlert(
-                isEditMode ? "फंड传输 एंट्री सफलतापूर्वक अपडेट कर दी गई है।" : "फंड ट्रांसफर सफलतापूर्वक पूर्ण हो चुका है।",
+                isEditMode ? "फंड ट्रांसफर एंट्री सफलतापूर्वक अपडेट कर दी गई है।" : "फंड ट्रांसफर सफलतापूर्वक पूर्ण हो चुका है।",
                 "Transaction Success",
                 "✅"
             );
