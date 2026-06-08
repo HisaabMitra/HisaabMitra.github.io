@@ -17,12 +17,12 @@ window.initSettlementPage = async function(currentUser) {
     const depAmountInput = document.getElementById('settle-dep-amount');
     const witAmountInput = document.getElementById('settle-wit-amount');
     const contraAmountInput = document.getElementById('settle-contra-amount');
-    const editIdInput = document.getElementById('settle-edit-id'); // Hidden Input Link
+    const editIdInput = document.getElementById('settle-edit-id'); 
 
     // Alphabetical Words Indicators
     const depWords = document.getElementById('settle-dep-words');
     const witWords = document.getElementById('settle-wit-words');
-    const historyTbody = document.getElementById('settle-history-body'); // History Spot
+    const historyTbody = document.getElementById('settle-history-body'); 
 
     // Global Vault State Cache Variables
     let currentSettlementBalance = 0;
@@ -51,28 +51,38 @@ window.initSettlementPage = async function(currentUser) {
                 window.currentUser = { ...window.currentUser, ...data };
             }
             // Sync database logs down table view immediately
-            await fetchRecentHistoryLogs();
+            await fetchTodayHistoryLogs();
         } catch (err) {
             console.error("❌ Failed to sync settlement balances from cloud node:", err);
         }
     }
 
-    // 📊 [LEDGER GENERATOR ENGINE]: Pull history logs and render into grid rows
-    async function fetchRecentHistoryLogs() {
+    // 📊 [TODAY LEDGER GENERATOR ENGINE]: Pull ONLY current date logs and render
+    async function fetchTodayHistoryLogs() {
         if (!historyTbody) return;
         try {
+            // 🌟 FIX: Aaj ki date calculations lock ki (Subah 00:00:00 se Raat 23:59:59 tak)
+            const todayStr = new Date().toISOString().split('T')[0];
+            const startOfToday = `${todayStr}T00:00:00.000Z`;
+            const endOfToday = `${todayStr}T23:59:59.999Z`;
+
             const { data, error } = await window.supabaseClient
                 .from('settlement_logs')
                 .select('*')
                 .eq('ko_code', currentUser.ko_code)
-                .order('transaction_date', { ascending: false })
-                .limit(10);
+                .gte('transaction_date', startOfToday)
+                .lte('transaction_date', endOfToday)
+                .order('transaction_date', { ascending: false });
 
             if (error) throw error;
 
+            // Update UI Table Header Label for Operator view clarity
+            const historyTitle = document.querySelector('#jarvis-settlement-wrapper h3');
+            if (historyTitle) historyTitle.innerText = "📊 Aaj ki Settlement History (Today's Logs)";
+
             historyTbody.innerHTML = "";
             if (!data || data.length === 0) {
-                historyTbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:18px; color:#888; font-style:italic;">No recent settlement entries logs found inside vault.</td></tr>`;
+                historyTbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:18px; color:#888; font-style:italic;">आज की तिथि में कोई सेटलमेंट एंट्री नहीं मिली है।</td></tr>`;
                 return;
             }
 
@@ -121,7 +131,7 @@ window.initSettlementPage = async function(currentUser) {
         });
         const targetBtn = document.querySelector(`.settle-opt-btn[data-panel="${panelType}"]`);
         if (targetBtn) {
-            targetBtn.style.background = panelType === 'withdrawal' ? '#27ae60' : (panelType === 'contra' ? '#343a40' : '#7d0022');
+            targetBtn.style.background = panelType === 'withdrawal' ? '#27ae60' : (targetPanel === 'contra' ? '#343a40' : '#7d0022');
             targetBtn.style.color = '#ffffff';
             targetBtn.style.border = 'none';
         }
@@ -142,7 +152,7 @@ window.initSettlementPage = async function(currentUser) {
         }
     }
 
-    // 🧹 [FORM RESET ENGINE]: Clears fields out of editor session mapping
+    // 🧹 [FORM RESET ENGINE]
     function resetSettleFormStates() {
         if (editIdInput) editIdInput.value = "";
         depAmountInput.value = "";
@@ -180,7 +190,7 @@ window.initSettlementPage = async function(currentUser) {
     attachWordTranslator(depAmountInput, depWords);
     attachWordTranslator(witAmountInput, witWords);
 
-    // 🚀 [DEPOSIT ROUTINE]: Settle Balance (+), Counter Cash Notes (-)
+    // 🚀 [DEPOSIT ROUTINE]
     const btnDepSave = document.getElementById('btn-settle-dep-save');
     if (btnDepSave) {
         btnDepSave.onclick = async function() {
@@ -252,7 +262,7 @@ window.initSettlementPage = async function(currentUser) {
         };
     }
 
-    // 🚀 [WITHDRAWAL ROUTINE]: Settle Balance (-), Counter Cash Notes (+)
+    // 🚀 [WITHDRAWAL ROUTINE]
     const btnWitSave = document.getElementById('btn-settle-wit-save');
     if (btnWitSave) {
         btnWitSave.onclick = async function() {
@@ -401,9 +411,8 @@ window.initSettlementPage = async function(currentUser) {
         };
     }
 
-    // 🔧 [HISTORY EVENT LISTENERS ATTACHER]: Triggers when edit/delete keys are clicked
+    // 🔧 [HISTORY EVENT LISTENERS ATTACHER]
     function attachHistoryActionListeners() {
-        // 📝 1. EDIT FLOW IMPLEMENTATION ROUTINE
         document.querySelectorAll('.settle-edit-btn').forEach(btn => {
             btn.onclick = async function() {
                 const logId = this.getAttribute('data-id');
@@ -436,7 +445,6 @@ window.initSettlementPage = async function(currentUser) {
             };
         });
 
-        // 🗑️ 2. DELETE FLOW WITH ROLLBACK PROTECTION ROUTINE
         document.querySelectorAll('.settle-del-btn').forEach(btn => {
             btn.onclick = async function() {
                 const logId = this.getAttribute('data-id');
@@ -464,7 +472,6 @@ window.initSettlementPage = async function(currentUser) {
                         return;
                     }
 
-                    // Mutate absolute rollback updates
                     await window.supabaseClient.from('user_roles').update({ settlement_balance: rolledBackBal }).eq('ko_code', currentUser.ko_code);
                     await window.supabaseClient.from('settlement_logs').delete().eq('id', logId);
 
@@ -478,7 +485,6 @@ window.initSettlementPage = async function(currentUser) {
         });
     }
 
-    // Run Initial Core Boot Synchronization
+    // Launch Setup Procedures
     await syncLiveSettlementVault();
-    mountDenominationForPanel('deposit');
 };
