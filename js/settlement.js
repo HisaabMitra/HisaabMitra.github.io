@@ -50,7 +50,7 @@ window.initSettlementPage = async function(currentUser) {
                 
                 window.currentUser = { ...window.currentUser, ...data };
             }
-            // Standalone safe table refresher call
+            // Standalone safe table refresher call for today's logs
             await fetchTodayHistoryLogs();
         } catch (err) {
             console.error("❌ Failed to sync settlement balances from cloud node:", err);
@@ -176,7 +176,7 @@ window.initSettlementPage = async function(currentUser) {
     attachWordTranslator(depAmountInput, depWords);
     attachWordTranslator(witAmountInput, witWords);
 
-    // 🚀 [DEPOSIT ROUTINE]: Settle Balance (+), Counter Cash Notes (-)
+    // 🚀 [DEPOSIT ROUTINE]
     const btnDepSave = document.getElementById('btn-settle-dep-save');
     if (btnDepSave) {
         btnDepSave.onclick = async function() {
@@ -252,7 +252,7 @@ window.initSettlementPage = async function(currentUser) {
         };
     }
 
-    // 🚀 [WITHDRAWAL ROUTINE]: Settle Balance (-), Counter Cash Notes (+)
+    // 🚀 [WITHDRAWAL ROUTINE]
     const btnWitSave = document.getElementById('btn-settle-wit-save');
     if (btnWitSave) {
         btnWitSave.onclick = async function() {
@@ -394,9 +394,9 @@ window.initSettlementPage = async function(currentUser) {
         };
     }
 
-    // 🔧 [TABLE ACTIONS HANDLERS]: Safe edit and rollbacks listeners
+    // 🔧 [TABLE ACTIONS HANDLERS]
     function attachTableActionListeners() {
-        // Edit Operation Hook 📝
+        // 📝 1. EDIT OPERATIONAL HOOK (With Real Note Sync Injection)
         document.querySelectorAll('.settle-edit-btn').forEach(btn => {
             btn.onclick = async function() {
                 const logId = this.getAttribute('data-id');
@@ -410,71 +410,91 @@ window.initSettlementPage = async function(currentUser) {
                     b.style.color = '#495057';
                     b.style.border = '1px solid #ced4da';
                 });
-
                 panels.forEach(p => p.style.display = 'none');
+
+                // 🧠 LIVE SYNC FIX: Edit karte waqt log table se amount upar jayega, 
+                // aur user_roles table se live note quantities ko uthakar input cells me autofill kar dega!
+                const { data: liveNotes } = await window.supabaseClient.from('user_roles').select('*').eq('ko_code', currentUser.ko_code).maybeSingle();
 
                 if (log.transaction_type === 'DEPOSIT') {
                     const dBtn = document.querySelector('.settle-opt-btn[data-panel="deposit"]');
                     if (dBtn) { dBtn.style.background = '#7d0022'; dBtn.style.color = '#fff'; dBtn.style.border = 'none'; }
                     document.getElementById('panel-settle-deposit').style.display = 'block';
+                    
                     mountDenominationForPanel('deposit');
                     depAmountInput.value = log.amount;
                     depAmountInput.dispatchEvent(new Event('input'));
                     document.getElementById('dep-panel-title').innerText = "📝 Edit Deposit Entry";
                     btnDepSave.innerText = "⚙️ Update Deposit Entry";
+
                 } else if (log.transaction_type === 'WITHDRAWAL') {
                     const wBtn = document.querySelector('.settle-opt-btn[data-panel="withdrawal"]');
                     if (wBtn) { wBtn.style.background = '#27ae60'; wBtn.style.color = '#fff'; wBtn.style.border = 'none'; }
                     document.getElementById('panel-settle-withdrawal').style.display = 'block';
+                    
                     mountDenominationForPanel('withdrawal');
                     witAmountInput.value = log.amount;
                     witAmountInput.dispatchEvent(new Event('input'));
                     document.getElementById('wit-panel-title').innerText = "📝 Edit Withdrawal Entry";
                     btnWitSave.innerText = "⚙️ Update Withdrawal Entry";
                 }
+                
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             };
         });
 
-        // Delete & Rollback Balance Operation Hook 🗑️
+        // 🗑️ 2. DELETE FLOW WITH SYSTEM NATIVE ALERTS BYPASS (Custom Modal Sync)
         document.querySelectorAll('.settle-del-btn').forEach(btn => {
-            btn.onclick = async function() {
+            btn.onclick = function() {
                 const logId = this.getAttribute('data-id');
-                if (!confirm("क्या आप वाकई इस सेटलमेंट एंट्री को डिलीट करना चाहते हैं?\nइससे बैलेंस वापस रोलबैक (उल्टा) हो जाएगा।")) return;
-
-                try {
-                    const { data: log } = await window.supabaseClient.from('settlement_logs').select('*').eq('id', logId).maybeSingle();
-                    if (!log) return;
-
-                    const { data: user } = await window.supabaseClient.from('user_roles').select('settlement_balance').eq('ko_code', currentUser.ko_code).maybeSingle();
-                    let currentDBBal = parseFloat(user.settlement_balance) || 0;
-
-                    let rolledBackBal = currentDBBal;
-                    if (log.transaction_type === 'DEPOSIT') {
-                        rolledBackBal = currentDBBal - parseFloat(log.amount);
-                    } else if (log.transaction_type === 'WITHDRAWAL') {
-                        rolledBackBal = currentDBBal + parseFloat(log.amount);
-                    } else if (log.transaction_type === 'CONTRA') {
-                        if (log.narration && log.narration.includes('DEBIT')) rolledBackBal = currentDBBal + parseFloat(log.amount);
-                        else rolledBackBal = currentDBBal - parseFloat(log.amount);
+                
+                // Browser default confirm dialog box ko custom modular box se replace kiya
+                if (typeof window.showCustomSystemConfirm === 'function') {
+                    window.showCustomSystemConfirm(
+                        "क्या आप वाकई इस सेटलमेंट एंट्री को डिलीट करना चाहते हैं? इससे बैलेंस वापस रोलबैक हो जाएगा।",
+                        "Confirm Deletion",
+                        async function() { await executeLogDeletion(logId); }
+                    );
+                } else {
+                    // Fallback framework switch
+                    if (confirm("क्या आप वाकई इस सेटलमेंट एंट्री को डिलीट करना चाहते हैं?")) {
+                        executeLogDeletion(logId);
                     }
-
-                    if (rolledBackBal < 0) {
-                        window.showSystemAlert("रोलबैक रद्द! डिलीट करने से बैलेंस नेगेटिव हो रहा है।", "Rollback Prohibited", "❌");
-                        return;
-                    }
-
-                    await window.supabaseClient.from('user_roles').update({ settlement_balance: rolledBackBal }).eq('ko_code', currentUser.ko_code);
-                    await window.supabaseClient.from('settlement_logs').delete().eq('id', logId);
-
-                    window.showSystemAlert("एंट्री डिलीट कर दी गई है और बैलेंस रोलबैक हो गया है।", "Deleted", "✅");
-                    await syncLiveSettlementVault();
-
-                } catch (e) {
-                    console.error("Deletion crash:", e);
                 }
             };
         });
+    }
+
+    // 💣 Actual Delete SQL firing framework with transaction state recovery
+    async function executeLogDeletion(logId) {
+        try {
+            const { data: log } = await window.supabaseClient.from('settlement_logs').select('*').eq('id', logId).maybeSingle();
+            if (!log) return;
+
+            const { data: user } = await window.supabaseClient.from('user_roles').select('settlement_balance').eq('ko_code', currentUser.ko_code).maybeSingle();
+            let currentDBBal = parseFloat(user.settlement_balance) || 0;
+
+            let rolledBackBal = currentDBBal;
+            if (log.transaction_type === 'DEPOSIT') {
+                rolledBackBal = currentDBBal - parseFloat(log.amount);
+            } else if (log.transaction_type === 'WITHDRAWAL') {
+                rolledBackBal = currentDBBal + parseFloat(log.amount);
+            }
+
+            if (rolledBackBal < 0) {
+                window.showSystemAlert("रोलबैक रद्द! डिलीट करने से बैंक बैलेंस नेगेटिव हो रहा है।", "Rollback Prohibited", "❌");
+                return;
+            }
+
+            await window.supabaseClient.from('user_roles').update({ settlement_balance: rolledBackBal }).eq('ko_code', currentUser.ko_code);
+            await window.supabaseClient.from('settlement_logs').delete().eq('id', logId);
+
+            window.showSystemAlert("एंट्री सफलतापूर्वक डिलीट कर दी गई है और बैलेंस रोलबैक हो गया है।", "Deleted Complete", "✅");
+            await syncLiveSettlementVault();
+
+        } catch (e) {
+            console.error("Deletion logic failure:", e);
+        }
     }
 
     // Initial load syncs
