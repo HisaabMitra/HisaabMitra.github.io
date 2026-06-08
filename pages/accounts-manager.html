@@ -1,158 +1,89 @@
 <div id="jarvis-accounts-manager-wrapper" style="display: flex; gap: 25px; padding: 20px; max-width: 1300px; margin: 0 auto; font-family: sans-serif; text-align: left; box-sizing: border-box; flex-wrap: wrap;">
-
     
-
-    <div style="flex: 1; min-width: 380px; background: #ffffff; padding: 22px; border-radius: 6px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-top: 5px solid #0056b3; border: 1px solid #dee2e6; border-top-width: 5px; box-sizing: border-box;">
-
+    <!-- LEFT PANEL: ACCOUNT INTAKE FORM (Jarvis Maroon Theme) -->
+    <div style="flex: 1; min-width: 380px; background: #ffffff; padding: 22px; border-radius: 6px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-top: 5px solid #7d0022; border: 1px solid #dee2e6; border-top-width: 5px; box-sizing: border-box;">
         
-
-        <div style="border-bottom: 3px solid #0056b3; padding-bottom: 12px; margin-bottom: 20px;">
-
-            <h2 style="color: #0056b3; margin: 0; font-size: 1.4rem; font-weight: bold;">🏦 खाता प्रबंधक (Accounts Manager)</h2>
-
-            <p style="margin: 5px 0 0 0; color: #555; font-size: 0.85rem;">Configure and links your dynamic banking settlement ledger nodes.</p>
-
+        <div style="border-bottom: 3px solid #7d0022; padding-bottom: 12px; margin-bottom: 20px;">
+            <h2 id="acc-manager-form-title" style="color: #7d0022; margin: 0; font-size: 1.4rem; font-weight: bold;">🏦 खाता प्रबंधक (Saving Account)</h2>
+            <p style="margin: 5px 0 0 0; color: #555; font-size: 0.85rem;">Configure and link your dynamic banking settlement ledger nodes.</p>
         </div>
 
-
-
+        <!-- 📑 FUTURE-PROOF ACCOUNT TYPE TABS (Maroon Active State) -->
         <div style="display: flex; gap: 5px; margin-bottom: 20px; border-bottom: 1px solid #dee2e6; padding-bottom: 5px;">
-
-            <button type="button" class="account-tab active" data-type="saving" style="padding: 8px 12px; background: #0056b3; color: white; border: none; border-radius: 4px 4px 0 0; font-weight: bold; cursor: pointer; font-size: 0.85rem;">Saving Account</button>
-
-            <button type="button" class="account-tab" data-type="od" style="padding: 8px 12px; background: #e9ecef; color: #333; border: none; border-radius: 4px 4px 0 0; font-weight: bold; cursor: not-allowed; font-size: 0.85rem;" disabled>OD Account (Soon)</button>
-
-            <button type="button" class="account-tab" data-type="loan" style="padding: 8px 12px; background: #e9ecef; color: #333; border: none; border-radius: 4px 4px 0 0; font-weight: bold; cursor: not-allowed; font-size: 0.85rem;" disabled>Loan Account (Soon)</button>
-
+            <button type="button" class="account-tab active" data-type="saving" style="padding: 8px 12px; background: #7d0022; color: white; border: none; border-radius: 4px 4px 0 0; font-weight: bold; cursor: pointer; font-size: 0.85rem; transition: 0.2s;">Saving Account</button>
+            <button type="button" class="account-tab" data-type="od" style="padding: 8px 12px; background: #e9ecef; color: #333; border: none; border-radius: 4px 4px 0 0; font-weight: bold; cursor: pointer; font-size: 0.85rem; transition: 0.2s;">OD Account</button>
+            <button type="button" class="account-tab" data-type="loan" style="padding: 8px 12px; background: #e9ecef; color: #333; border: none; border-radius: 4px 4px 0 0; font-weight: bold; cursor: pointer; font-size: 0.85rem; transition: 0.2s;">Loan Account</button>
         </div>
 
-
-
+        <!-- LIVE ACCOUNT INTAKE FORM FIELDS -->
         <form id="form-accounts-manager-master" onsubmit="return false;">
-
             <div style="margin-bottom: 12px;">
-
                 <label style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.85rem; color: #333;">Account Number:</label>
-
                 <input type="text" id="acc-manager-number" placeholder="Enter bank account number..." required style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem; box-sizing: border-box;">
-
             </div>
 
-
-
             <div style="margin-bottom: 12px;">
-
                 <label style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.85rem; color: #333;">Account Holder Name:</label>
-
                 <input type="text" id="acc-manager-holder" placeholder="Enter full name of holder..." required style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem; box-sizing: border-box;">
-
             </div>
 
-
-
             <div style="margin-bottom: 12px;">
-
                 <label style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.85rem; color: #333;">Bank Name:</label>
-
                 <input type="text" id="acc-manager-bank" placeholder="e.g. State Bank of India..." required style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem; box-sizing: border-box;">
-
             </div>
-
-
 
             <div style="margin-bottom: 12px;">
-
                 <label style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.85rem; color: #333;">IFSC Code:</label>
-
                 <input type="text" id="acc-manager-ifsc" placeholder="SBIN000XXXX..." required style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem; box-sizing: border-box; text-transform: uppercase;">
-
             </div>
 
-
+            <!-- OPTIONAL FIELD: AADHAAR NUMBER -->
+            <div style="margin-bottom: 12px;">
+                <label style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.85rem; color: #333;">Aadhaar Number (Optional):</label>
+                <input type="text" id="acc-manager-aadhar" placeholder="Enter 12-digit Aadhaar number..." maxlength="12" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem; box-sizing: border-box;">
+            </div>
 
             <div style="margin-bottom: 20px;">
-
-                <label style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.85rem; color: #333;">Opening / Current Balance (₹):</label>
-
+                <label id="lbl-acc-manager-balance" style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.85rem; color: #333;">Opening / Current Balance (₹):</label>
                 <input type="number" id="acc-manager-balance" placeholder="0.00" min="0" step="0.01" required style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem; box-sizing: border-box;">
-
             </div>
-
-
 
             <div style="display: flex; gap: 10px; margin-top: 20px; border-top: 1px dashed #dee2e6; padding-top: 15px;">
-
-                <button type="submit" id="btn-acc-manager-save" style="flex: 2; padding: 12px; background: #0056b3; color: #ffffff; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.95rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-
+                <button type="submit" id="btn-acc-manager-save" style="flex: 2; padding: 12px; background: #7d0022; color: #ffffff; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.95rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: 0.2s;">
                     ➕ Add Link Account
-
                 </button>
-
-                <button type="button" id="btn-acc-manager-clear" style="flex: 1; padding: 12px; background: #6c757d; color: #ffffff; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.95rem;">
-
+                <button type="button" id="btn-acc-manager-clear" style="flex: 1; padding: 12px; background: #6c757d; color: #ffffff; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.95rem; transition: 0.2s;">
                     Clear
-
                 </button>
-
             </div>
-
         </form>
-
     </div>
 
-
-
+    <!-- RIGHT PANEL: LINKED ACTIVE ACCOUNTS DISPLAY LEDGER -->
     <div style="flex: 1.4; min-width: 450px; background: #ffffff; padding: 22px; border-radius: 6px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-top: 5px solid #28a745; border: 1px solid #dee2e6; border-top-width: 5px; box-sizing: border-box;">
-
         <div style="border-bottom: 3px solid #28a745; padding-bottom: 12px; margin-bottom: 20px;">
-
             <h2 style="color: #28a745; margin: 0; font-size: 1.4rem; font-weight: bold;">📊 Linked Active Accounts</h2>
-
             <p style="margin: 5px 0 0 0; color: #555; font-size: 0.85rem;">Live preview of registered banking terminals inside ledger grid mapping.</p>
-
         </div>
-
-
 
         <div style="overflow-x: auto;">
-
             <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
-
                 <thead>
-
                     <tr style="background: #f8f9fa; border-bottom: 2px solid #dee2e6;">
-
                         <th style="padding: 12px; color: #495057;">Bank & Account</th>
-
                         <th style="padding: 12px; color: #495057;">Holder Details</th>
-
                         <th style="padding: 12px; color: #495057;">IFSC</th>
-
                         <th style="padding: 12px; color: #495057; text-align: right;">Live Balance</th>
-
                         <th style="padding: 12px; color: #495057; text-align: center;">Actions</th>
-
                     </tr>
-
                 </thead>
-
                 <tbody id="acc-manager-table-body">
-
                     <tr>
-
                         <td colspan="5" style="padding: 30px; text-align: center; color: #888; font-style: italic;">No saving accounts linked yet. Use the left panel to configure nodes.</td>
-
                     </tr>
-
                 </tbody>
-
             </table>
-
         </div>
-
     </div>
 
-
-
 </div>
-
