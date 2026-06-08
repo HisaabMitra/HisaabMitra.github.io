@@ -219,32 +219,44 @@ window.initCashManagerPage = async function(currentUser) {
         };
     }
 
-    // ✏️ [EDIT ENTRY FUNCTION]: Loads data back into input fields
+    // ✏️ [EDIT ENTRY FUNCTION]: Loads data back into input fields & Refreshes UI Grid
     window.editCashEntry = function(item) {
         if (!item) return;
         
-        // Form controls me value wapas fill karein
+        // 1. Form controls me values wapas fill karein
         if (inputReason) inputReason.value = item.reason || "Contra";
         if (inputParticular) inputParticular.value = item.particular || "";
         if (inputAmount) inputAmount.value = item.amount || "";
 
-        // Core plugin map me breakdown values back-inject karein
-        if (window.MasterDenom1stIn2ndOut && typeof window.MasterDenom1stIn2ndOut.setValues === 'function') {
+        // 2. Core plugin map me breakdown values back-inject karein
+        if (window.MasterDenom1stIn2ndOut) {
             const valuesToSet = {};
             const noteDenoms = [500, 200, 100, 50, 20, 10, 5];
-            noteDenoms.forEach(d => {
-                valuesToSet[`in_${d}`] = item[`in_${d}`] || 0;
-                valuesToSet[`out_${d}`] = item[`out_${d}`] || 0;
-            });
-            valuesToSet[`in_coins`] = item[`in_coins`] || 0;
-            valuesToSet[`out_coins`] = item[`out_coins`] || 0;
             
-            window.MasterDenom1stIn2ndOut.setValues(valuesToSet);
+            noteDenoms.forEach(d => {
+                valuesToSet[`in_${d}`] = parseInt(item[`in_${d}`]) || 0;
+                valuesToSet[`out_${d}`] = parseInt(item[`out_${d}`]) || 0;
+            });
+            valuesToSet[`in_coins`] = parseInt(item['in_coins']) || 0;
+            valuesToSet[`out_coins`] = parseInt(item['out_coins']) || 0;
+            
+            // Core values push handler
+            if (typeof window.MasterDenom1stIn2ndOut.setValues === 'function') {
+                window.MasterDenom1stIn2ndOut.setValues(valuesToSet);
+            } else if (window.MasterDenom1stIn2ndOut.values) {
+                window.MasterDenom1stIn2ndOut.values = { ...window.MasterDenom1stIn2ndOut.values, ...valuesToSet };
+            }
+
+            // ⭐ UI REFRESH: Component ko force re-render karein taaki screen pe live values chhap jayein
+            if (typeof window.MasterDenom1stIn2ndOut.render === 'function') {
+                window.MasterDenom1stIn2ndOut.render('cash-manager-unified-container');
+            }
+
             window.showSystemAlert("ट्रांजैक्शन डेटा फॉर्म में लोड कर दिया गया है। बदलाव करके दोबारा सेव करें।", "Edit Mode", "ℹ️");
         }
     };
 
-    // 🗑️ [DELETE & ROLLBACK SYSTEM]: Fully Fixed With Dynamic Core Signature
+    // 🗑️ [DELETE & ROLLBACK SYSTEM]: Fully Fixed With Custom App Signature
     window.deleteCashEntry = async function(id) {
         if (window.showSystemConfirm) {
             window.showSystemConfirm(
