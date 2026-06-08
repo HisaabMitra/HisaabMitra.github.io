@@ -251,12 +251,12 @@ window.initCashManagerPage = async function(currentUser) {
         };
     }
 
-    // ✏️ [EDIT ENTRY FUNCTION]: Pure Dynamic Table Fetch with Exact Column Matching (in_X / out_X)
+   // ✏️ [EDIT ENTRY FUNCTION]: Correct sequence implementation (Render -> setValues -> calculate)
     window.editCashEntry = async function(id) {
         if (!id) return;
         
         try {
-            // Memory se nahi, direct table se live row data pull
+            // Step 1: Fetch live single entry data block directly from database
             const { data: item, error } = await window.supabaseClient
                 .from('cash_transactions')
                 .select('*')
@@ -268,41 +268,40 @@ window.initCashManagerPage = async function(currentUser) {
                 return;
             }
 
-            // State sets
+            // Active edit mode state
             currentEditingTxId = id;
-            btnMasterSave.innerText = "🔄 Update Cash Adjustments";
+            if (btnMasterSave) btnMasterSave.innerText = "🔄 Update Cash Adjustments";
 
-            // 1. Controls configuration loading
+            // Step 2: Populate form base standard input controls
             if (inputReason) inputReason.value = item.reason || "Contra";
             if (inputParticular) inputParticular.value = item.particular || "";
             if (inputAmount) inputAmount.value = item.amount || "";
 
-            // 2. ⭐ EXACT MAPPING WITH NATIVE COLUMNS (in_500, out_500, etc.)
+            // Step 3: Trigger core plugin logic injection sequence
             if (window.MasterDenom1stIn2ndOut) {
+                
+                // 🔄 FIRST: Naya blank grid container design layout render karein
+                if (typeof window.MasterDenom1stIn2ndOut.render === 'function') {
+                    window.MasterDenom1stIn2ndOut.render('cash-manager-unified-container');
+                }
+
+                // Parse payload values matching exact native table scheme columns
                 const valuesToSet = {};
                 const noteDenoms = [500, 200, 100, 50, 20, 10, 5];
                 
                 noteDenoms.forEach(d => {
-                    // Direct key injection maps matching your specific alter table structure
                     valuesToSet[`in_${d}`] = parseInt(item[`in_${d}`]) || 0;
                     valuesToSet[`out_${d}`] = parseInt(item[`out_${d}`]) || 0;
                 });
                 valuesToSet[`in_coins`] = parseInt(item['in_coins']) || 0;
                 valuesToSet[`out_coins`] = parseInt(item['out_coins']) || 0;
                 
-                // Form layout plugin update
+                // 🔄 SECOND: Input boxes inject hone ke baad unke andar values set karein
                 if (typeof window.MasterDenom1stIn2ndOut.setValues === 'function') {
                     window.MasterDenom1stIn2ndOut.setValues(valuesToSet);
-                } else if (window.MasterDenom1stIn2ndOut.values) {
-                    window.MasterDenom1stIn2ndOut.values = { ...window.MasterDenom1stIn2ndOut.values, ...valuesToSet };
                 }
 
-                // Force layout trigger refresh rendering screen
-                if (typeof window.MasterDenom1stIn2ndOut.render === 'function') {
-                    window.MasterDenom1stIn2ndOut.render('cash-manager-unified-container');
-                }
-
-                // Highlight background color update
+                // Highlight background render refresh table grid updates
                 renderTodayEntriesTable();
                 window.showSystemAlert("ट्रांजैक्शन संशोधन मोड सक्रिय। डेटा लोड कर दिया गया है।", "Edit Mode Live", "ℹ️");
             }
