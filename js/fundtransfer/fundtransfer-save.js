@@ -4,7 +4,6 @@
 
 window.executeFundTransferSave = async function(saveBtn, currentUser, flags) {
     try {
-        // UI Elements Extraction Context from DOM
         const fromAadhaarInput = document.getElementById('ft-from-aadhaar');
         const toAadhaarInput = document.getElementById('ft-to-aadhaar');
         const ftAmountInput = document.getElementById('ft-amount');
@@ -24,7 +23,6 @@ window.executeFundTransferSave = async function(saveBtn, currentUser, flags) {
         const amount = parseFloat(ftAmountInput.value) || 0;
         const remarks = ftRemarksInput.value.trim();
 
-        // 🛡️ Guardrails Validation Checks
         if (!fromAadhaar || !toAadhaar || amount <= 0) {
             if (window.showSystemAlert) {
                 window.showSystemAlert("कृपया प्रेषक/प्राप्तकर्ता आधार और वैध राशि दर्ज करें।", "Validation Error", "❌");
@@ -41,30 +39,34 @@ window.executeFundTransferSave = async function(saveBtn, currentUser, flags) {
 
         const isEditMode = saveBtn.dataset.mode === "edit";
 
-        // ⭐ THE POWER INTERCEPTOR: Prompt user if linked terminal detected inside registry
+        // ⭐ INTERCEPTOR ENGINE: Prompt integration with immediate asynchronous macro-task delay rendering
         if (window.matchedSavingAccountObj && !window.denomInjectedActive && !isEditMode) {
             if (window.showSystemConfirm) {
                 window.showSystemConfirm(
                     `🛡️ Authorized Account Holder Detected! Kya aap is transaction ke liye physical notes Denomination adjustments check karna chahte hain?`,
                     "Denomination Routing Verification",
                     function() {
-                        // IF YES: Mount layout structure frames
                         if (denomWrapper) denomWrapper.style.display = 'flex';
                         window.denomInjectedActive = true;
-                        if (window.JarvisDenominationEngine) {
-                            window.JarvisDenominationEngine.render('ft-injected-matrix-anchor');
-                        }
+                        
+                        // ⭐ FIX: Added layout rendering macro-task delay to prevent DOM collision injection drops
+                        setTimeout(() => {
+                            if (window.JarvisDenominationEngine && typeof window.JarvisDenominationEngine.render === 'function') {
+                                console.log("📊 Injecting 1stOut-2ndIn Denomination grid inside anchor layout bounds...");
+                                window.JarvisDenominationEngine.render('ft-injected-matrix-anchor');
+                            } else {
+                                console.error("❌ Critical Failure: JarvisDenominationEngine missing from background matrix environment.");
+                            }
+                        }, 60);
                     },
                     function() {
-                        // IF NO: Straight procedural pass down bypass execution line
                         proceedWithDatabasePersistence(saveBtn, currentUser, fromAadhaar, toAadhaar, amount, remarks, isEditMode, null, lblFromName, lblToName);
                     }
                 );
-                return; // Stop sync cascade loop till prompt resolves
+                return; 
             }
         }
 
-        // Compilation data packs if matrix loop injection is active
         let finalDenomJSON = null;
         if (window.denomInjectedActive && window.JarvisDenominationEngine) {
             const dataPack = window.JarvisDenominationEngine.getValues();
@@ -82,7 +84,6 @@ window.executeFundTransferSave = async function(saveBtn, currentUser, flags) {
             };
         }
 
-        // Fire sequential database loop process
         proceedWithDatabasePersistence(saveBtn, currentUser, fromAadhaar, toAadhaar, amount, remarks, isEditMode, finalDenomJSON, lblFromName, lblToName);
 
     } catch (fatalErr) {
@@ -90,7 +91,6 @@ window.executeFundTransferSave = async function(saveBtn, currentUser, flags) {
     }
 };
 
-// Internal standalone persistence function
 async function proceedWithDatabasePersistence(saveBtn, currentUser, fromAadhaar, toAadhaar, amount, remarks, isEditMode, denomPayload, lblFromName, lblToName) {
     try {
         saveBtn.disabled = true;
@@ -104,7 +104,7 @@ async function proceedWithDatabasePersistence(saveBtn, currentUser, fromAadhaar,
             to_customer_name: lblToName ? lblToName.innerText : "UNKNOWN BENEFICIARY",
             amount: amount,
             remarks: remarks,
-            denomination_json: denomPayload, // Inject nested matrix payload object
+            denomination_json: denomPayload, 
             transaction_date: new Date().toISOString()
         };
 
@@ -123,18 +123,15 @@ async function proceedWithDatabasePersistence(saveBtn, currentUser, fromAadhaar,
                 .insert([transferPayload]);
             clientError = error;
 
-            // ⭐ THE LEDGER INTERFACE BALANCER TRIGGER: Sync balance only if account match sequence holds
             if (!clientError && window.matchedSavingAccountObj) {
                 const oldBalanceVal = parseFloat(window.matchedSavingAccountObj.balance) || 0;
-                const newBalanceVal = oldBalanceVal + amount; // Credit flow
+                const newBalanceVal = oldBalanceVal + amount; 
 
-                // Step A: Live balance increment inside bank terminal accounts core table
                 await window.supabaseClient
                     .from('saving_bank_accounts')
                     .update({ balance: newBalanceVal })
                     .eq('id', window.matchedSavingAccountObj.id);
 
-                // Step B: Write explicit tracking narration inside saving_account_transactions table log bounds
                 await window.supabaseClient
                     .from('saving_account_transactions')
                     .insert([{
@@ -146,7 +143,7 @@ async function proceedWithDatabasePersistence(saveBtn, currentUser, fromAadhaar,
                         amount: amount,
                         old_balance: oldBalanceVal,
                         new_balance: newBalanceVal,
-                        particulars: `Fund Transfer Received from Remitter Aadhaar: ${fromAadhaar}. Remarks: ${remarks}`
+                        particulars: `Fund Transfer Received from Remitter Aadhaar: [Redacted]. Remarks: ${remarks}`
                     }]);
             }
         }
@@ -155,7 +152,7 @@ async function proceedWithDatabasePersistence(saveBtn, currentUser, fromAadhaar,
 
         if (window.showSystemAlert) {
             window.showSystemAlert(
-                isEditMode ? "फंड ट्रांसफर एंट्री सफलतापूर्वक अपडेट कर दी गई है।" : "फंड ट्रांसफर सफलतापूर्वक पूर्ण हो चुका है।",
+                isEditMode ? "फंड传输 एंट्री सफलतापूर्वक अपडेट कर दी गई है।" : "फंड ट्रांसफर सफलतापूर्वक पूर्ण हो चुका है।",
                 "Transaction Success",
                 "✅"
             );
