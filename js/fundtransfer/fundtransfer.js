@@ -19,12 +19,13 @@ window.initFundTransferPage = async function(currentUser) {
     // New Architectural Node References
     const tellyStatusNode = document.getElementById('ft-live-telly-status-node');
     const denomWrapper = document.getElementById('ft-denomination-wrapper-node');
+    const btnBypassDenom = document.getElementById('btn-ft-bypass-denom');
 
     // Global Tracking Flags for Verification
     let isFromCustomerValid = false;
     let isToCustomerValid = false;
     
-    // State Memory Tracks
+    // State Memory Tracks Matrix
     window.matchedSavingAccountObj = null; 
     window.denomInjectedActive = false;
 
@@ -52,7 +53,7 @@ window.initFundTransferPage = async function(currentUser) {
                     return;
                 }
 
-                // Table Rows Rendering with Complete Look
+                // Table Rows Rendering with Complete Look (No Masking)
                 data.forEach((tx, index) => {
                     const timeStr = new Date(tx.transaction_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                     const txStr = btoa(unescape(encodeURIComponent(JSON.stringify(tx))));
@@ -62,7 +63,7 @@ window.initFundTransferPage = async function(currentUser) {
                     const displayToId = tx.to_aadhaar || "REF-" + tx.id.slice(0,6);
 
                     tbody.insertAdjacentHTML('beforeend', `
-                        <tr style="border-bottom: 1px solid #eee;">
+                        <tr style="border-bottom: 1px solid #eee; vertical-align: middle;">
                             <td style="padding:12px; font-weight: bold; color: #555; text-align:center;">${srNo}</td>
                             <td style="padding:12px; font-weight: 600; letter-spacing:0.5px;">
                                 <span style="color: #7d0022;">${displayFromId}</span><br>
@@ -73,7 +74,7 @@ window.initFundTransferPage = async function(currentUser) {
                                 <small style="color:#6c757d; font-weight: normal; text-transform: uppercase;">${tx.to_customer_name}</small>
                             </td>
                             <td style="padding:12px; font-weight:bold; color:#0f5132;">₹${parseFloat(tx.amount).toFixed(2)}</td>
-                            <td style="padding:12px;">${timeStr} ${tx.denomination_json ? '📊' : ''}</td>
+                            <td style="padding:12px; font-weight: 500; color: #555;">${timeStr} ${tx.denomination_json ? '📊' : ''}</td>
                             <td style="padding:12px; text-align:center;">
                                 <div style="display:inline-flex; align-items:center; gap:15px; justify-content:center;">
                                     <span class="btn-edit-ft-tx" data-tx="${txStr}" style="cursor:pointer; font-size:1.1rem; user-select:none;" title="Edit Entry">✏️</span>
@@ -98,17 +99,23 @@ window.initFundTransferPage = async function(currentUser) {
             if (!aadhaarNo) {
                 if (isSender) isFromCustomerValid = false; else isToCustomerValid = false;
                 lblNameElement.innerText = "--";
+                lblNameElement.style.color = "#333";
+                if (!isSender && tellyStatusNode) tellyStatusNode.innerHTML = '';
                 return;
             }
 
-            if (aadhaarNo.length !== 12 || isNaN(aadhaarNo)) {
+            // Strict Regex validation loop check parameters bounds
+            if (aadhaarNo.length !== 12 || !/^\d+$/.test(aadhaarNo)) {
                 window.showSystemAlert("आधार नंबर पूरे 12 अंकों का होना अनिवार्य है!", "Validation Error", "❌");
                 if (isSender) isFromCustomerValid = false; else isToCustomerValid = false;
                 lblNameElement.innerText = "INVALID FORMAT";
+                lblNameElement.style.color = "#dc3545";
+                if (!isSender && tellyStatusNode) tellyStatusNode.innerHTML = '';
                 return;
             }
 
             lblNameElement.innerText = "Searching database...";
+            lblNameElement.style.color = "#6c757d";
 
             try {
                 const { data: customer, error } = await window.supabaseClient
@@ -121,16 +128,20 @@ window.initFundTransferPage = async function(currentUser) {
 
                 if (customer) {
                     lblNameElement.innerText = customer.customer_name.toUpperCase();
+                    lblNameElement.style.color = isSender ? "#7d0022" : "#27ae60";
                     if (isSender) isFromCustomerValid = true; else isToCustomerValid = true;
 
-                    // ⭐ NEW UPGRADE GATE: Cross-telly with active linked bank account nodes specifically for Receiver
+                    // ⭐ NEW UPGRADE GATE: Cross-telly logic filter specifically for Receiver
                     if (!isSender && tellyStatusNode) {
                         tellyStatusNode.innerHTML = `<span style="color:#6c757d;">🔍 Cross-checking secure accounts manager nodes...</span>`;
-                        const { data: bankAcc } = await window.supabaseClient
+                        
+                        const { data: bankAcc, error: bankErr } = await window.supabaseClient
                             .from('saving_bank_accounts')
                             .select('*')
                             .eq('aadhar_number', aadhaarNo)
                             .maybeSingle();
+
+                        if (bankErr) throw bankErr;
 
                         if (bankAcc) {
                             window.matchedSavingAccountObj = bankAcc;
@@ -143,7 +154,9 @@ window.initFundTransferPage = async function(currentUser) {
 
                 } else {
                     lblNameElement.innerText = "NOT REGISTERED";
+                    lblNameElement.style.color = "#e67e22";
                     if (isSender) isFromCustomerValid = false; else isToCustomerValid = false;
+                    if (!isSender && tellyStatusNode) tellyStatusNode.innerHTML = '';
 
                     if (window.showDynamicNewCustomerModal) {
                         window.showDynamicNewCustomerModal({
@@ -152,10 +165,12 @@ window.initFundTransferPage = async function(currentUser) {
                         }).then(regResult => {
                             if (regResult && regResult.success) {
                                 lblNameElement.innerText = regResult.customer_name.toUpperCase();
+                                lblNameElement.style.color = isSender ? "#7d0022" : "#27ae60";
                                 if (isSender) isFromCustomerValid = true; else isToCustomerValid = true;
                                 if (!isSender) verifyCustomerAadhaar(aadhaarInput, lblNameElement, false);
                             } else {
                                 lblNameElement.innerText = "--";
+                                lblNameElement.style.color = "#333";
                                 aadhaarInput.value = "";
                                 aadhaarInput.focus();
                             }
@@ -168,31 +183,38 @@ window.initFundTransferPage = async function(currentUser) {
             } catch (err) {
                 console.error("Database Customer Search Error:", err);
                 lblNameElement.innerText = "ERROR";
+                lblNameElement.style.color = "#dc3545";
+                if (!isSender && tellyStatusNode) tellyStatusNode.innerHTML = '';
             }
         }
 
-        // Attach Blur Events Listeners for Inputs
+        // Attach Shunted Primitive Event Assignment Listeners
         if (fromAadhaarInput) {
-            fromAadhaarInput.addEventListener('blur', () => {
+            fromAadhaarInput.onblur = function() {
                 verifyCustomerAadhaar(fromAadhaarInput, lblFromName, true);
-            });
+            };
         }
         if (toAadhaarInput) {
-            toAadhaarInput.addEventListener('blur', () => {
-                if (fromAadhaarInput && fromAadhaarInput.value.trim() === toAadhaarInput.value.trim() && toAadhaarInput.value.trim() !== "") {
+            toAadhaarInput.onblur = function() {
+                const fromVal = fromAadhaarInput ? fromAadhaarInput.value.trim() : "";
+                const toVal = toAadhaarInput.value.trim();
+                
+                if (fromVal === toVal && toVal !== "") {
                     window.showSystemAlert("भेजने वाले और पाने वाले का आधार नंबर समान नहीं हो सकता सर!", "Operation Denied", "⚠️");
                     toAadhaarInput.value = "";
                     lblToName.innerText = "--";
+                    lblToName.style.color = "#333";
                     isToCustomerValid = false;
+                    if (tellyStatusNode) tellyStatusNode.innerHTML = '';
                     return;
                 }
                 verifyCustomerAadhaar(toAadhaarInput, lblToName, false);
-            });
+            };
         }
 
         // 🔢 [LIVE TRANSLATOR]: Live Hindi Words Translation
         if (ftAmountInput) {
-            ftAmountInput.addEventListener('input', () => {
+            ftAmountInput.oninput = function() {
                 const amt = parseInt(ftAmountInput.value) || 0;
                 if (ftWordsDisplay) {
                     if (amt === 0) {
@@ -203,11 +225,11 @@ window.initFundTransferPage = async function(currentUser) {
                         ftWordsDisplay.innerText = `₹${amt.toLocaleString('en-IN')} मात्र`;
                     }
                 }
-            });
+            };
             ftAmountInput.addEventListener('wheel', e => e.preventDefault(), { passive: false });
         }
 
-        // 🚀 [EXECUTE MODULE HOOK]: Secure Storage Controller Bindings
+        // 🚀 [EXECUTE MODULE HOOK]: Secure Storage Controller Bindings Connection
         const saveBtn = document.getElementById('btn-ft-save');
         if (saveBtn) {
             saveBtn.onclick = async function() {
@@ -222,7 +244,7 @@ window.initFundTransferPage = async function(currentUser) {
             };
         }
 
-        // ✏️ [ROW EVENTS HUB]: Action Controls Listeners Binding
+        // ✏️ [ROW EVENTS HUB]: Action Controls Listeners Binding Loop
         function attachFundTransferActionListeners() {
             document.querySelectorAll('.btn-edit-ft-tx').forEach(btn => {
                 btn.onclick = function() {
@@ -235,7 +257,9 @@ window.initFundTransferPage = async function(currentUser) {
                         ftRemarksInput.value = txData.remarks || "";
 
                         lblFromName.innerText = txData.from_customer_name;
+                        lblFromName.style.color = "#7d0022";
                         lblToName.innerText = txData.to_customer_name;
+                        lblToName.style.color = "#27ae60";
                         
                         isFromCustomerValid = true;
                         isToCustomerValid = true;
@@ -244,7 +268,7 @@ window.initFundTransferPage = async function(currentUser) {
                             ftWordsDisplay.innerText = `${window.numberToHindiWords(parseInt(txData.amount))} रुपए मात्र`;
                         }
 
-                        // ⭐ RECOVER DENOMINATION STATE ON EDIT MODE
+                        // ⭐ BACKLOAD HYDRATION DATA RECOVERY ON EDIT MODE
                         if (txData.denomination_json) {
                             window.denomInjectedActive = true;
                             if (denomWrapper) denomWrapper.style.display = 'flex';
@@ -272,7 +296,7 @@ window.initFundTransferPage = async function(currentUser) {
                 };
             });
 
-            // Delete Row Controller Integration
+            // Delete Control Row Tracker (Link directly to fundtransfer-delete.js)
             document.querySelectorAll('.btn-delete-ft-tx').forEach(btn => {
                 btn.onclick = async function() {
                     const txId = this.getAttribute('data-id');
@@ -294,8 +318,8 @@ window.initFundTransferPage = async function(currentUser) {
             if (ftAmountInput) ftAmountInput.value = "";
             if (ftRemarksInput) ftRemarksInput.value = "";
             
-            if (lblFromName) lblFromName.innerText = "--";
-            if (lblToName) lblToName.innerText = "--";
+            if (lblFromName) { lblFromName.innerText = "--"; lblFromName.style.color = "#333"; }
+            if (lblToName) { lblToName.innerText = "--"; lblToName.style.color = "#333"; }
             if (ftWordsDisplay) ftWordsDisplay.innerText = "Zero Rupees Only";
             if (tellyStatusNode) tellyStatusNode.innerHTML = '';
             if (denomWrapper) denomWrapper.style.display = 'none';
@@ -316,7 +340,7 @@ window.initFundTransferPage = async function(currentUser) {
         const clearBtn = document.getElementById('btn-ft-clear');
         if (clearBtn) clearBtn.onclick = window.masterFundTransferClear;
 
-        // Bypassing active layout close button mechanics
+        // Bypassing active denomination layout frames
         if (btnBypassDenom) {
             btnBypassDenom.onclick = function() {
                 window.denomInjectedActive = false;
