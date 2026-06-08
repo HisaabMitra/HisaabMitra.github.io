@@ -164,6 +164,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (pageName === 'search' && typeof initSearchModule === 'function') initSearchModule();
         if (pageName === 'super-admin' && typeof initSuperAdminModule === 'function') initSuperAdminModule();
+
+
+
+
+        if (pageName === 'accounts-manager') {
+        if (typeof window.initAccountsManagerPage === 'function') {
+        window.initAccountsManagerPage(currentLoggedInUser);
+            } else {
+        console.error("initAccountsManagerPage function missing in accounts-manager.js");
+        }
+        }
         
         // 🖨️ SETTINGS GATEWAY: Jarvis Boot Engine Trigger
         if (pageName === 'settings') {
