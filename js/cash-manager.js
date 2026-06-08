@@ -193,34 +193,33 @@ window.initCashManagerPage = async function(currentUser) {
 
             if (!hasSufficientStock) return;
 
-            // 🛑 CUSTOM APP ALERT IMPLEMENTATION: Particular empty warning handler inside app standard panel
-            if (!particularVal) {
-                // Agar aapke system me custom dynamic confirm system window h, toh usko toggle karein. 
-                // Alternatively, custom modal injection style fallback trigger wrapper element inside code:
-                if (window.showSystemConfirm) {
-                    window.showSystemConfirm(
-                        "Particular भरना भविष्य में इस transaction को याद रखने के लिए ज़रूरी है! क्या आप आगे बढ़ना चाहते हैं?", 
-                        async function(confirmed) {
-                            if (confirmed) {
-                                particularVal = "Contra";
-                                inputParticular.value = "Contra";
-                                await executeSaveWorkflow(particularVal, amountVal, updatedNotesPayload);
-                            }
-                        }
-                    );
-                } else {
-                    // Failback dynamic UI alert framework to match style panel
-                    const userConfirmation = confirm("Particular भरना भविष्य में इस transaction को याद रखने के लिए ज़रूरी है! क्या आप आगे बढ़ना चाहते हैं?");
-                    if (userConfirmation) {
-                        particularVal = "Contra";
-                        inputParticular.value = "Contra";
-                        await executeSaveWorkflow(particularVal, amountVal, updatedNotesPayload);
-                    }
+           // 🛑 CUSTOM APP ALERT IMPLEMENTATION: Fixed Callback Code Leak
+if (!particularVal) {
+    if (window.showSystemConfirm) {
+        // Pehle parameter me sirf plain text message bhejna hai
+        window.showSystemConfirm(
+            "Particular भरना भविष्य में इस transaction को याद रखने के लिए ज़रूरी है! क्या आप आगे बढ़ना चाहते हैं?", 
+            async function(confirmed) {
+                if (confirmed) {
+                    particularVal = "Contra";
+                    if (inputParticular) inputParticular.value = "Contra";
+                    await executeSaveWorkflow(particularVal, amountVal, updatedNotesPayload);
                 }
-            } else {
-                // Agar particular already populated fill hai toh seedha execute hoga entry loop workflow
-                await executeSaveWorkflow(particularVal, amountVal, updatedNotesPayload);
             }
+        );
+    } else {
+        // Fallback agar showSystemConfirm na mile
+        const userConfirmation = confirm("Particular भरना भविष्य में इस transaction को याद रखने के लिए ज़रूरी है! क्या आप आगे बढ़ना चाहते हैं?");
+        if (userConfirmation) {
+            particularVal = "Contra";
+            if (inputParticular) inputParticular.value = "Contra";
+            await executeSaveWorkflow(particularVal, amountVal, updatedNotesPayload);
+        }
+    }
+} else {
+    // Agar particular me pehle se text likha hai toh seedha save karein
+    await executeSaveWorkflow(particularVal, amountVal, updatedNotesPayload);
+}
         };
     }
 
