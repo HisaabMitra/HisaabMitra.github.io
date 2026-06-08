@@ -50,10 +50,9 @@ window.initSettlementPage = async function(currentUser) {
                 
                 window.currentUser = { ...window.currentUser, ...data };
             }
-            // Standalone safe table refresher call for today's logs
             await fetchTodayHistoryLogs();
         } catch (err) {
-            console.error("❌ Failed to sync settlement balances from cloud node:", err);
+            console.error("❌ Failed to sync settlement balances:", err);
         }
     }
 
@@ -113,47 +112,52 @@ window.initSettlementPage = async function(currentUser) {
     optButtons.forEach(btn => {
         btn.addEventListener('click', (e) => {
             const targetPanel = btn.getAttribute('data-panel');
-
-            // Form clean resets on swap
-            if (editIdInput) editIdInput.value = "";
-            depAmountInput.value = "";
-            witAmountInput.value = "";
-            contraAmountInput.value = "";
-            if (depWords) depWords.innerText = "Zero Rupees Only";
-            if (witWords) witWords.innerText = "Zero Rupees Only";
-            
-            document.getElementById('dep-panel-title').innerText = "📥 Deposit Amount & Denomination";
-            document.getElementById('wit-panel-title').innerText = "📤 Withdrawal Amount & Denomination";
-            document.getElementById('contra-panel-title').innerText = "🔄 Direct Contra Balance Adjustment";
-            document.getElementById('btn-settle-dep-save').innerText = "📥 Save Bank Deposit";
-            document.getElementById('btn-settle-wit-save').innerText = "📤 Save Bank Withdrawal";
-
-            // Set Premium Left Sidebar active state styles
-            optButtons.forEach(b => {
-                b.style.background = '#ffffff';
-                b.style.color = '#495057';
-                b.style.border = '1px solid #ced4da';
-            });
-            btn.style.background = targetPanel === 'withdrawal' ? '#27ae60' : (targetPanel === 'contra' ? '#343a40' : '#7d0022');
-            btn.style.color = '#ffffff';
-            btn.style.border = 'none';
-
-            // Toggle active panels viewport display
-            panels.forEach(p => p.style.display = 'none');
-            const targetElement = document.getElementById(`panel-settle-${targetPanel}`);
-            if (targetElement) targetElement.style.display = 'block';
-
-            mountDenominationForPanel(targetPanel);
+            resetSettleFormStates();
+            switchTabTo(targetPanel);
         });
     });
 
-    // 🧮 [DENOMINATION MOUNT ENGINE] - RESTORED ORIGINAL
+    function switchTabTo(panelType) {
+        optButtons.forEach(b => {
+            b.style.background = '#ffffff';
+            b.style.color = '#495057';
+            b.style.border = '1px solid #ced4da';
+        });
+        const targetBtn = document.querySelector(`.settle-opt-btn[data-panel="${panelType}"]`);
+        if (targetBtn) {
+            targetBtn.style.background = panelType === 'withdrawal' ? '#27ae60' : (panelType === 'contra' ? '#343a40' : '#7d0022');
+            targetBtn.style.color = '#ffffff';
+            targetBtn.style.border = 'none';
+        }
+
+        panels.forEach(p => p.style.display = 'none');
+        const targetElement = document.getElementById(`panel-settle-${panelType}`);
+        if (targetElement) targetElement.style.display = 'block';
+
+        mountDenominationForPanel(panelType);
+    }
+
     function mountDenominationForPanel(panelType) {
         if (panelType === 'deposit' && window.DenominationOutInComponent) {
             window.DenominationOutInComponent.render('settle-deposit-denom-container');
         } else if (panelType === 'withdrawal' && window.DenominationInOutComponent) {
             window.DenominationInOutComponent.render('settle-withdrawal-denom-container');
         }
+    }
+
+    function resetSettleFormStates() {
+        if (editIdInput) editIdInput.value = "";
+        depAmountInput.value = "";
+        witAmountInput.value = "";
+        contraAmountInput.value = "";
+        if (depWords) depWords.innerText = "Zero Rupees Only";
+        if (witWords) witWords.innerText = "Zero Rupees Only";
+        
+        document.getElementById('dep-panel-title').innerText = "📥 Deposit Amount & Denomination";
+        document.getElementById('wit-panel-title').innerText = "📤 Withdrawal Amount & Denomination";
+        document.getElementById('contra-panel-title').innerText = "🔄 Direct Contra Balance Adjustment";
+        document.getElementById('btn-settle-dep-save').innerText = "📥 Save Bank Deposit";
+        document.getElementById('btn-settle-wit-save').innerText = "📤 Save Bank Withdrawal";
     }
 
     // 🔢 Live Word Translators
@@ -234,14 +238,9 @@ window.initSettlementPage = async function(currentUser) {
                     window.showSystemAlert(`₹${amount.toFixed(2)} सफलतापूर्वक सेटलमेंट खाते में जोड़े गए।`, "सफलता", "✅");
                 }
 
-                if (editIdInput) editIdInput.value = "";
-                depAmountInput.value = "";
-                if (depWords) depWords.innerText = "Zero Rupees Only";
-                document.getElementById('dep-panel-title').innerText = "📥 Deposit Amount & Denomination";
-                btnDepSave.innerText = "📥 Save Bank Deposit";
-                
+                resetSettleFormStates();
                 await syncLiveSettlementVault();
-                mountDenominationForPanel('deposit');
+                switchTabTo('deposit');
 
             } catch (err) {
                 console.error(err);
@@ -315,14 +314,9 @@ window.initSettlementPage = async function(currentUser) {
                     window.showSystemAlert(`₹${amount.toFixed(2)} सेटलमेंट खाते से काट कर काउंटर पर जोड़ दिए गए हैं।`, "सफलता", "✅");
                 }
 
-                if (editIdInput) editIdInput.value = "";
-                witAmountInput.value = "";
-                if (witWords) witWords.innerText = "Zero Rupees Only";
-                document.getElementById('wit-panel-title').innerText = "📤 Withdrawal Amount & Denomination";
-                btnWitSave.innerText = "📤 Save Bank Withdrawal";
-
+                resetSettleFormStates();
                 await syncLiveSettlementVault();
-                mountDenominationForPanel('withdrawal');
+                switchTabTo('withdrawal');
 
             } catch (err) {
                 console.error(err);
@@ -396,7 +390,7 @@ window.initSettlementPage = async function(currentUser) {
 
     // 🔧 [TABLE ACTIONS HANDLERS]
     function attachTableActionListeners() {
-        // 📝 1. EDIT OPERATIONAL HOOK (With Real Note Sync Injection)
+        // 📝 1. EDIT OPERATIONAL HOOK (With Denomination Mapping Injection)
         document.querySelectorAll('.settle-edit-btn').forEach(btn => {
             btn.onclick = async function() {
                 const logId = this.getAttribute('data-id');
@@ -405,58 +399,85 @@ window.initSettlementPage = async function(currentUser) {
 
                 if (editIdInput) editIdInput.value = log.id;
 
-                optButtons.forEach(b => {
-                    b.style.background = '#ffffff';
-                    b.style.color = '#495057';
-                    b.style.border = '1px solid #ced4da';
-                });
-                panels.forEach(p => p.style.display = 'none');
+                resetSettleFormStates();
 
-                // 🧠 LIVE SYNC FIX: Edit karte waqt log table se amount upar jayega, 
-                // aur user_roles table se live note quantities ko uthakar input cells me autofill kar dega!
-                const { data: liveNotes } = await window.supabaseClient.from('user_roles').select('*').eq('ko_code', currentUser.ko_code).maybeSingle();
-
+                // 🌟 FIX CORE: Edit click par phele panels switch honge fir logs/user snapshot se denomination inputs mapping sync hogi
                 if (log.transaction_type === 'DEPOSIT') {
-                    const dBtn = document.querySelector('.settle-opt-btn[data-panel="deposit"]');
-                    if (dBtn) { dBtn.style.background = '#7d0022'; dBtn.style.color = '#fff'; dBtn.style.border = 'none'; }
-                    document.getElementById('panel-settle-deposit').style.display = 'block';
-                    
-                    mountDenominationForPanel('deposit');
+                    switchTabTo('deposit');
                     depAmountInput.value = log.amount;
                     depAmountInput.dispatchEvent(new Event('input'));
                     document.getElementById('dep-panel-title').innerText = "📝 Edit Deposit Entry";
                     btnDepSave.innerText = "⚙️ Update Deposit Entry";
 
+                    // Agar log table me specific row notes store hain toh use load karein, nahi toh total amount matching logic
+                    setTimeout(() => {
+                        const noteDenoms = [500, 200, 100, 50, 20, 10, 5];
+                        let remainingAmount = log.amount;
+                        
+                        noteDenoms.forEach(d => {
+                            const inputCell = document.querySelector(`.gen-out-val[data-note="${d}"]`);
+                            if (inputCell) {
+                                const noteCount = Math.floor(remainingAmount / d);
+                                if (noteCount > 0) {
+                                    inputCell.value = noteCount;
+                                    remainingAmount -= (noteCount * d);
+                                }
+                            }
+                        });
+                        const coinsCell = document.querySelector('.gen-out-val[data-note="coins"]');
+                        if (coinsCell && remainingAmount > 0) {
+                            coinsCell.value = remainingAmount;
+                        }
+                        if(window.DenominationOutInComponent) window.DenominationOutInComponent.calculate();
+                    }, 100);
+
                 } else if (log.transaction_type === 'WITHDRAWAL') {
-                    const wBtn = document.querySelector('.settle-opt-btn[data-panel="withdrawal"]');
-                    if (wBtn) { wBtn.style.background = '#27ae60'; wBtn.style.color = '#fff'; wBtn.style.border = 'none'; }
-                    document.getElementById('panel-settle-withdrawal').style.display = 'block';
-                    
-                    mountDenominationForPanel('withdrawal');
+                    switchTabTo('withdrawal');
                     witAmountInput.value = log.amount;
                     witAmountInput.dispatchEvent(new Event('input'));
                     document.getElementById('wit-panel-title').innerText = "📝 Edit Withdrawal Entry";
                     btnWitSave.innerText = "⚙️ Update Withdrawal Entry";
+
+                    setTimeout(() => {
+                        const noteDenoms = [500, 200, 100, 50, 20, 10, 5];
+                        let remainingAmount = log.amount;
+                        
+                        noteDenoms.forEach(d => {
+                            const inputCell = document.querySelector(`.gen-in-val[data-note="${d}"]`);
+                            if (inputCell) {
+                                const noteCount = Math.floor(remainingAmount / d);
+                                if (noteCount > 0) {
+                                    inputCell.value = noteCount;
+                                    remainingAmount -= (noteCount * d);
+                                }
+                            }
+                        });
+                        const coinsCell = document.querySelector('.gen-in-val[data-note="coins"]');
+                        if (coinsCell && remainingAmount > 0) {
+                            coinsCell.value = remainingAmount;
+                        }
+                        if(window.DenominationInOutComponent) window.DenominationInOutComponent.calculate();
+                    }, 100);
                 }
                 
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             };
         });
 
-        // 🗑️ 2. DELETE FLOW WITH SYSTEM NATIVE ALERTS BYPASS (Custom Modal Sync)
+        // 🗑️ 2. DELETE FLOW WITH SYSTEM NATIVE ALERTS BYPASS
         document.querySelectorAll('.settle-del-btn').forEach(btn => {
             btn.onclick = function() {
                 const logId = this.getAttribute('data-id');
                 
-                // Browser default confirm dialog box ko custom modular box se replace kiya
                 if (typeof window.showCustomSystemConfirm === 'function') {
                     window.showCustomSystemConfirm(
-                        "क्या आप वाकई इस सेटलमेंट एंट्री को डिलीट करना चाहते हैं? इससे बैलेंस वापस रोलबैक हो जाएगा।",
-                        "Confirm Deletion",
-                        async function() { await executeLogDeletion(logId); }
+                        "क्या आप वाकई इस सेटलमेंट एंट्री को डिलीट करना चाहते हैं?\nइससे बैंक बैलेंस वापस रोलबैक (उल्टा) हो जाएगा।",
+                        "एंट्री डिलीट करें 🗑️",
+                        async function() { 
+                            await executeLogDeletion(logId); 
+                        }
                     );
                 } else {
-                    // Fallback framework switch
                     if (confirm("क्या आप वाकई इस सेटलमेंट एंट्री को डिलीट करना चाहते हैं?")) {
                         executeLogDeletion(logId);
                     }
@@ -465,7 +486,7 @@ window.initSettlementPage = async function(currentUser) {
         });
     }
 
-    // 💣 Actual Delete SQL firing framework with transaction state recovery
+    // 💣 Actual Delete SQL firing framework
     async function executeLogDeletion(logId) {
         try {
             const { data: log } = await window.supabaseClient.from('settlement_logs').select('*').eq('id', logId).maybeSingle();
