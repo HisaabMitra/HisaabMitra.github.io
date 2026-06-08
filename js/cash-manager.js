@@ -1,148 +1,56 @@
 // ========================================================
-// 💼 CORE ENGINE: COUNTER CASH MANAGER (MANUAL SYNC & NOTE EXCHANGE)
+// 💼 CORE ENGINE: COUNTER CASH MANAGER (PURE DENOMINATION RUNTIME)
 // ========================================================
 
 window.initCashManagerPage = async function(currentUser) {
     console.log("⚡ Jarvis Cash Manager Engine Initializing...");
 
-    const optButtons = document.querySelectorAll('.cash-opt-btn');
-    const panels = document.querySelectorAll('.cash-panel');
-    const adjTypeSelect = document.getElementById('cash-adj-type');
-    const btnAdjSave = document.getElementById('btn-cash-adj-save');
-    const btnExchSave = document.getElementById('btn-cash-exch-save');
+    const btnMasterSave = document.getElementById('btn-cash-manager-master-save');
 
-    // 🔄 [TAB PANEL SWAPPER]
-    optButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
-            const targetPanel = btn.getAttribute('data-panel');
-
-            optButtons.forEach(b => {
-                b.style.background = '#ffffff';
-                b.style.color = '#495057';
-                b.style.border = '1px solid #ced4da';
-            });
-            btn.style.background = targetPanel === 'exchange' ? '#343a40' : '#7d0022';
-            btn.style.color = '#ffffff';
-            btn.style.border = 'none';
-
-            panels.forEach(p => p.style.display = 'none');
-            const targetElement = document.getElementById(`panel-cash-${targetPanel}`);
-            if (targetElement) targetElement.style.display = 'block';
-
-            mountSharedComponentForPanel(targetPanel);
-        });
-    });
-
-    // 🧮 [COMPONENT INJECTION HOOK]
-    function mountSharedComponentForPanel(panelType) {
+    // 🧮 [DIRECT INJECTION ROUTINE]: Khulate hi seedha plugin load karein
+    function bootUnifiedCashGrid() {
         if (!window.DenominationInOutComponent) {
-            console.error("❌ Generic DenominationInOutComponent asset reference missing!");
+            console.error("❌ Generic DenominationInOutComponent asset reference missing from global scope!");
             return;
         }
 
         window.DenominationInOutComponent.clear();
-
-        if (panelType === 'adjust') {
-            window.DenominationInOutComponent.render('cash-adj-denom-container');
-            updateHeaderLabelText("💵 डिनॉमिनेशन विवरण (कैश समायोजन)");
-        } else if (panelType === 'exchange') {
-            window.DenominationInOutComponent.render('cash-exch-denom-container');
-            updateHeaderLabelText("🔄 डिनॉमिनेशन विवरण (नोट सुधार / एक्सचेंज)");
-        }
-    }
-
-    function updateHeaderLabelText(textMsg) {
+        window.DenominationInOutComponent.render('cash-manager-unified-container');
+        
+        // Technical headers clean up right away
         setTimeout(() => {
-            const labelNode = document.querySelector('#cash-adj-denom-container h4') || document.querySelector('#cash-exch-denom-container h4');
-            if (labelNode) labelNode.innerText = textMsg;
+            const h4Title = document.querySelector('#cash-manager-unified-container h4');
+            if (h4Title) h4Title.innerText = "📊 काउंटर नोट विवरण (IN / OUT)";
         }, 50);
     }
 
-    // 🚀 [ADJUSTMENT ROUTINE]: Pure Denomination-Driven Cash Modification
-    if (btnAdjSave) {
-        btnAdjSave.onclick = async function() {
-            const mode = adjTypeSelect.value;
-
-            // 🌟 LOOK FIX: Seedha active component ki live calculated value ko hi main amount manenge
-            const amount = window.DenominationInOutComponent ? window.DenominationInOutComponent.calculate() : 0;
-
-            if (amount <= 0) {
-                window.showSystemAlert("कृपया डिनॉमिनेशन तालिका में नोटों की संख्या दर्ज करें।", "Validation Missing", "❌");
-                return;
-            }
+    // 🚀 [MASTER SAVE ACTION ROUTINE]: Syncs both IN and OUT fields simultaneously
+    if (btnMasterSave) {
+        btnMasterSave.onclick = async function() {
+            if (!window.DenominationInOutComponent) return;
 
             try {
-                btnAdjSave.disabled = true;
-                btnAdjSave.innerText = "Processing Cash Update...";
+                btnMasterSave.disabled = true;
+                btnMasterSave.innerText = "Processing Cash Sync...";
 
-                const { data: liveUser } = await window.supabaseClient.from('user_roles').select('*').eq('ko_code', currentUser.ko_code).maybeSingle();
+                // Fetch current absolute live cash stocks from data vault node
+                const { data: liveUser, error: fetchErr } = await window.supabaseClient
+                    .from('user_roles')
+                    .select('*')
+                    .eq('ko_code', currentUser.ko_code)
+                    .maybeSingle();
+
+                if (fetchErr) throw fetchErr;
+
+                // Grab live values mapped from inside active component fields array
                 const inputNotes = window.DenominationInOutComponent.getValues();
-
-                let updatedNotesPayload = {};
-
-                for (let note in inputNotes) {
-                    const noteValue = note.split('_')[2]; 
-                    const dbColumnKey = `cash_${noteValue}`;
-
-                    const currentStock = parseInt(liveUser[dbColumnKey]) || 0;
-                    
-                    // DenominationInOutComponent ke dono input (In aur Out fields) ka net aggregate rashi context nikalte hain
-                    const inQty = inputNotes[`denom_in_${noteValue}`] || 0;
-                    const outQty = inputNotes[`denom_out_${noteValue}`] || 0;
-                    const netEnteredQty = inQty + outQty; // Kyunki adjustment me user kisi bhi ek side note dal sakta h
-
-                    if (mode === 'in') {
-                        updatedNotesPayload[dbColumnKey] = currentStock + netEnteredQty;
-                    } else if (mode === 'out') {
-                        if (currentStock < netEnteredQty) {
-                            window.showSystemAlert(`आपके काउंटर पर ₹${noteValue} के पर्याप्त नोट उपलब्ध नहीं हैं!`, "Stock Alert", "⚠️");
-                            btnAdjSave.disabled = false;
-                            btnAdjSave.innerText = "💾 Process Cash Adjustment";
-                            return;
-                        }
-                        updatedNotesPayload[dbColumnKey] = Math.max(0, currentStock - netEnteredQty);
-                    }
-                }
-
-                // Update database row
-                const { error } = await window.supabaseClient.from('user_roles').update(updatedNotesPayload).eq('ko_code', currentUser.ko_code);
-                if (error) throw error;
-
-                window.showSystemAlert(`डिनॉमिनेशन के अनुसार ₹${amount} काउंटर कैश में सफलतापूर्वक ${mode === 'in' ? 'जोड़' : 'घटा'} दिए गए हैं।`, "Adjustment Complete", "✅");
-                mountSharedComponentForPanel('adjust');
-
-            } catch (err) {
-                console.error("Cash adjustment failed:", err);
-                window.showSystemAlert("डेटाबेस समायोजन विफल हुआ।", "Error", "❌");
-            } finally {
-                btnAdjSave.disabled = false;
-                btnAdjSave.innerText = "💾 Process Cash Adjustment";
-            }
-        };
-    }
-
-    // 🚀 [EXCHANGE ROUTINE]: Process Note correction without mutating Net Amount (Exact ₹0 Tally)
-    if (btnExchSave) {
-        btnExchSave.onclick = async function() {
-            const netCashValue = window.DenominationInOutComponent ? window.DenominationInOutComponent.calculate() : 0;
-
-            if (netCashValue !== 0) {
-                window.showSystemAlert(`नोट एक्सचेंज निष्पादित नहीं किया जा सकता!\nनेट कैश टोटल ₹0 होना चाहिए, लेकिन अभी ₹${netCashValue} है।`, "Net Balance Violation", "⚠️");
-                return;
-            }
-
-            try {
-                btnExchSave.disabled = true;
-                btnExchSave.innerText = "Executing Note Exchange...";
-
-                const { data: liveUser } = await window.supabaseClient.from('user_roles').select('*').eq('ko_code', currentUser.ko_code).maybeSingle();
-                const inputNotes = window.DenominationInOutComponent.getValues();
-
                 let updatedNotesPayload = {};
                 let hasSufficientStock = true;
 
                 const noteDenoms = [500, 200, 100, 50, 20, 10, 5];
-                
+                let processedAnyNote = false;
+
+                // 🌟 ATOMIC ARITHMETIC LOOP: Calculate Net cash columns mutation mapping
                 for (let i = 0; i < noteDenoms.length; i++) {
                     const d = noteDenoms[i];
                     const dbColumnKey = `cash_${d}`;
@@ -151,47 +59,69 @@ window.initCashManagerPage = async function(currentUser) {
                     const inQty = inputNotes[`denom_in_${d}`] || 0;
                     const outQty = inputNotes[`denom_out_${d}`] || 0;
 
+                    if (inQty > 0 || outQty > 0) processedAnyNote = true;
+
+                    // Core Formula: Naya Stock = Purana Stock + Aaya Hua Note (IN) - Gaya Hua Note (OUT)
                     const adjustedStock = currentStock + inQty - outQty;
 
                     if (adjustedStock < 0) {
-                        window.showSystemAlert(`आपके काउंटर पर ₹${d} के नोट पर्याप्त मात्रा में उपलब्ध नहीं हैं!`, "Insufficient Notes stock", "⚠️");
+                        window.showSystemAlert(`आपके काउंटर पर ₹${d} के नोट पर्याप्त मात्रा में उपलब्ध नहीं हैं कि इतने OUT किए जा सकें!`, "Stock Alert", "⚠️");
                         hasSufficientStock = false;
                         break;
                     }
                     updatedNotesPayload[dbColumnKey] = adjustedStock;
                 }
 
+                // Coins Flow processing segment
                 if (hasSufficientStock) {
                     const currentCoins = parseInt(liveUser['cash_coins']) || 0;
                     const cIn = inputNotes['denom_in_coins'] || 0;
                     const cOut = inputNotes['denom_out_coins'] || 0;
                     
+                    if (cIn > 0 || cOut > 0) processedAnyNote = true;
+
                     if ((currentCoins + cIn - cOut) < 0) {
-                        window.showSystemAlert("काउंटर तिजोरी में सिक्के कम हैं!", "Insufficient Coins stock", "⚠️");
+                        window.showSystemAlert("काउंटर तिजोरी में सिक्के कम हैं, इतने OUT नहीं किए जा सकते!", "Stock Alert", "⚠️");
                         hasSufficientStock = false;
                     } else {
                         updatedNotesPayload['cash_coins'] = currentCoins + cIn - cOut;
                     }
                 }
 
-                if (!hasSufficientStock) return;
+                if (!hasSufficientStock) {
+                    btnMasterSave.disabled = false;
+                    btnMasterSave.innerText = "💾 Save Cash Adjustments";
+                    return;
+                }
 
-                const { error } = await window.supabaseClient.from('user_roles').update(updatedNotesPayload).eq('ko_code', currentUser.ko_code);
-                if (error) throw error;
+                if (!processedAnyNote) {
+                    window.showSystemAlert("कृपया तालिका में कम से कम एक नोट की मात्रा दर्ज करें।", "Empty Fields", "⚠️");
+                    btnMasterSave.disabled = false;
+                    btnMasterSave.innerText = "💾 Save Cash Adjustments";
+                    return;
+                }
 
-                window.showSystemAlert("नोटों की अदला-बदली / सुधार सफलतापूर्वक पूरा हुआ।", "Vault Reconciled", "✅");
-                mountSharedComponentForPanel('exchange');
+                // Commit the atomic merged payload directly into user_roles row profile
+                const { error: updateErr } = await window.supabaseClient
+                    .from('user_roles')
+                    .update(updatedNotesPayload)
+                    .eq('ko_code', currentUser.ko_code);
+
+                if (updateErr) throw updateErr;
+
+                window.showSystemAlert("काउंटर का फिजिकल कैश स्टॉक सफलतापूर्वक अपडेट कर दिया गया है।", "Stock Updated", "✅");
+                bootUnifiedCashGrid();
 
             } catch (err) {
-                console.error("Exchange profile adjustment error stack:", err);
-                window.showSystemAlert("एक्सचेंज ट्रांजैक्शन विफल।", "Error", "❌");
+                console.error("Master cash manager core failure stack:", err);
+                window.showSystemAlert("डेटाबेस स्टॉक अपडेट विफल हुआ।", "Error", "❌");
             } finally {
-                btnExchSave.disabled = false;
-                btnExchSave.innerText = "🔄 Execute Note Exchange";
+                btnMasterSave.disabled = false;
+                btnMasterSave.innerText = "💾 Save Cash Adjustments";
             }
         };
     }
 
-    // Default boot setup triggers
-    mountSharedComponentForPanel('adjust');
+    // Run direct initial load synchronization procedures on boot trigger
+    bootUnifiedCashGrid();
 };
