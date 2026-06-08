@@ -56,7 +56,6 @@ window.MasterDenom1stIn2ndOut = {
         let totalOut = 0;
         const notes = [500, 200, 100, 50, 20, 10, 5];
 
-        // Notes Math Logic calculation
         notes.forEach(note => {
             const inEl = document.querySelector(`.cm-note-in[data-note="${note}"]`);
             const outEl = document.querySelector(`.cm-note-out[data-note="${note}"]`);
@@ -65,7 +64,6 @@ window.MasterDenom1stIn2ndOut = {
             const countIn = inEl ? (parseInt(inEl.value) || 0) : 0;
             const countOut = outEl ? (parseInt(outEl.value) || 0) : 0;
             
-            // Net row value formula mapping
             const netRowValue = (countIn - countOut) * note;
             if (displayEl) {
                 displayEl.innerText = `₹${netRowValue}`;
@@ -78,7 +76,6 @@ window.MasterDenom1stIn2ndOut = {
             totalOut += countOut * note;
         });
 
-        // Coins Math Logic
         const coinInEl = document.querySelector('.cm-note-in[data-note="coins"]');
         const coinOutEl = document.querySelector('.cm-note-out[data-note="coins"]');
         const coinDisplayEl = document.getElementById('cm-row-total-coins');
@@ -97,7 +94,6 @@ window.MasterDenom1stIn2ndOut = {
         totalIn += coinsIn;
         totalOut += coinsOut;
 
-        // Sync summary labels screen elements
         const lblIn = document.getElementById('cm-summary-in');
         const lblOut = document.getElementById('cm-summary-out');
         const lblNet = document.getElementById('cm-summary-net');
@@ -140,6 +136,29 @@ window.MasterDenom1stIn2ndOut = {
         dataPayload['out_coins'] = cOut ? (parseInt(cOut.value) || 0) : 0;
 
         return dataPayload;
+    },
+
+    // ⭐ NEWLY ADDED: Pure Dynamic Value Injector
+    setValues: function(values) {
+        if (!values) return;
+        const notes = [500, 200, 100, 50, 20, 10, 5];
+
+        notes.forEach(note => {
+            const inEl = document.querySelector(`.cm-note-in[data-note="${note}"]`);
+            const outEl = document.querySelector(`.cm-note-out[data-note="${note}"]`);
+
+            if (inEl) inEl.value = parseInt(values[`in_${note}`]) || 0;
+            if (outEl) outEl.value = parseInt(values[`out_${note}`]) || 0;
+        });
+
+        const coinIn = document.querySelector('.cm-note-in[data-note="coins"]');
+        const coinOut = document.querySelector('.cm-note-out[data-note="coins"]');
+
+        if (coinIn) coinIn.value = parseInt(values.in_coins) || 0;
+        if (coinOut) coinOut.value = parseInt(values.out_coins) || 0;
+
+        // Auto calculate totals immediately after injection
+        this.calculate();
     },
 
     clear: function() {
