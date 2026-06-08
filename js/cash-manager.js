@@ -5,24 +5,17 @@
 window.initCashManagerPage = async function(currentUser) {
     console.log("⚡ Jarvis Cash Manager Engine Initializing...");
 
-    // UI Tab Panel Elements
     const optButtons = document.querySelectorAll('.cash-opt-btn');
     const panels = document.querySelectorAll('.cash-panel');
-
-    // Input Adjustment Fields
     const adjTypeSelect = document.getElementById('cash-adj-type');
-    const adjAmountInput = document.getElementById('cash-adj-amount');
-
-    // Action Save Buttons
     const btnAdjSave = document.getElementById('btn-cash-adj-save');
     const btnExchSave = document.getElementById('btn-cash-exch-save');
 
-    // 🔄 [TAB PANEL SWAPPER]: Handles clean sidebar swapping layout
+    // 🔄 [TAB PANEL SWAPPER]
     optButtons.forEach(btn => {
         btn.addEventListener('click', () => {
             const targetPanel = btn.getAttribute('data-panel');
 
-            // Sidebar navigation buttons active focus state mapping
             optButtons.forEach(b => {
                 b.style.background = '#ffffff';
                 b.style.color = '#495057';
@@ -32,17 +25,15 @@ window.initCashManagerPage = async function(currentUser) {
             btn.style.color = '#ffffff';
             btn.style.border = 'none';
 
-            // Toggle active viewport panels display blocks
             panels.forEach(p => p.style.display = 'none');
             const targetElement = document.getElementById(`panel-cash-${targetPanel}`);
             if (targetElement) targetElement.style.display = 'block';
 
-            // Mount standard component layout on swap triggers
             mountSharedComponentForPanel(targetPanel);
         });
     });
 
-    // 🧮 [COMPONENT INJECTION HOOK]: Render standard component as per instructions
+    // 🧮 [COMPONENT INJECTION HOOK]
     function mountSharedComponentForPanel(panelType) {
         if (!window.DenominationInOutComponent) {
             console.error("❌ Generic DenominationInOutComponent asset reference missing!");
@@ -67,21 +58,16 @@ window.initCashManagerPage = async function(currentUser) {
         }, 50);
     }
 
-    // 🚀 [ADJUSTMENT ROUTINE]: Process direct Cash In / Cash Out modifications
+    // 🚀 [ADJUSTMENT ROUTINE]: Pure Denomination-Driven Cash Modification
     if (btnAdjSave) {
         btnAdjSave.onclick = async function() {
             const mode = adjTypeSelect.value;
-            const amount = parseFloat(adjAmountInput.value) || 0;
+
+            // 🌟 LOOK FIX: Seedha active component ki live calculated value ko hi main amount manenge
+            const amount = window.DenominationInOutComponent ? window.DenominationInOutComponent.calculate() : 0;
 
             if (amount <= 0) {
-                window.showSystemAlert("कृपया एक वैध समायोजन राशि दर्ज करें।", "Validation Missing", "❌");
-                return;
-            }
-
-            // Read live values from the active DenominationInOutComponent container grid
-            const denoTotal = window.DenominationInOutComponent ? window.DenominationInOutComponent.calculate() : amount;
-            if (denoTotal !== amount) {
-                window.showSystemAlert(`राशि का मिलान नहीं हुआ!\nदर्ज राशि: ₹${amount}\nडिनॉमिनेशन कुल: ₹${denoTotal}`, "Tally Mismatch", "⚠️");
+                window.showSystemAlert("कृपया डिनॉमिनेशन तालिका में नोटों की संख्या दर्ज करें।", "Validation Missing", "❌");
                 return;
             }
 
@@ -89,25 +75,32 @@ window.initCashManagerPage = async function(currentUser) {
                 btnAdjSave.disabled = true;
                 btnAdjSave.innerText = "Processing Cash Update...";
 
-                // Fetch current user details snapshot to load latest cash balances
                 const { data: liveUser } = await window.supabaseClient.from('user_roles').select('*').eq('ko_code', currentUser.ko_code).maybeSingle();
                 const inputNotes = window.DenominationInOutComponent.getValues();
 
                 let updatedNotesPayload = {};
 
-                // Loop layout logic to mutate specific physical note counts inside user_roles schema row
                 for (let note in inputNotes) {
-                    // Mapping standard field names like 'denom_in_500' to schema format 'cash_500'
                     const noteValue = note.split('_')[2]; 
                     const dbColumnKey = `cash_${noteValue}`;
 
                     const currentStock = parseInt(liveUser[dbColumnKey]) || 0;
-                    const enteredQty = inputNotes[note]; // Values picked up from component storage context
+                    
+                    // DenominationInOutComponent ke dono input (In aur Out fields) ka net aggregate rashi context nikalte hain
+                    const inQty = inputNotes[`denom_in_${noteValue}`] || 0;
+                    const outQty = inputNotes[`denom_out_${noteValue}`] || 0;
+                    const netEnteredQty = inQty + outQty; // Kyunki adjustment me user kisi bhi ek side note dal sakta h
 
                     if (mode === 'in') {
-                        updatedNotesPayload[dbColumnKey] = currentStock + enteredQty; // Cash Add
+                        updatedNotesPayload[dbColumnKey] = currentStock + netEnteredQty;
                     } else if (mode === 'out') {
-                        updatedNotesPayload[dbColumnKey] = Math.max(0, currentStock - enteredQty; // Cash Subtract with negative protection
+                        if (currentStock < netEnteredQty) {
+                            window.showSystemAlert(`आपके काउंटर पर ₹${noteValue} के पर्याप्त नोट उपलब्ध नहीं हैं!`, "Stock Alert", "⚠️");
+                            btnAdjSave.disabled = false;
+                            btnAdjSave.innerText = "💾 Process Cash Adjustment";
+                            return;
+                        }
+                        updatedNotesPayload[dbColumnKey] = Math.max(0, currentStock - netEnteredQty);
                     }
                 }
 
@@ -115,8 +108,7 @@ window.initCashManagerPage = async function(currentUser) {
                 const { error } = await window.supabaseClient.from('user_roles').update(updatedNotesPayload).eq('ko_code', currentUser.ko_code);
                 if (error) throw error;
 
-                window.showSystemAlert(`काउंटर पर सफलतापूर्वक कैश ${mode === 'in' ? 'बढ़ा' : 'घटा'} दिया गया है।`, "Success", "✅");
-                adjAmountInput.value = "";
+                window.showSystemAlert(`डिनॉमिनेशन के अनुसार ₹${amount} काउंटर कैश में सफलतापूर्वक ${mode === 'in' ? 'जोड़' : 'घटा'} दिए गए हैं।`, "Adjustment Complete", "✅");
                 mountSharedComponentForPanel('adjust');
 
             } catch (err) {
@@ -129,13 +121,11 @@ window.initCashManagerPage = async function(currentUser) {
         };
     }
 
-    // 🚀 [EXCHANGE ROUTINE]: Process Note correction without mutating Net Amount
+    // 🚀 [EXCHANGE ROUTINE]: Process Note correction without mutating Net Amount (Exact ₹0 Tally)
     if (btnExchSave) {
         btnExchSave.onclick = async function() {
-            // Read Net calculated amount from our unique target plugin logic 
             const netCashValue = window.DenominationInOutComponent ? window.DenominationInOutComponent.calculate() : 0;
 
-            // Security core logic guard: Net Cash MUST be equal to zero for an isolated notes exchange matrix
             if (netCashValue !== 0) {
                 window.showSystemAlert(`नोट एक्सचेंज निष्पादित नहीं किया जा सकता!\nनेट कैश टोटल ₹0 होना चाहिए, लेकिन अभी ₹${netCashValue} है।`, "Net Balance Violation", "⚠️");
                 return;
@@ -151,7 +141,6 @@ window.initCashManagerPage = async function(currentUser) {
                 let updatedNotesPayload = {};
                 let hasSufficientStock = true;
 
-                // Process standard collection loop map
                 const noteDenoms = [500, 200, 100, 50, 20, 10, 5];
                 
                 for (let i = 0; i < noteDenoms.length; i++) {
@@ -162,7 +151,6 @@ window.initCashManagerPage = async function(currentUser) {
                     const inQty = inputNotes[`denom_in_${d}`] || 0;
                     const outQty = inputNotes[`denom_out_${d}`] || 0;
 
-                    // Net mutation calculation per unique notes bucket row row
                     const adjustedStock = currentStock + inQty - outQty;
 
                     if (adjustedStock < 0) {
@@ -173,7 +161,6 @@ window.initCashManagerPage = async function(currentUser) {
                     updatedNotesPayload[dbColumnKey] = adjustedStock;
                 }
 
-                // Coins Execution block safety
                 if (hasSufficientStock) {
                     const currentCoins = parseInt(liveUser['cash_coins']) || 0;
                     const cIn = inputNotes['denom_in_coins'] || 0;
@@ -189,7 +176,6 @@ window.initCashManagerPage = async function(currentUser) {
 
                 if (!hasSufficientStock) return;
 
-                // Fire update commands inside user_roles row profile
                 const { error } = await window.supabaseClient.from('user_roles').update(updatedNotesPayload).eq('ko_code', currentUser.ko_code);
                 if (error) throw error;
 
