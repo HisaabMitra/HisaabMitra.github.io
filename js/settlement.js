@@ -84,6 +84,12 @@ window.initSettlementPage = async function(currentUser) {
                 let badgeBg = log.transaction_type === 'DEPOSIT' ? '#e8f5e9' : (log.transaction_type === 'WITHDRAWAL' ? '#ffebee' : '#f5f5f5');
                 let badgeColor = log.transaction_type === 'DEPOSIT' ? '#2e7d32' : (log.transaction_type === 'WITHDRAWAL' ? '#c62828' : '#333');
                 
+                // Pure UI text cleaner mapping (JSON string ko history table me aam user se chhupane ke liye split clean kiya)
+                let cleanNarration = log.narration || '';
+                if (cleanNarration.includes('|| Notes:')) {
+                    cleanNarration = cleanNarration.split('|| Notes:')[0];
+                }
+
                 historyTbody.insertAdjacentHTML('beforeend', `
                     <tr style="border-bottom: 1px solid #eef0f2; vertical-align: middle;">
                         <td style="padding:10px; text-align:center; font-weight:bold; color:#777;">${index + 1}</td>
@@ -93,7 +99,7 @@ window.initSettlementPage = async function(currentUser) {
                         <td style="padding:10px; font-weight:bold; color:#222;">₹${parseFloat(log.amount).toFixed(2)}</td>
                         <td style="padding:10px; color:#666;">₹${parseFloat(log.previous_balance).toFixed(2)}</td>
                         <td style="padding:10px; font-weight:600; color:${badgeColor};">₹${parseFloat(log.new_balance).toFixed(2)}</td>
-                        <td style="padding:10px; color:#555; font-size:0.85rem;">${log.narration || ''}</td>
+                        <td style="padding:10px; color:#555; font-size:0.85rem;">${cleanNarration}</td>
                         <td style="padding:10px; text-align:center; white-space:nowrap;">
                             <button class="settle-edit-btn" data-id="${log.id}" style="padding:5px 8px; background:#f39c12; color:#fff; border:none; border-radius:3px; cursor:pointer; font-size:0.8rem; margin-right:5px; font-weight:bold;">📝</button>
                             <button class="settle-del-btn" data-id="${log.id}" style="padding:5px 8px; background:#e74c3c; color:#fff; border:none; border-radius:3px; cursor:pointer; font-size:0.8rem; font-weight:bold;">🗑️</button>
@@ -223,8 +229,15 @@ window.initSettlementPage = async function(currentUser) {
                 const { error } = await window.supabaseClient.from('user_roles').update(updatedNotesPayload).eq('ko_code', currentUser.ko_code);
                 if (error) throw error;
 
+                // 🌟 LIVE SYNC FIX: Pure denomination map array ko json string banakar narration column ke piche tag kar diya safely
+                const notesBackupString = JSON.stringify(inputNotes);
+
                 if (isEditMode) {
-                    await window.supabaseClient.from('settlement_logs').update({ amount: amount, new_balance: computedNewBalance }).eq('id', editIdInput.value);
+                    await window.supabaseClient.from('settlement_logs').update({ 
+                        amount: amount, 
+                        new_balance: computedNewBalance,
+                        narration: `Settlement Account Deposit || Notes:${notesBackupString}`
+                    }).eq('id', editIdInput.value);
                     window.showSystemAlert("एंट्री सफलतापूर्वक अपडेट कर दी गई है।", "सफलता", "✅");
                 } else {
                     await window.supabaseClient.from('settlement_logs').insert([{
@@ -233,7 +246,7 @@ window.initSettlementPage = async function(currentUser) {
                         amount: amount,
                         previous_balance: dbSettleBal,
                         new_balance: computedNewBalance,
-                        narration: "Settlement Account Deposit"
+                        narration: `Settlement Account Deposit || Notes:${notesBackupString}`
                     }]);
                     window.showSystemAlert(`₹${amount.toFixed(2)} सफलतापूर्वक सेटलमेंट खाते में जोड़े गए।`, "सफलता", "✅");
                 }
@@ -299,8 +312,15 @@ window.initSettlementPage = async function(currentUser) {
                 const { error } = await window.supabaseClient.from('user_roles').update(updatedNotesPayload).eq('ko_code', currentUser.ko_code);
                 if (error) throw error;
 
+                // 🌟 LIVE SYNC FIX: Withdrawal notes backup map logic
+                const notesBackupString = JSON.stringify(inputNotes);
+
                 if (isEditMode) {
-                    await window.supabaseClient.from('settlement_logs').update({ amount: amount, new_balance: computedNewBalance }).eq('id', editIdInput.value);
+                    await window.supabaseClient.from('settlement_logs').update({ 
+                        amount: amount, 
+                        new_balance: computedNewBalance,
+                        narration: `Settlement Account Withdrawal || Notes:${notesBackupString}`
+                    }).eq('id', editIdInput.value);
                     window.showSystemAlert("एंट्री सफलतापूर्वक अपडेट कर दी गई है।", "सफलता", "✅");
                 } else {
                     await window.supabaseClient.from('settlement_logs').insert([{
@@ -309,7 +329,7 @@ window.initSettlementPage = async function(currentUser) {
                         amount: amount,
                         previous_balance: dbSettleBal,
                         new_balance: computedNewBalance,
-                        narration: "Settlement Account Withdrawal"
+                        narration: `Settlement Account Withdrawal || Notes:${notesBackupString}`
                     }]);
                     window.showSystemAlert(`₹${amount.toFixed(2)} सेटलमेंट खाते से काट कर काउंटर पर जोड़ दिए गए हैं।`, "सफलता", "✅");
                 }
@@ -390,7 +410,7 @@ window.initSettlementPage = async function(currentUser) {
 
     // 🔧 [TABLE ACTIONS HANDLERS]
     function attachTableActionListeners() {
-        // 📝 1. EDIT OPERATIONAL HOOK (With Denomination Mapping Injection)
+        // 📝 1. EDIT OPERATIONAL HOOK (With Exact Saved Denomination Retrieval)
         document.querySelectorAll('.settle-edit-btn').forEach(btn => {
             btn.onclick = async function() {
                 const logId = this.getAttribute('data-id');
@@ -401,7 +421,17 @@ window.initSettlementPage = async function(currentUser) {
 
                 resetSettleFormStates();
 
-                // 🌟 FIX CORE: Edit click par phele panels switch honge fir logs/user snapshot se denomination inputs mapping sync hogi
+                // Check narration meta details to decode exact note records
+                let savedNotes = null;
+                if (log.narration && log.narration.includes('|| Notes:')) {
+                    try {
+                        const jsonPart = log.narration.split('|| Notes:')[1];
+                        savedNotes = JSON.parse(jsonPart);
+                    } catch (e) {
+                        console.error("Error decoding backup log notes mapping json:", e);
+                    }
+                }
+
                 if (log.transaction_type === 'DEPOSIT') {
                     switchTabTo('deposit');
                     depAmountInput.value = log.amount;
@@ -409,26 +439,18 @@ window.initSettlementPage = async function(currentUser) {
                     document.getElementById('dep-panel-title').innerText = "📝 Edit Deposit Entry";
                     btnDepSave.innerText = "⚙️ Update Deposit Entry";
 
-                    // Agar log table me specific row notes store hain toh use load karein, nahi toh total amount matching logic
+                    // 🌟 EXACT SYNC RESTORE: Agar database log me pure notes mile toh exact wahi input cells me autofill honge
                     setTimeout(() => {
-                        const noteDenoms = [500, 200, 100, 50, 20, 10, 5];
-                        let remainingAmount = log.amount;
-                        
-                        noteDenoms.forEach(d => {
-                            const inputCell = document.querySelector(`.gen-out-val[data-note="${d}"]`);
-                            if (inputCell) {
-                                const noteCount = Math.floor(remainingAmount / d);
-                                if (noteCount > 0) {
-                                    inputCell.value = noteCount;
-                                    remainingAmount -= (noteCount * d);
-                                }
-                            }
-                        });
-                        const coinsCell = document.querySelector('.gen-out-val[data-note="coins"]');
-                        if (coinsCell && remainingAmount > 0) {
-                            coinsCell.value = remainingAmount;
+                        if (savedNotes) {
+                            // Map values back into fields array keys like cash_500, cash_coins
+                            [500, 200, 100, 50, 20, 10, 5].forEach(d => {
+                                const inputCell = document.querySelector(`.gen-out-val[data-note="${d}"]`);
+                                if (inputCell) inputCell.value = savedNotes[`cash_${d}`] || 0;
+                            });
+                            const coinsCell = document.querySelector('.gen-out-val[data-note="coins"]');
+                            if (coinsCell) coinsCell.value = savedNotes['cash_coins'] || 0;
                         }
-                        if(window.DenominationOutInComponent) window.DenominationOutInComponent.calculate();
+                        if (window.DenominationOutInComponent) window.DenominationOutInComponent.calculate();
                     }, 100);
 
                 } else if (log.transaction_type === 'WITHDRAWAL') {
@@ -438,25 +460,17 @@ window.initSettlementPage = async function(currentUser) {
                     document.getElementById('wit-panel-title').innerText = "📝 Edit Withdrawal Entry";
                     btnWitSave.innerText = "⚙️ Update Withdrawal Entry";
 
+                    // 🌟 EXACT SYNC RESTORE: For Withdrawal layout inputs mapping
                     setTimeout(() => {
-                        const noteDenoms = [500, 200, 100, 50, 20, 10, 5];
-                        let remainingAmount = log.amount;
-                        
-                        noteDenoms.forEach(d => {
-                            const inputCell = document.querySelector(`.gen-in-val[data-note="${d}"]`);
-                            if (inputCell) {
-                                const noteCount = Math.floor(remainingAmount / d);
-                                if (noteCount > 0) {
-                                    inputCell.value = noteCount;
-                                    remainingAmount -= (noteCount * d);
-                                }
-                            }
-                        });
-                        const coinsCell = document.querySelector('.gen-in-val[data-note="coins"]');
-                        if (coinsCell && remainingAmount > 0) {
-                            coinsCell.value = remainingAmount;
+                        if (savedNotes) {
+                            [500, 200, 100, 50, 20, 10, 5].forEach(d => {
+                                const inputCell = document.querySelector(`.gen-in-val[data-note="${d}"]`);
+                                if (inputCell) inputCell.value = savedNotes[`cash_${d}`] || 0;
+                            });
+                            const coinsCell = document.querySelector('.gen-in-val[data-note="coins"]');
+                            if (coinsCell) coinsCell.value = savedNotes['cash_coins'] || 0;
                         }
-                        if(window.DenominationInOutComponent) window.DenominationInOutComponent.calculate();
+                        if (window.DenominationInOutComponent) window.DenominationInOutComponent.calculate();
                     }, 100);
                 }
                 
