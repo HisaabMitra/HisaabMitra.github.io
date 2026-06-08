@@ -1,5 +1,5 @@
 // ========================================================
-// 🏢 VAULT ENGINE: REAL-TIME SETTLEMENT & CASH RECONCILIATION
+// 🏢 VAULT ENGINE: REAL-TIME SETTLEMENT & CASH RECONCILIATION (WITH DENOM ROLLBACK)
 // ========================================================
 
 window.initSettlementPage = async function(currentUser) {
@@ -50,10 +50,9 @@ window.initSettlementPage = async function(currentUser) {
                 
                 window.currentUser = { ...window.currentUser, ...data };
             }
-            // Standalone safe table refresher call for today's logs
             await fetchTodayHistoryLogs();
         } catch (err) {
-            console.error("❌ Failed to sync settlement balances:", err);
+            console.error("❌ Failed to sync settlement balances from cloud node:", err);
         }
     }
 
@@ -85,7 +84,6 @@ window.initSettlementPage = async function(currentUser) {
                 let badgeBg = log.transaction_type === 'DEPOSIT' ? '#e8f5e9' : (log.transaction_type === 'WITHDRAWAL' ? '#ffebee' : '#f5f5f5');
                 let badgeColor = log.transaction_type === 'DEPOSIT' ? '#2e7d32' : (log.transaction_type === 'WITHDRAWAL' ? '#c62828' : '#333');
                 
-                // Pure UI text cleaner mapping (JSON string split)
                 let cleanNarration = log.narration || '';
                 if (cleanNarration.includes('|| Notes:')) {
                     cleanNarration = cleanNarration.split('|| Notes:')[0];
@@ -115,7 +113,7 @@ window.initSettlementPage = async function(currentUser) {
         }
     }
 
-    // 🔄 [UPDATED VERTICAL TAB PANEL SWAPPER ROUTINE]
+    // 🔄 [TAB PANEL SWAPPER]
     optButtons.forEach(btn => {
         btn.addEventListener('click', (e) => {
             const targetPanel = btn.getAttribute('data-panel');
@@ -187,7 +185,7 @@ window.initSettlementPage = async function(currentUser) {
     attachWordTranslator(depAmountInput, depWords);
     attachWordTranslator(witAmountInput, witWords);
 
-    // 🚀 [DEPOSIT ROUTINE]
+    // 🚀 [DEPOSIT ROUTINE]: Settle Balance (+), Counter Cash Notes (-)
     const btnDepSave = document.getElementById('btn-settle-dep-save');
     if (btnDepSave) {
         btnDepSave.onclick = async function() {
@@ -210,22 +208,40 @@ window.initSettlementPage = async function(currentUser) {
                 btnDepSave.innerText = "सहेज रहे हैं...";
 
                 const { data: liveUser } = await window.supabaseClient.from('user_roles').select('*').eq('ko_code', currentUser.ko_code).maybeSingle();
-                const dbSettleBal = parseFloat(liveUser.settlement_balance) || 0;
+                let dbSettleBal = parseFloat(liveUser.settlement_balance) || 0;
                 
-                let computedNewBalance = dbSettleBal;
+                let oldNotes = null;
                 if (isEditMode) {
-                    const { data: oldLog } = await window.supabaseClient.from('settlement_logs').select('amount').eq('id', editIdInput.value).maybeSingle();
-                    computedNewBalance = (dbSettleBal - (parseFloat(oldLog?.amount) || 0)) + amount;
-                } else {
-                    computedNewBalance = dbSettleBal + amount;
+                    const { data: oldLog } = await window.supabaseClient.from('settlement_logs').select('*').eq('id', editIdInput.value).maybeSingle();
+                    dbSettleBal = dbSettleBal - (parseFloat(oldLog?.amount) || 0); // Reverse old bank amount
+                    
+                    if (oldLog?.narration && oldLog.narration.includes('|| Notes:')) {
+                        try { oldNotes = JSON.parse(log.narration.split('|| Notes:')[1]); } catch(e){}
+                    }
                 }
 
+                const computedNewBalance = dbSettleBal + amount;
                 const inputNotes = window.DenominationOutInComponent.getValues();
                 let updatedNotesPayload = { settlement_balance: computedNewBalance };
-                for (let key in inputNotes) {
-                    const currentStock = parseInt(liveUser[key]) || 0;
-                    updatedNotesPayload[key] = Math.max(0, currentStock - inputNotes[key]);
-                }
+
+                // 🌟 LOOP WITH ATOMIC DENOMINATION ROLLBACK LOGIC
+                const noteKeys = [500, 200, 100, 50, 20, 10, 5];
+                noteKeys.forEach(d => {
+                    const dbKey = `cash_${d}`;
+                    let currentStock = parseInt(liveUser[dbKey]) || 0;
+                    
+                    if (isEditMode && oldNotes) {
+                        // Deposit Rollback formula: Naya Stock = Purana Stock + Puraane Notes (IN back) - Naye Notes (OUT)
+                        const oldQty = parseInt(oldNotes[dbKey]) || 0;
+                        currentStock = currentStock + oldQty; 
+                    }
+                    updatedNotesPayload[dbKey] = Math.max(0, currentStock - (inputNotes[dbKey] || 0));
+                });
+
+                // Coins adjustment
+                let currentCoins = parseInt(liveUser['cash_coins']) || 0;
+                if (isEditMode && oldNotes) { currentCoins = currentCoins + (parseInt(oldNotes['cash_coins']) || 0); }
+                updatedNotesPayload['cash_coins'] = Math.max(0, currentCoins - (inputNotes['cash_coins'] || 0));
 
                 const { error } = await window.supabaseClient.from('user_roles').update(updatedNotesPayload).eq('ko_code', currentUser.ko_code);
                 if (error) throw error;
@@ -235,10 +251,11 @@ window.initSettlementPage = async function(currentUser) {
                 if (isEditMode) {
                     await window.supabaseClient.from('settlement_logs').update({ 
                         amount: amount, 
+                        previous_balance: dbSettleBal,
                         new_balance: computedNewBalance,
                         narration: `Settlement Account Deposit || Notes:${notesBackupString}`
                     }).eq('id', editIdInput.value);
-                    window.showSystemAlert("एंट्री सफलतापूर्वक अपडेट कर दी गई है।", "सफलता", "✅");
+                    window.showSystemAlert("एंट्री और डिनॉमिनेशन सफलतापूर्वक अपडेट कर दिए गए हैं।", "सफलता", "✅");
                 } else {
                     await window.supabaseClient.from('settlement_logs').insert([{
                         ko_code: currentUser.ko_code,
@@ -264,7 +281,7 @@ window.initSettlementPage = async function(currentUser) {
         };
     }
 
-    // 🚀 [WITHDRAWAL ROUTINE]
+    // 🚀 [WITHDRAWAL ROUTINE]: Settle Balance (-), Counter Cash Notes (+)
     const btnWitSave = document.getElementById('btn-settle-wit-save');
     if (btnWitSave) {
         btnWitSave.onclick = async function() {
@@ -287,27 +304,63 @@ window.initSettlementPage = async function(currentUser) {
                 btnWitSave.innerText = "सहेज रहे हैं...";
 
                 const { data: liveUser } = await window.supabaseClient.from('user_roles').select('*').eq('ko_code', currentUser.ko_code).maybeSingle();
-                const dbSettleBal = parseFloat(liveUser.settlement_balance) || 0;
+                let dbSettleBal = parseFloat(liveUser.settlement_balance) || 0;
                 
-                let computedNewBalance = dbSettleBal;
+                let oldNotes = null;
                 if (isEditMode) {
-                    const { data: oldLog } = await window.supabaseClient.from('settlement_logs').select('amount').eq('id', editIdInput.value).maybeSingle();
-                    computedNewBalance = (dbSettleBal + (parseFloat(oldLog?.amount) || 0)) - amount;
-                } else {
-                    computedNewBalance = dbSettleBal - amount;
+                    const { data: oldLog } = await window.supabaseClient.from('settlement_logs').select('*').eq('id', editIdInput.value).maybeSingle();
+                    dbSettleBal = dbSettleBal + (parseFloat(oldLog?.amount) || 0); // Add back old withdrawal amount
+                    
+                    if (oldLog?.narration && oldLog.narration.includes('|| Notes:')) {
+                        try { oldNotes = JSON.parse(oldLog.narration.split('|| Notes:')[1]); } catch(e){}
+                    }
                 }
                 
+                const computedNewBalance = dbSettleBal - amount;
                 if (computedNewBalance < 0) {
                     window.showSystemAlert("आपके सेटलमेंट खाते में पर्याप्त राशि उपलब्ध नहीं है!", "Insufficient Capital", "⚠️");
+                    btnWitSave.disabled = false;
+                    btnWitSave.innerText = "📤 Save Bank Withdrawal";
                     return;
                 }
 
                 const inputNotes = window.DenominationInOutComponent.getValues();
                 let updatedNotesPayload = { settlement_balance: computedNewBalance };
-                for (let key in inputNotes) {
-                    const currentStock = parseInt(liveUser[key]) || 0;
-                    updatedNotesPayload[key] = currentStock + inputNotes[key];
+
+                // 🌟 LOOP WITH ATOMIC DENOMINATION ROLLBACK LOGIC
+                const noteKeys = [500, 200, 100, 50, 20, 10, 5];
+                let stockCheckPass = true;
+
+                for (let i = 0; i < noteKeys.length; i++) {
+                    const d = noteKeys[i];
+                    const dbKey = `cash_${d}`;
+                    let currentStock = parseInt(liveUser[dbKey]) || 0;
+
+                    if (isEditMode && oldNotes) {
+                        // Withdrawal Rollback formula: Naya Stock = Purana Stock - Puraane Notes (OUT back) + Naye Notes (IN)
+                        const oldQty = parseInt(oldNotes[dbKey]) || 0;
+                        currentStock = currentStock - oldQty; 
+                    }
+
+                    const finalStock = currentStock + (inputNotes[dbKey] || 0);
+                    if (finalStock < 0) {
+                        window.showSystemAlert(`रोलबैक विफलता: काउंटर पर ₹${d} के पर्याप्त नोट उपलब्ध नहीं हैं!`, "Stock Error", "❌");
+                        stockCheckPass = false;
+                        break;
+                    }
+                    updatedNotesPayload[dbKey] = finalStock;
                 }
+
+                if (!stockCheckPass) {
+                    btnWitSave.disabled = false;
+                    btnWitSave.innerText = "📤 Save Bank Withdrawal";
+                    return;
+                }
+
+                // Coins adjust
+                let currentCoins = parseInt(liveUser['cash_coins']) || 0;
+                if (isEditMode && oldNotes) { currentCoins = currentCoins - (parseInt(oldNotes['cash_coins']) || 0); }
+                updatedNotesPayload['cash_coins'] = currentCoins + (inputNotes['cash_coins'] || 0);
 
                 const { error } = await window.supabaseClient.from('user_roles').update(updatedNotesPayload).eq('ko_code', currentUser.ko_code);
                 if (error) throw error;
@@ -317,10 +370,11 @@ window.initSettlementPage = async function(currentUser) {
                 if (isEditMode) {
                     await window.supabaseClient.from('settlement_logs').update({ 
                         amount: amount, 
+                        previous_balance: dbSettleBal,
                         new_balance: computedNewBalance,
                         narration: `Settlement Account Withdrawal || Notes:${notesBackupString}`
                     }).eq('id', editIdInput.value);
-                    window.showSystemAlert("एंट्री सफलतापूर्वक अपडेट कर दी गई है।", "सफलता", "✅");
+                    window.showSystemAlert("एंट्री और डिनॉमिनेशन सफलतापूर्वक अपडेट कर दिए गए हैं।", "सफलता", "✅");
                 } else {
                     await window.supabaseClient.from('settlement_logs').insert([{
                         ko_code: currentUser.ko_code,
@@ -423,15 +477,15 @@ window.initSettlementPage = async function(currentUser) {
                 let savedNotes = null;
                 if (log.narration && log.narration.includes('|| Notes:')) {
                     try {
-                        const jsonPart = log.narration.split('|| Notes:')[1];
-                        savedNotes = JSON.parse(jsonPart);
+                        savedNotes = JSON.parse(log.narration.split('|| Notes:')[1]);
                     } catch (e) {
-                        console.error("Error decoding backup log notes JSON:", e);
+                        console.error(e);
                     }
                 }
 
                 if (log.transaction_type === 'DEPOSIT') {
                     switchTabTo('deposit');
+                    if(editIdInput) editIdInput.value = log.id; 
                     depAmountInput.value = log.amount;
                     depAmountInput.dispatchEvent(new Event('input'));
                     document.getElementById('dep-panel-title').innerText = "📝 Edit Deposit Entry";
@@ -451,6 +505,7 @@ window.initSettlementPage = async function(currentUser) {
 
                 } else if (log.transaction_type === 'WITHDRAWAL') {
                     switchTabTo('withdrawal');
+                    if(editIdInput) editIdInput.value = log.id; 
                     witAmountInput.value = log.amount;
                     witAmountInput.dispatchEvent(new Event('input'));
                     document.getElementById('wit-panel-title').innerText = "📝 Edit Withdrawal Entry";
@@ -473,53 +528,94 @@ window.initSettlementPage = async function(currentUser) {
             };
         });
 
-        // 🗑️ 2. DELETE FLOW WITH SYSTEM NATIVE ALERTS REMOVED (Strict Custom Popup Mode Only)
+        // 🗑️ 2. DELETE FLOW WITH SYSTEM NATIVE ALERTS REMOVED
         document.querySelectorAll('.settle-del-btn').forEach(btn => {
             btn.onclick = function() {
                 const logId = this.getAttribute('data-id');
                 
-                // 🌟 REMOVED ALL DEFAULT WINDOW CONFIRMS FROM HELL
                 if (typeof window.showCustomSystemConfirm === 'function') {
                     window.showCustomSystemConfirm(
-                        "क्या आप वाकई इस सेटलमेंट एंट्री को डिलीट करना चाहते हैं?\nइससे बैंक बैलेंस वापस रोलबैक (उल्टा) हो जाएगा।",
+                        "क्या आप वाकई इस सेटलमेंट एंट्री को डिलीट करना चाहते हैं?\nइससे बैंक बैलेंस और काउंटर डिनॉमिनेशन दोनों रोलबैक हो जाएंगे।",
                         "एंट्री डिलीट करें 🗑️",
                         async function() { 
                             await executeLogDeletion(logId); 
                         }
                     );
                 } else {
-                    // Fail-safe protection module context routing
                     executeLogDeletion(logId);
                 }
             };
         });
     }
 
-    // 💣 Actual Delete SQL firing framework
+    // 💣 Actual Delete SQL firing framework with complete Note Rollback Recovery
     async function executeLogDeletion(logId) {
         try {
             const { data: log } = await window.supabaseClient.from('settlement_logs').select('*').eq('id', logId).maybeSingle();
             if (!log) return;
 
-            const { data: user } = await window.supabaseClient.from('user_roles').select('settlement_balance').eq('ko_code', currentUser.ko_code).maybeSingle();
-            let currentDBBal = parseFloat(user.settlement_balance) || 0;
+            const { data: liveUser } = await window.supabaseClient.from('user_roles').select('*').eq('ko_code', currentUser.ko_code).maybeSingle();
+            let currentDBBal = parseFloat(liveUser.settlement_balance) || 0;
 
             let rolledBackBal = currentDBBal;
+            let updatedNotesPayload = {};
+
+            let savedNotes = null;
+            if (log.narration && log.narration.includes('|| Notes:')) {
+                try { savedNotes = JSON.parse(log.narration.split('|| Notes:')[1]); } catch(e){}
+            }
+
+            const noteKeys = [500, 200, 100, 50, 20, 10, 5];
+
             if (log.transaction_type === 'DEPOSIT') {
                 rolledBackBal = currentDBBal - parseFloat(log.amount);
+                updatedNotesPayload['settlement_balance'] = rolledBackBal;
+
+                // Deposit rollback: notes come BACK to counter (+)
+                noteKeys.forEach(d => {
+                    const dbKey = `cash_${d}`;
+                    const curQty = parseInt(liveUser[dbKey]) || 0;
+                    const oldQty = savedNotes ? (parseInt(savedNotes[dbKey]) || 0) : 0;
+                    updatedNotesPayload[dbKey] = curQty + oldQty;
+                });
+                let cCoins = parseInt(liveUser['cash_coins']) || 0;
+                updatedNotesPayload['cash_coins'] = cCoins + (savedNotes ? (parseInt(savedNotes['cash_coins']) || 0) : 0);
+
             } else if (log.transaction_type === 'WITHDRAWAL') {
                 rolledBackBal = currentDBBal + parseFloat(log.amount);
+                updatedNotesPayload['settlement_balance'] = rolledBackBal;
+
+                // Withdrawal rollback: notes LEAVE from counter (-)
+                let deletePass = true;
+                for (let i = 0; i < noteKeys.length; i++) {
+                    const d = noteKeys[i];
+                    const dbKey = `cash_${d}`;
+                    const curQty = parseInt(liveUser[dbKey]) || 0;
+                    const oldQty = savedNotes ? (parseInt(savedNotes[dbKey]) || 0) : 0;
+                    
+                    if ((curQty - oldQty) < 0) {
+                        window.showSystemAlert(`डिलीट रद्द! काउंटर पर ₹${d} के पर्याप्त नोट नहीं हैं।`, "Stock Alert", "❌");
+                        deletePass = false;
+                        break;
+                    }
+                    updatedNotesPayload[dbKey] = curQty - oldQty;
+                }
+                if (!deletePass) return;
+
+                let cCoins = parseInt(liveUser['cash_coins']) || 0;
+                updatedNotesPayload['cash_coins'] = Math.max(0, cCoins - (savedNotes ? (parseInt(savedNotes['cash_coins']) || 0) : 0));
             }
 
             if (rolledBackBal < 0) {
-                window.showSystemAlert("रोलबैक रद्द! डिलीट करने से बैंक बैलेंस नेगेटिव हो रहा है।", "Rollback Prohibited", "❌");
+                window.showSystemAlert("रोलबैक रद्द! डिलीट करने से बैंक बैलेंस Negative हो रहा है।", "Rollback Prohibited", "❌");
                 return;
             }
 
-            await window.supabaseClient.from('user_roles').update({ settlement_balance: rolledBackBal }).eq('ko_code', currentUser.ko_code);
+            // Fire atomic update
+            await window.supabaseClient.from('user_roles').update(updatedNotesPayload).eq('ko_code', currentUser.ko_code);
             await window.supabaseClient.from('settlement_logs').delete().eq('id', logId);
 
-            window.showSystemAlert("एंट्री सफलतापूर्वक डिलीट कर दी गई है और बैलेंस रोलबैक हो गया है।", "Deleted Complete", "✅");
+            window.showSystemAlert("एंट्री डिलीट कर दी गई है और बैंक बैलेंस सहित काउंटर नोट रोलबैक हो गए हैं।", "Deleted Complete", "✅");
             await syncLiveSettlementVault();
 
         } catch (e) {
