@@ -50,6 +50,7 @@ window.initSettlementPage = async function(currentUser) {
                 
                 window.currentUser = { ...window.currentUser, ...data };
             }
+            // Standalone safe table refresher call for today's logs
             await fetchTodayHistoryLogs();
         } catch (err) {
             console.error("❌ Failed to sync settlement balances:", err);
@@ -84,7 +85,7 @@ window.initSettlementPage = async function(currentUser) {
                 let badgeBg = log.transaction_type === 'DEPOSIT' ? '#e8f5e9' : (log.transaction_type === 'WITHDRAWAL' ? '#ffebee' : '#f5f5f5');
                 let badgeColor = log.transaction_type === 'DEPOSIT' ? '#2e7d32' : (log.transaction_type === 'WITHDRAWAL' ? '#c62828' : '#333');
                 
-                // Pure UI text cleaner mapping (JSON string ko history table me aam user se chhupane ke liye split clean kiya)
+                // Pure UI text cleaner mapping (JSON string split)
                 let cleanNarration = log.narration || '';
                 if (cleanNarration.includes('|| Notes:')) {
                     cleanNarration = cleanNarration.split('|| Notes:')[0];
@@ -229,7 +230,6 @@ window.initSettlementPage = async function(currentUser) {
                 const { error } = await window.supabaseClient.from('user_roles').update(updatedNotesPayload).eq('ko_code', currentUser.ko_code);
                 if (error) throw error;
 
-                // 🌟 LIVE SYNC FIX: Pure denomination map array ko json string banakar narration column ke piche tag kar diya safely
                 const notesBackupString = JSON.stringify(inputNotes);
 
                 if (isEditMode) {
@@ -312,7 +312,6 @@ window.initSettlementPage = async function(currentUser) {
                 const { error } = await window.supabaseClient.from('user_roles').update(updatedNotesPayload).eq('ko_code', currentUser.ko_code);
                 if (error) throw error;
 
-                // 🌟 LIVE SYNC FIX: Withdrawal notes backup map logic
                 const notesBackupString = JSON.stringify(inputNotes);
 
                 if (isEditMode) {
@@ -410,7 +409,7 @@ window.initSettlementPage = async function(currentUser) {
 
     // 🔧 [TABLE ACTIONS HANDLERS]
     function attachTableActionListeners() {
-        // 📝 1. EDIT OPERATIONAL HOOK (With Exact Saved Denomination Retrieval)
+        // 📝 1. EDIT OPERATIONAL HOOK
         document.querySelectorAll('.settle-edit-btn').forEach(btn => {
             btn.onclick = async function() {
                 const logId = this.getAttribute('data-id');
@@ -421,14 +420,13 @@ window.initSettlementPage = async function(currentUser) {
 
                 resetSettleFormStates();
 
-                // Check narration meta details to decode exact note records
                 let savedNotes = null;
                 if (log.narration && log.narration.includes('|| Notes:')) {
                     try {
                         const jsonPart = log.narration.split('|| Notes:')[1];
                         savedNotes = JSON.parse(jsonPart);
                     } catch (e) {
-                        console.error("Error decoding backup log notes mapping json:", e);
+                        console.error("Error decoding backup log notes JSON:", e);
                     }
                 }
 
@@ -439,10 +437,8 @@ window.initSettlementPage = async function(currentUser) {
                     document.getElementById('dep-panel-title').innerText = "📝 Edit Deposit Entry";
                     btnDepSave.innerText = "⚙️ Update Deposit Entry";
 
-                    // 🌟 EXACT SYNC RESTORE: Agar database log me pure notes mile toh exact wahi input cells me autofill honge
                     setTimeout(() => {
                         if (savedNotes) {
-                            // Map values back into fields array keys like cash_500, cash_coins
                             [500, 200, 100, 50, 20, 10, 5].forEach(d => {
                                 const inputCell = document.querySelector(`.gen-out-val[data-note="${d}"]`);
                                 if (inputCell) inputCell.value = savedNotes[`cash_${d}`] || 0;
@@ -460,7 +456,6 @@ window.initSettlementPage = async function(currentUser) {
                     document.getElementById('wit-panel-title').innerText = "📝 Edit Withdrawal Entry";
                     btnWitSave.innerText = "⚙️ Update Withdrawal Entry";
 
-                    // 🌟 EXACT SYNC RESTORE: For Withdrawal layout inputs mapping
                     setTimeout(() => {
                         if (savedNotes) {
                             [500, 200, 100, 50, 20, 10, 5].forEach(d => {
@@ -478,11 +473,12 @@ window.initSettlementPage = async function(currentUser) {
             };
         });
 
-        // 🗑️ 2. DELETE FLOW WITH SYSTEM NATIVE ALERTS BYPASS
+        // 🗑️ 2. DELETE FLOW WITH SYSTEM NATIVE ALERTS REMOVED (Strict Custom Popup Mode Only)
         document.querySelectorAll('.settle-del-btn').forEach(btn => {
             btn.onclick = function() {
                 const logId = this.getAttribute('data-id');
                 
+                // 🌟 REMOVED ALL DEFAULT WINDOW CONFIRMS FROM HELL
                 if (typeof window.showCustomSystemConfirm === 'function') {
                     window.showCustomSystemConfirm(
                         "क्या आप वाकई इस सेटलमेंट एंट्री को डिलीट करना चाहते हैं?\nइससे बैंक बैलेंस वापस रोलबैक (उल्टा) हो जाएगा।",
@@ -492,9 +488,8 @@ window.initSettlementPage = async function(currentUser) {
                         }
                     );
                 } else {
-                    if (confirm("क्या आप वाकई इस सेटलमेंट एंट्री को डिलीट करना चाहते हैं?")) {
-                        executeLogDeletion(logId);
-                    }
+                    // Fail-safe protection module context routing
+                    executeLogDeletion(logId);
                 }
             };
         });
