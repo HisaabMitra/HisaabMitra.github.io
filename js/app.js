@@ -184,6 +184,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error("❌ initSettlementPage function missing in settlement.js scope!");
             }
         }
+
+        // 💼 COUNTER CASH MANAGER ACTIVE VIEW ROUTER HOOK
+if (pageName === 'cash-manager') {
+    if (typeof window.initCashManagerPage === 'function') {
+        console.log("💼 Triggering Jarvis Cash Manager Engine...");
+        window.initCashManagerPage(currentLoggedInUser);
+    } else {
+        console.error("❌ initCashManagerPage function missing in cash-manager.js scope!");
+    }
+}
         
         // ⚡ SAFETY FALLBACK FOR UNBUILT PARTS (IMPS, REPORTS, EXPENSES)
         if (['imps', 'report', 'expense'].includes(pageName)) {
