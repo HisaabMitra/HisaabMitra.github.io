@@ -32,17 +32,18 @@ window.initAccountsManagerPage = async function(currentUser) {
         renderLinkedAccountsTable();
     }
 
-    // 📑 [TABS TOGGLE LOGIC SWITCHER]: Dynamic UI changing without losing state
+   // 📑 [TABS TOGGLE LOGIC SWITCHER]: Fully Fixed Maroon Theme Toggle
     document.querySelectorAll('.account-tab').forEach(tab => {
         tab.onclick = function() {
+            // Puraane saare tabs ko reset (deactivate) karein
             document.querySelectorAll('.account-tab').forEach(t => {
                 t.style.background = '#e9ecef';
                 t.style.color = '#333';
                 t.classList.remove('active');
             });
 
-            // Set current active styles
-            this.style.background = '#0056b3';
+            // ⭐ FIX: Active tab ko ab Blue ke bajay pure Jarvis Maroon (#7d0022) rang milega
+            this.style.background = '#7d0022';
             this.style.color = 'white';
             this.classList.add('active');
 
@@ -54,7 +55,6 @@ window.initAccountsManagerPage = async function(currentUser) {
                 lblBalance.innerText = currentActiveType === 'loan' ? "Loan Outstanding Balance (₹):" : "Opening / Current Balance (₹):";
             }
 
-            // Notice simulation for unbuilt backend models if clicked on OD or Loan
             if (currentActiveType !== 'saving') {
                 console.log(`ℹ️ Switch to ${currentActiveType} mode layout template ready.`);
             }
