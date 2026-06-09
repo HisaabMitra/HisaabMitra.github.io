@@ -387,16 +387,36 @@ function dispatchPrintStream(transactionId) {
 }
 
 /**
- * Reset form input parameters
+ * Global Initialization Entry Point required by app.js router
+ */
+window.initFundTransferPage = function() {
+    console.log("🚀 app.js routing invoked initFundTransferPage()");
+    clearFundTransferForm();
+    refreshTransferLedger();
+};
+
+/**
+ * Reset form input parameters safely checking element existence
  */
 function clearFundTransferForm() {
-    document.getElementById('ft-from-aadhaar').value = '';
-    document.getElementById('ft-to-aadhaar').value = '';
-    document.getElementById('ft-from-name').innerText = '';
-    document.getElementById('ft-to-name').innerText = '';
-    document.getElementById('ft-amount').value = '';
-    document.getElementById('ft-amount-words').innerText = 'Amount in words will appear here...';
-    document.getElementById('ft-remarks').value = '';
+    const fromAadhaar = document.getElementById('ft-from-aadhaar');
+    const toAadhaar = document.getElementById('ft-to-aadhaar');
+    const fromName = document.getElementById('ft-from-name');
+    const toName = document.getElementById('ft-to-name');
+    const amount = document.getElementById('ft-amount');
+    const amountWords = document.getElementById('ft-amount-words');
+    const remarks = document.getElementById('ft-remarks');
+
+    // Element checks lagaye hain taaki null property error na aaye agar ID different ho
+    if (fromAadhaar) fromAadhaar.value = '';
+    if (toAadhaar) toAadhaar.value = '';
+    if (fromName) fromName.innerText = '';
+    if (toName) toName.innerText = '';
+    if (amount) amount.value = '';
+    if (amountWords) amountWords.innerText = 'Amount in words will appear here...';
+    if (remarks) remarks.value = '';
+    
     isAuthorizedTarget = false;
     targetAccountDetails = null;
+    console.log("🧼 Fund Transfer Form Cleared");
 }
