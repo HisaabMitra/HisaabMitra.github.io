@@ -1,121 +1,83 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aadhaar to Aadhaar Fund Transfer</title>
-    <link rel="stylesheet" href="css/bootstrap.min.css">
-    <link rel="stylesheet" href="css/adminlte.min.css">
-    <link rel="stylesheet" href="css/font-awesome/css/font-awesome.min.css">
-    <style>
-        .remitter-section {
-            border-left: 4px solid #007bff; /* Primary color */
-            background-color: #f8f9fa;
-        }
-        .beneficiary-section {
-            border-left: 4px solid #28a745; /* Success color */
-            background-color: #f8f9fa;
-        }
-        .custom-card-header {
-            background-color: #f4f6f9;
-            border-bottom: 1px solid #e3e6f0;
-        }
-    </style>
-</head>
-<body class="hold-transition sidebar-mini">
-<div class="wrapper">
-    <div class="content-wrapper">
-        <section class="content-header">
-            <div class="container-fluid">
-                <div class="row mb-2">
-                    <div class="col-sm-6">
-                        <h1>Aadhaar to Aadhaar Fund Transfer</h1>
-                    </div>
-                </div>
+<div id="jarvis-fund-transfer-wrapper" style="display: flex; gap: 25px; padding: 20px; max-width: 1300px; margin: 0 auto; font-family: sans-serif; text-align: left; box-sizing: border-box; flex-wrap: wrap;">
+    
+    <div style="flex: 1.2; min-width: 450px; background: #ffffff; padding: 22px; border-radius: 6px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-top: 5px solid #7d0022; border: 1px solid #dee2e6; border-top-width: 5px; box-sizing: border-box;">
+        
+        <div style="border-bottom: 3px solid #7d0022; padding-bottom: 12px; margin-bottom: 20px;">
+            <h2 style="color: #7d0022; margin: 0; font-size: 1.4rem; font-weight: bold;">💸 आधार से आधार फंड ट्रांसफर</h2>
+            <p style="margin: 5px 0 0 0; color: #555; font-size: 0.85rem;">Direct Aadhaar to Aadhaar secure account transfer.</p>
+        </div>
+
+        <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 15px;">
+            <div style="flex: 1; min-width: 200px;">
+                <label style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.9rem; color: #333;">From Aadhaar Number (Remitter):</label>
+                <input type="text" id="ft-from-aadhaar" placeholder="Enter 12 digit Aadhaar" maxlength="12" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem; box-sizing: border-box;">
+                <div id="ft-from-name" style="margin-top: 6px; color: #28a745; font-weight: bold; font-size: 0.85rem; min-height: 18px;"></div>
             </div>
-        </section>
 
-        <section class="content">
-            <div class="container-fluid">
-                <div class="card">
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-6 remitter-section p-3">
-                                <h4 class="text-primary"><i class="fa fa-user"></i> Remitter Details (From)</h4>
-                                <div class="form-group">
-                                    <label for="fromAadhaar">Remitter Aadhaar Number</label>
-                                    <input type="text" id="fromAadhaar" class="form-control" placeholder="Enter 12 digit Aadhaar" maxlength="12">
-                                    <div id="fromNameLabel" class="form-text text-success font-weight-bold mt-2"></div>
-                                </div>
-                            </div>
+            <div style="flex: 1; min-width: 200px;">
+                <label style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.9rem; color: #333;">To Aadhaar Number (Beneficiary):</label>
+                <input type="text" id="ft-to-aadhaar" placeholder="Enter 12 digit Aadhaar" maxlength="12" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem; box-sizing: border-box;">
+                <div id="ft-to-name" style="margin-top: 6px; color: #28a745; font-weight: bold; font-size: 0.85rem; min-height: 18px;"></div>
+            </div>
+        </div>
 
-                            <div class="col-md-6 beneficiary-section p-3">
-                                <h4 class="text-success"><i class="fa fa-user-plus"></i> Beneficiary Details (To)</h4>
-                                <div class="form-group">
-                                    <label for="toAadhaar">Beneficiary Aadhaar Number</label>
-                                    <input type="text" id="toAadhaar" class="form-control" placeholder="Enter 12 digit Aadhaar" maxlength="12">
-                                    <div id="toNameLabel" class="form-text text-success font-weight-bold mt-2"></div>
-                                </div>
-                            </div>
-                        </div>
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.9rem; color: #333;">Amount (₹):</label>
+            <input type="number" id="ft-amount" placeholder="0" min="1" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem; box-sizing: border-box;">
+        </div>
 
-                        <hr>
+        <div style="margin-bottom: 15px;">
+            <div id="ft-amount-words" style="background: #fafafa; padding: 12px; border-radius: 4px; border: 1px solid #eef0f2; color: #666; font-size: 0.85rem; font-style: italic; min-height: 40px; box-sizing: border-box;">
+                Amount in words will appear here...
+            </div>
+        </div>
 
-                        <div class="row mt-3">
-                            <div class="col-md-4 form-group">
-                                <label for="transferAmount">Amount to Transfer</label>
-                                <input type="number" id="transferAmount" class="form-control" placeholder="Enter Amount">
-                            </div>
-                            <div class="col-md-8 form-group d-flex align-items-end">
-                                <label for="amountInWords" class="sr-only">Amount in Words</label>
-                                <div id="amountInWords" class="alert alert-secondary w-100 p-2 text-muted" style="min-height: 38px;">Amount in words...</div>
-                            </div>
-                        </div>
+        <div style="margin-bottom: 20px;">
+            <label style="display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.9rem; color: #333;">Remarks:</label>
+            <input type="text" id="ft-remarks" placeholder="Enter transfer remarks..." style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem; box-sizing: border-box;">
+        </div>
 
-                        <div class="row">
-                            <div class="col-md-12 form-group">
-                                <label for="transferRemarks">Remarks</label>
-                                <textarea id="transferRemarks" class="form-control" rows="2" placeholder="Enter remarks (Optional)"></textarea>
-                            </div>
-                        </div>
+        <div style="display: flex; gap: 15px; justify-content: flex-end; margin-top: 25px; border-top: 1px dashed #dee2e6; padding-top: 15px;">
+            <button type="button" id="btn-ft-master-save" style="width: 100%; padding: 14px; background: #7d0022; color: #ffffff; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 1rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: 0.2s;">
+                💾 Save Fund Transfer
+            </button>
+        </div>
+    </div>
 
-                        <div class="row mt-4 mb-4">
-                            <div class="col-md-12">
-                                <button id="btnSaveTransfer" class="btn btn-primary btn-lg btn-block">
-                                    <i class="fa fa-save"></i> Save Fund Transfer
-                                </button>
-                            </div>
-                        </div>
+    <div style="flex: 1.4; min-width: 500px; background: #ffffff; padding: 22px; border-radius: 6px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-top: 5px solid #28a745; border: 1px solid #dee2e6; border-top-width: 5px; box-sizing: border-box;">
+        
+        <div style="border-bottom: 3px solid #28a745; padding-bottom: 12px; margin-bottom: 20px;">
+            <h2 style="color: #28a745; margin: 0; font-size: 1.4rem; font-weight: bold;">📊 Recent Fund Transfers</h2>
+            <p style="margin: 5px 0 0 0; color: #555; font-size: 0.85rem;">Live status of transfers. Edit details or print receipts below.</p>
+        </div>
 
-                        <div class="card card-outline card-info">
-                            <div class="card-header custom-card-header">
-                                <h3 class="card-title text-info"><i class="fa fa-list"></i> Recent Transfers</h3>
-                            </div>
-                            <div class="card-body p-0">
-                                <table class="table table-bordered table-striped table-hover" id="transferTable">
-                                    <thead class="bg-light">
-                                        <tr>
-                                            <th>ID</th>
-                                            <th>Date & Time</th>
-                                            <th>From Aadhaar (Remitter)</th>
-                                            <th>To Aadhaar (Beneficiary)</th>
-                                            <th>Amount (₹)</th>
-                                            <th>Remarks</th>
-                                            <th>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="transferTableBody">
-                                        <tr>
-                                            <td colspan="7" class="text-center text-muted">No recent transfers found.</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div> </div> </div> </section>
-    </div> </div> <script src="js/jquery.min.js"></script>
-<script src="js/bootstrap.bundle.min.js"></script>
-<script src="js/adminlte.min.js"></script>
-<script src="js/fund-transfer.js"></script>
-</body>
-</html>
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
+                <thead>
+                    <tr style="background: #f8f9fa; border-bottom: 2px solid #dee2e6;">
+                        <th style="padding: 10px; color: #495057; font-weight: bold;">Details</th>
+                        <th style="padding: 10px; color: #495057; font-weight: bold;">Amount</th>
+                        <th style="padding: 10px; color: #495057; font-weight: bold; text-align: center;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="ft-today-table-body">
+                    <tr>
+                        <td style="padding: 10px; border-bottom: 1px solid #eee;">
+                            <small style="color: #666; display: block;">ID: #1001 | 09-06-2026</small>
+                            <strong>From:</strong> 1234-5678-9012 (Amit Kumar)<br>
+                            <strong>To:</strong> 9876-5432-1098 (Authorized Staff)
+                        </td>
+                        <td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold; color: #7d0022; vertical-align: middle;">
+                            ₹5,000.00
+                        </td>
+                        <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: center; vertical-align: middle;">
+                            <button type="button" class="btn-ft-edit" style="padding: 5px 10px; background: #ffc107; color: #000; border: none; border-radius: 3px; cursor: pointer; font-weight: bold; font-size: 0.8rem; margin-right: 5px;">✏️ Edit</button>
+                            <button type="button" class="btn-ft-print" style="padding: 5px 10px; background: #17a2b8; color: #fff; border: none; border-radius: 3px; cursor: pointer; font-weight: bold; font-size: 0.8rem;">🖨️ Print</button>
+                        </td>
+                    </tr>
+                    </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
