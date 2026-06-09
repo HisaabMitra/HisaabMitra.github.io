@@ -1,68 +1,121 @@
-<div class="container-fluid mt-4">
-    <h2 class="mb-4">Aadhaar to Aadhaar Fund Transfer System</h2>
-    
-    <div class="row">
-        <div class="col-md-6 border-end">
-            <h4 class="text-primary">From (Remitter)</h4>
-            <div class="mb-3">
-                <label for="fromAadhaar" class="form-label">Aadhaar Number</label>
-                <input type="text" id="fromAadhaar" class="form-control" maxlength="12" placeholder="Enter 12 digit Aadhaar">
-                <div id="fromNameLabel" class="form-text text-success fw-bold mt-2"></div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aadhaar to Aadhaar Fund Transfer</title>
+    <link rel="stylesheet" href="css/bootstrap.min.css">
+    <link rel="stylesheet" href="css/adminlte.min.css">
+    <link rel="stylesheet" href="css/font-awesome/css/font-awesome.min.css">
+    <style>
+        .remitter-section {
+            border-left: 4px solid #007bff; /* Primary color */
+            background-color: #f8f9fa;
+        }
+        .beneficiary-section {
+            border-left: 4px solid #28a745; /* Success color */
+            background-color: #f8f9fa;
+        }
+        .custom-card-header {
+            background-color: #f4f6f9;
+            border-bottom: 1px solid #e3e6f0;
+        }
+    </style>
+</head>
+<body class="hold-transition sidebar-mini">
+<div class="wrapper">
+    <div class="content-wrapper">
+        <section class="content-header">
+            <div class="container-fluid">
+                <div class="row mb-2">
+                    <div class="col-sm-6">
+                        <h1>Aadhaar to Aadhaar Fund Transfer</h1>
+                    </div>
+                </div>
             </div>
-        </div>
+        </section>
 
-        <div class="col-md-6">
-            <h4 class="text-success">To (Beneficiary)</h4>
-            <div class="mb-3">
-                <label for="toAadhaar" class="form-label">Aadhaar Number</label>
-                <input type="text" id="toAadhaar" class="form-control" maxlength="12" placeholder="Enter 12 digit Aadhaar">
-                <div id="toNameLabel" class="form-text text-success fw-bold mt-2"></div>
-            </div>
-        </div>
-    </div>
+        <section class="content">
+            <div class="container-fluid">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 remitter-section p-3">
+                                <h4 class="text-primary"><i class="fa fa-user"></i> Remitter Details (From)</h4>
+                                <div class="form-group">
+                                    <label for="fromAadhaar">Remitter Aadhaar Number</label>
+                                    <input type="text" id="fromAadhaar" class="form-control" placeholder="Enter 12 digit Aadhaar" maxlength="12">
+                                    <div id="fromNameLabel" class="form-text text-success font-weight-bold mt-2"></div>
+                                </div>
+                            </div>
 
-    <hr>
+                            <div class="col-md-6 beneficiary-section p-3">
+                                <h4 class="text-success"><i class="fa fa-user-plus"></i> Beneficiary Details (To)</h4>
+                                <div class="form-group">
+                                    <label for="toAadhaar">Beneficiary Aadhaar Number</label>
+                                    <input type="text" id="toAadhaar" class="form-control" placeholder="Enter 12 digit Aadhaar" maxlength="12">
+                                    <div id="toNameLabel" class="form-text text-success font-weight-bold mt-2"></div>
+                                </div>
+                            </div>
+                        </div>
 
-    <div class="row mt-3">
-        <div class="col-md-4 mb-3">
-            <label for="transferAmount" class="form-label">Amount</label>
-            <input type="number" id="transferAmount" class="form-control" placeholder="Enter Amount">
-        </div>
-        <div class="col-md-8 mb-3 align-self-end">
-            <div id="amountInWords" class="alert alert-secondary py-2" style="min-height: 38px;">Amount in words...</div>
-        </div>
-    </div>
+                        <hr>
 
-    <div class="row">
-        <div class="col-md-12 mb-3">
-            <label for="transferRemarks" class="form-label">Remarks</label>
-            <input type="text" id="transferRemarks" class="form-control" placeholder="Enter Remarks">
-        </div>
-    </div>
+                        <div class="row mt-3">
+                            <div class="col-md-4 form-group">
+                                <label for="transferAmount">Amount to Transfer</label>
+                                <input type="number" id="transferAmount" class="form-control" placeholder="Enter Amount">
+                            </div>
+                            <div class="col-md-8 form-group d-flex align-items-end">
+                                <label for="amountInWords" class="sr-only">Amount in Words</label>
+                                <div id="amountInWords" class="alert alert-secondary w-100 p-2 text-muted" style="min-height: 38px;">Amount in words...</div>
+                            </div>
+                        </div>
 
-    <div class="row mb-4">
-        <div class="col-md-12">
-            <button id="btnSaveTransfer" class="btn btn-primary btn-lg w-100">Save Transfer</button>
-        </div>
-    </div>
+                        <div class="row">
+                            <div class="col-md-12 form-group">
+                                <label for="transferRemarks">Remarks</label>
+                                <textarea id="transferRemarks" class="form-control" rows="2" placeholder="Enter remarks (Optional)"></textarea>
+                            </div>
+                        </div>
 
-    <div class="row">
-        <div class="col-md-12">
-            <h4>Recent Transfers</h4>
-            <table class="table table-bordered table-striped" id="transferTable">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>From Aadhaar</th>
-                        <th>To Aadhaar</th>
-                        <th>Amount</th>
-                        <th>Remarks</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="transferTableBody">
-                    </tbody>
-            </table>
-        </div>
-    </div>
-</div>
+                        <div class="row mt-4 mb-4">
+                            <div class="col-md-12">
+                                <button id="btnSaveTransfer" class="btn btn-primary btn-lg btn-block">
+                                    <i class="fa fa-save"></i> Save Fund Transfer
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="card card-outline card-info">
+                            <div class="card-header custom-card-header">
+                                <h3 class="card-title text-info"><i class="fa fa-list"></i> Recent Transfers</h3>
+                            </div>
+                            <div class="card-body p-0">
+                                <table class="table table-bordered table-striped table-hover" id="transferTable">
+                                    <thead class="bg-light">
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Date & Time</th>
+                                            <th>From Aadhaar (Remitter)</th>
+                                            <th>To Aadhaar (Beneficiary)</th>
+                                            <th>Amount (₹)</th>
+                                            <th>Remarks</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="transferTableBody">
+                                        <tr>
+                                            <td colspan="7" class="text-center text-muted">No recent transfers found.</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div> </div> </div> </section>
+    </div> </div> <script src="js/jquery.min.js"></script>
+<script src="js/bootstrap.bundle.min.js"></script>
+<script src="js/adminlte.min.js"></script>
+<script src="js/fund-transfer.js"></script>
+</body>
+</html>
