@@ -1,368 +1,325 @@
-// ========================================================
-// 💸 DIRECT CUSTOMER-TO-CUSTOMER FUND TRANSFER ENGINE (STREAMLINED CORE)
-// ========================================================
+/**
+ * Aadhaar-to-Aadhaar Fund Transfer System Core Logic
+ * Handles dynamic search, validation, automated registration modal triggers, 
+ * amount-to-words parsing, authorized staff checks, and local storage/state rendering.
+ */
 
-window.initFundTransferPage = async function(currentUser) {
-    console.log("⚡ Jarvis Fund Transfer Engine Initializing...");
+// Global state tracking for transaction constraints
+let isAuthorizedTarget = false;
+let currentActiveTransfers = [];
 
-    // UI Input Elements Hooking
-    const fromAadhaarInput = document.getElementById('ft-from-aadhaar');
-    const toAadhaarInput = document.getElementById('ft-to-aadhaar');
-    const ftAmountInput = document.getElementById('ft-amount');
-    const ftRemarksInput = document.getElementById('ft-remarks');
-    
-    // Live UI Labels
-    const lblFromName = document.getElementById('lbl-ft-from-name');
-    const lblToName = document.getElementById('lbl-ft-to-name');
-    const ftWordsDisplay = document.getElementById('ft-amount-words');
+document.addEventListener("DOMContentLoaded", function () {
+    // 1. Initial configuration and cache loading
+    initializeFundTransferSystem();
 
-    // New Architectural Node References
-    const tellyStatusNode = document.getElementById('ft-live-telly-status-node');
-    const denomWrapper = document.getElementById('ft-denomination-wrapper-node');
-    const btnBypassDenom = document.getElementById('btn-ft-bypass-denom');
+    // 2. Event Binding for Aadhaar input handling (From Side)
+    document.getElementById('ft-from-aadhaar').addEventListener('blur', function () {
+        processIdentityLookup(this.value, 'ft-from-name', this.id);
+    });
 
-    // Global Tracking Flags for Verification
-    let isFromCustomerValid = false;
-    let isToCustomerValid = false;
-    
-    // State Memory Tracks Matrix
-    window.matchedSavingAccountObj = null; 
-    window.denomInjectedActive = false;
+    // 3. Event Binding for Aadhaar input handling (To Side)
+    document.getElementById('ft-to-aadhaar').addEventListener('blur', function () {
+        processIdentityLookup(this.value, 'ft-to-name', this.id);
+    });
 
-    try {
-        // 📊 [LEDGER SYSTEM]: Aaj ki live fund transfer summary load karna
-        window.loadTodayFundTransfers = async function() {
-            const tbody = document.getElementById('today-ft-body');
-            if (!tbody) return;
+    // 4. Reactive Amount Monitoring for Text Translation
+    document.getElementById('ft-amount').addEventListener('input', function () {
+        evaluateAmountConversion(this.value);
+    });
 
-            const todayStr = new Date().toISOString().split('T')[0];
+    // 5. Global Action trigger for primary storage lifecycle
+    document.getElementById('btn-ft-master-save').addEventListener('click', function () {
+        executeFundTransferPersistence();
+    });
+});
 
-            try {
-                const { data, error } = await window.supabaseClient
-                    .from('fund_transfers')
-                    .select('*')
-                    .eq('ko_code', currentUser.ko_code)
-                    .gte('transaction_date', `${todayStr}T00:00:00`)
-                    .order('transaction_date', { ascending: false });
+/**
+ * Initializes setup and pulls historical daily context rows
+ */
+function initializeFundTransferSystem() {
+    clearFundTransferForm();
+    refreshTransferLedger();
+}
 
-                if (error) throw error;
+/**
+ * Handles Identity lookups across public.banking_customers schema
+ */
+function processIdentityLookup(aadhaarVal, displayLabelId, inputFieldId) {
+    const cleansedAadhaar = aadhaarVal.trim();
+    const labelSelector = document.getElementById(displayLabelId);
 
-                tbody.innerHTML = '';
-                if (!data || data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:15px; color:#777;">आज काउंटर पर कोई फंड ट्रांसफर नहीं मिला</td></tr>';
-                    return;
-                }
-
-                // Table Rows Rendering with Complete Look (No Masking)
-                data.forEach((tx, index) => {
-                    const timeStr = new Date(tx.transaction_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                    const txStr = btoa(unescape(encodeURIComponent(JSON.stringify(tx))));
-                    const srNo = data.length - index;
-
-                    const displayFromId = tx.from_aadhaar || "REF-" + tx.id.slice(0,6);
-                    const displayToId = tx.to_aadhaar || "REF-" + tx.id.slice(0,6);
-
-                    tbody.insertAdjacentHTML('beforeend', `
-                        <tr style="border-bottom: 1px solid #eee; vertical-align: middle;">
-                            <td style="padding:12px; font-weight: bold; color: #555; text-align:center;">${srNo}</td>
-                            <td style="padding:12px; font-weight: 600; letter-spacing:0.5px;">
-                                <span style="color: #7d0022;">${displayFromId}</span><br>
-                                <small style="color:#6c757d; font-weight: normal; text-transform: uppercase;">${tx.from_customer_name}</small>
-                            </td>
-                            <td style="padding:12px; font-weight: 600; letter-spacing:0.5px;">
-                                <span style="color: #27ae60;">${displayToId}</span><br>
-                                <small style="color:#6c757d; font-weight: normal; text-transform: uppercase;">${tx.to_customer_name}</small>
-                            </td>
-                            <td style="padding:12px; font-weight:bold; color:#0f5132;">₹${parseFloat(tx.amount).toFixed(2)}</td>
-                            <td style="padding:12px; font-weight: 500; color: #555;">${timeStr} ${tx.denomination_json ? '📊' : ''}</td>
-                            <td style="padding:12px; text-align:center;">
-                                <div style="display:inline-flex; align-items:center; gap:15px; justify-content:center;">
-                                    <span class="btn-edit-ft-tx" data-tx="${txStr}" style="cursor:pointer; font-size:1.1rem; user-select:none;" title="Edit Entry">✏️</span>
-                                    <span class="btn-print-ft-receipt" data-tx="${txStr}" style="cursor:pointer; font-size:1.2rem; user-select:none;" title="Print Slip">🖨️</span>
-                                    <span class="btn-delete-ft-tx" data-id="${tx.id}" style="cursor:pointer; font-size:1.1rem; user-select:none;" title="Delete & Rollback">🗑️</span>
-                                </div>
-                            </td>
-                        </tr>
-                    `);
-                });
-
-                attachFundTransferActionListeners();
-
-            } catch (err) {
-                console.error("Fund Transfer Ledger Load Error:", err);
-            }
-        };
-
-        // 🔍 [RADAR VERIFIER MODULE]: Customer Validator Lookup + Bank Account Cross-Telly
-        async function verifyCustomerAadhaar(aadhaarInput, lblNameElement, isSender) {
-            const aadhaarNo = aadhaarInput.value.trim();
-            if (!aadhaarNo) {
-                if (isSender) isFromCustomerValid = false; else isToCustomerValid = false;
-                lblNameElement.innerText = "--";
-                lblNameElement.style.color = "#333";
-                if (!isSender && tellyStatusNode) tellyStatusNode.innerHTML = '';
-                return;
-            }
-
-            // Strict Regex validation loop check parameters bounds
-            if (aadhaarNo.length !== 12 || !/^\d+$/.test(aadhaarNo)) {
-                window.showSystemAlert("आधार नंबर पूरे 12 अंकों का होना अनिवार्य है!", "Validation Error", "❌");
-                if (isSender) isFromCustomerValid = false; else isToCustomerValid = false;
-                lblNameElement.innerText = "INVALID FORMAT";
-                lblNameElement.style.color = "#dc3545";
-                if (!isSender && tellyStatusNode) tellyStatusNode.innerHTML = '';
-                return;
-            }
-
-            lblNameElement.innerText = "Searching database...";
-            lblNameElement.style.color = "#6c757d";
-
-            try {
-                const { data: customer, error } = await window.supabaseClient
-                    .from('banking_customers')
-                    .select('*')
-                    .eq('aadhaar_number', aadhaarNo)
-                    .maybeSingle();
-
-                if (error) throw error;
-
-                if (customer) {
-                    lblNameElement.innerText = customer.customer_name.toUpperCase();
-                    lblNameElement.style.color = isSender ? "#7d0022" : "#27ae60";
-                    if (isSender) isFromCustomerValid = true; else isToCustomerValid = true;
-
-                    // ⭐ NEW UPGRADE GATE: Cross-telly logic filter specifically for Receiver
-                    if (!isSender && tellyStatusNode) {
-                        tellyStatusNode.innerHTML = `<span style="color:#6c757d;">🔍 Cross-checking secure accounts manager nodes...</span>`;
-                        
-                        const { data: bankAcc, error: bankErr } = await window.supabaseClient
-                            .from('saving_bank_accounts')
-                            .select('*')
-                            .eq('aadhar_number', aadhaarNo)
-                            .maybeSingle();
-
-                        if (bankErr) throw bankErr;
-
-                        if (bankAcc) {
-                            window.matchedSavingAccountObj = bankAcc;
-                            tellyStatusNode.innerHTML = `<span style="color:#28a745;">✅ Authorized Account Node Detected (${bankAcc.bank_name})</span>`;
-                        } else {
-                            window.matchedSavingAccountObj = null;
-                            tellyStatusNode.innerHTML = `<span style="color:#e67e22;">ℹ️ External Routing Node (No cash adjustments)</span>`;
-                        }
-                    }
-
-                } else {
-                    lblNameElement.innerText = "NOT REGISTERED";
-                    lblNameElement.style.color = "#e67e22";
-                    if (isSender) isFromCustomerValid = false; else isToCustomerValid = false;
-                    if (!isSender && tellyStatusNode) tellyStatusNode.innerHTML = '';
-
-                    if (window.showDynamicNewCustomerModal) {
-                        window.showDynamicNewCustomerModal({
-                            source: 'fundtransfer',
-                            aadhaar_number: aadhaarNo
-                        }).then(regResult => {
-                            if (regResult && regResult.success) {
-                                lblNameElement.innerText = regResult.customer_name.toUpperCase();
-                                lblNameElement.style.color = isSender ? "#7d0022" : "#27ae60";
-                                if (isSender) isFromCustomerValid = true; else isToCustomerValid = true;
-                                if (!isSender) verifyCustomerAadhaar(aadhaarInput, lblNameElement, false);
-                            } else {
-                                lblNameElement.innerText = "--";
-                                lblNameElement.style.color = "#333";
-                                aadhaarInput.value = "";
-                                aadhaarInput.focus();
-                            }
-                        }).catch(err => {
-                            console.error("Global Modal Error:", err);
-                            lblNameElement.innerText = "--";
-                        });
-                    }
-                }
-            } catch (err) {
-                console.error("Database Customer Search Error:", err);
-                lblNameElement.innerText = "ERROR";
-                lblNameElement.style.color = "#dc3545";
-                if (!isSender && tellyStatusNode) tellyStatusNode.innerHTML = '';
-            }
-        }
-
-        // Attach Shunted Primitive Event Assignment Listeners
-        if (fromAadhaarInput) {
-            fromAadhaarInput.onblur = function() {
-                verifyCustomerAadhaar(fromAadhaarInput, lblFromName, true);
-            };
-        }
-        if (toAadhaarInput) {
-            toAadhaarInput.onblur = function() {
-                const fromVal = fromAadhaarInput ? fromAadhaarInput.value.trim() : "";
-                const toVal = toAadhaarInput.value.trim();
-                
-                if (fromVal === toVal && toVal !== "") {
-                    window.showSystemAlert("भेजने वाले और पाने वाले का आधार नंबर समान नहीं हो सकता सर!", "Operation Denied", "⚠️");
-                    toAadhaarInput.value = "";
-                    lblToName.innerText = "--";
-                    lblToName.style.color = "#333";
-                    isToCustomerValid = false;
-                    if (tellyStatusNode) tellyStatusNode.innerHTML = '';
-                    return;
-                }
-                verifyCustomerAadhaar(toAadhaarInput, lblToName, false);
-            };
-        }
-
-        // 🔢 [LIVE TRANSLATOR]: Live Hindi Words Translation
-        if (ftAmountInput) {
-            ftAmountInput.oninput = function() {
-                const amt = parseInt(ftAmountInput.value) || 0;
-                if (ftWordsDisplay) {
-                    if (amt === 0) {
-                        ftWordsDisplay.innerText = "Zero Rupees Only";
-                    } else if (typeof window.numberToHindiWords === 'function') {
-                        ftWordsDisplay.innerText = `${window.numberToHindiWords(amt)} रुपए मात्र`;
-                    } else {
-                        ftWordsDisplay.innerText = `₹${amt.toLocaleString('en-IN')} मात्र`;
-                    }
-                }
-            };
-            ftAmountInput.addEventListener('wheel', e => e.preventDefault(), { passive: false });
-        }
-
-        // 🚀 [EXECUTE MODULE HOOK]: Secure Storage Controller Bindings Connection
-        const saveBtn = document.getElementById('btn-ft-save');
-        if (saveBtn) {
-            saveBtn.onclick = async function() {
-                if (typeof window.executeFundTransferSave === 'function') {
-                    await window.executeFundTransferSave(saveBtn, currentUser, {
-                        isFromValid: isFromCustomerValid,
-                        isToValid: isToCustomerValid
-                    });
-                } else {
-                    console.error("executeFundTransferSave function missing from global window context!");
-                }
-            };
-        }
-
-        // ✏️ [ROW EVENTS HUB]: Action Controls Listeners Binding Loop
-        function attachFundTransferActionListeners() {
-            document.querySelectorAll('.btn-edit-ft-tx').forEach(btn => {
-                btn.onclick = function() {
-                    try {
-                        const txData = JSON.parse(decodeURIComponent(escape(atob(this.getAttribute('data-tx')))));
-                        
-                        fromAadhaarInput.value = txData.from_aadhaar;
-                        toAadhaarInput.value = txData.to_aadhaar;
-                        ftAmountInput.value = txData.amount;
-                        ftRemarksInput.value = txData.remarks || "";
-
-                        lblFromName.innerText = txData.from_customer_name;
-                        lblFromName.style.color = "#7d0022";
-                        lblToName.innerText = txData.to_customer_name;
-                        lblToName.style.color = "#27ae60";
-                        
-                        isFromCustomerValid = true;
-                        isToCustomerValid = true;
-
-                        if (ftWordsDisplay && typeof window.numberToHindiWords === 'function') {
-                            ftWordsDisplay.innerText = `${window.numberToHindiWords(parseInt(txData.amount))} रुपए मात्र`;
-                        }
-
-                        // ⭐ BACKLOAD HYDRATION DATA RECOVERY ON EDIT MODE
-                        if (txData.denomination_json) {
-                            window.denomInjectedActive = true;
-                            if (denomWrapper) denomWrapper.style.display = 'flex';
-                            setTimeout(() => {
-                                if (window.JarvisDenominationEngine) {
-                                    window.JarvisDenominationEngine.render('ft-injected-matrix-anchor', txData.denomination_json);
-                                }
-                            }, 150);
-                        } else {
-                            window.denomInjectedActive = false;
-                            if (denomWrapper) denomWrapper.style.display = 'none';
-                        }
-
-                        if (saveBtn) {
-                            saveBtn.innerText = "🔄 Update Transfer";
-                            saveBtn.style.background = "#d35400";
-                            saveBtn.dataset.mode = "edit";
-                            saveBtn.dataset.editingFtId = txData.id;
-                        }
-
-                        window.showSystemAlert("फंड ट्रांसफर प्रविष्टि संपादन मोड में लोड हो गई है!", "Edit Mode", "ℹ️");
-                    } catch (e) {
-                        console.error("Edit mode mapping crash:", e);
-                    }
-                };
-            });
-
-            // Delete Control Row Tracker (Link directly to fundtransfer-delete.js)
-            document.querySelectorAll('.btn-delete-ft-tx').forEach(btn => {
-                btn.onclick = async function() {
-                    const txId = this.getAttribute('data-id');
-                    if (!txId) return;
-
-                    if (typeof window.executeFundTransferDelete === 'function') {
-                        await window.executeFundTransferDelete(txId);
-                    } else {
-                        console.error("executeFundTransferDelete function missing from global window context!");
-                    }
-                };
-            });
-        }
-
-        // 🧹 [CLEAR CONTROLLER]: Form State Reset System
-        window.masterFundTransferClear = function() {
-            if (fromAadhaarInput) fromAadhaarInput.value = "";
-            if (toAadhaarInput) toAadhaarInput.value = "";
-            if (ftAmountInput) ftAmountInput.value = "";
-            if (ftRemarksInput) ftRemarksInput.value = "";
-            
-            if (lblFromName) { lblFromName.innerText = "--"; lblFromName.style.color = "#333"; }
-            if (lblToName) { lblToName.innerText = "--"; lblToName.style.color = "#333"; }
-            if (ftWordsDisplay) ftWordsDisplay.innerText = "Zero Rupees Only";
-            if (tellyStatusNode) tellyStatusNode.innerHTML = '';
-            if (denomWrapper) denomWrapper.style.display = 'none';
-
-            isFromCustomerValid = false;
-            isToCustomerValid = false;
-            window.matchedSavingAccountObj = null;
-            window.denomInjectedActive = false;
-
-            if (saveBtn) {
-                saveBtn.innerText = "🚀 Execute Transfer";
-                saveBtn.style.background = "#7d0022";
-                delete saveBtn.dataset.mode;
-                delete saveBtn.dataset.editingFtId;
-            }
-        };
-
-        const clearBtn = document.getElementById('btn-ft-clear');
-        if (clearBtn) clearBtn.onclick = window.masterFundTransferClear;
-
-        // Bypassing active denomination layout frames
-        if (btnBypassDenom) {
-            btnBypassDenom.onclick = function() {
-                window.denomInjectedActive = false;
-                if (denomWrapper) denomWrapper.style.display = 'none';
-            };
-        }
-
-        // ⌨️ Shortcuts Handler Hooks
-        document.onkeydown = function(e) {
-            if ((e.key === 's' || e.key === 'S') && (e.ctrlKey || e.metaKey)) {
-                e.preventDefault();
-                document.getElementById('btn-ft-save')?.click();
-            }
-            if (e.key === 'Escape' || e.key === 'Esc') {
-                window.masterFundTransferClear();
-            }
-        };
-
-        // Bootstrap load sequence
-        window.loadTodayFundTransfers();
-
-    } catch (err) {
-        console.error("Fund Transfer Gateway Crash:", err);
+    if (cleansedAadhaar.length !== 12 || isNaN(cleansedAadhaar)) {
+        labelSelector.style.color = '#7d0022';
+        labelSelector.innerText = "❌ Invalid Aadhaar Number format.";
+        return;
     }
-};
+
+    labelSelector.style.color = '#666';
+    labelSelector.innerText = "🔍 Checking registry...";
+
+    // Dynamic backend execution against public.banking_customers
+    fetch(`api/get_customer_by_identity.php?identity_token=${encodeURIComponent(cleansedAadhaar)}`)
+        .then(res => res.json())
+        .then(response => {
+            if (response.success && response.identity_found) {
+                labelSelector.style.color = '#28a745';
+                labelSelector.innerText = `👤 ${response.customer_name}`;
+
+                // Point 7 Evaluation: Check if Target entity exists within public.saving_bank_accounts
+                if (inputFieldId === 'ft-to-aadhaar') {
+                    evaluateAuthorizationNode(cleansedAadhaar);
+                }
+            } else {
+                // Point 4 Override: Open standard registration wrapper if entity missing
+                labelSelector.style.color = '#7d0022';
+                labelSelector.innerText = "⚠️ Identity context absent. Opening registration...";
+                invokeRegistrationGateway(cleansedAadhaar, displayLabelId, inputFieldId);
+            }
+        })
+        .catch(err => {
+            console.error("Lookup interface exception:", err);
+            labelSelector.innerText = "Error executing schema lookups.";
+        });
+}
+
+/**
+ * Evaluates target accounts within the authorized public.saving_bank_accounts grid
+ */
+function evaluateAuthorizationNode(aadhaarVal) {
+    fetch(`api/check_account_clearance.php?identity_token=${encodeURIComponent(aadhaarVal)}`)
+        .then(res => res.json())
+        .then(response => {
+            if (response.success && response.is_authorized_staff) {
+                isAuthorizedTarget = true;
+                alert("⚠️ Authorized Staff destination flagged. Cash layout tracking enforced via local inventory modules.");
+                
+                // Invoke local global inventory interface from js/withdrawal/denomination.js
+                if (typeof window.openDenominationModal === "function") {
+                    window.openDenominationModal();
+                } else {
+                    console.warn("External currency calculation system (denomination.js) unavailable.");
+                }
+            } else {
+                isAuthorizedTarget = false;
+            }
+        })
+        .catch(err => console.error("Authorization check fault:", err));
+}
+
+/**
+ * Interface routing to activate system registration dialog standard modules
+ */
+function invokeRegistrationGateway(aadhaarVal, displayLabelId, inputFieldId) {
+    if (typeof window.openWithdrawalRegistrationModal === "function") {
+        window.openWithdrawalRegistrationModal(aadhaarVal, function (newIdentityRecord) {
+            document.getElementById(inputFieldId).value = newIdentityRecord.aadhaar_number;
+            const targetLabel = document.getElementById(displayLabelId);
+            targetLabel.style.color = '#28a745';
+            targetLabel.innerText = `👤 ${newIdentityRecord.customer_name}`;
+            
+            if (inputFieldId === 'ft-to-aadhaar') {
+                evaluateAuthorizationNode(newIdentityRecord.aadhaar_number);
+            }
+        });
+    } else {
+        // Fallback interface handler if environment bindings are running asynchronously
+        let placeholderManualEntry = prompt("Customer registration fallback sequence. Enter display name:");
+        if (placeholderManualEntry) {
+            const mockIdentity = {
+                aadhaar_number: aadhaarVal,
+                customer_name: placeholderManualEntry
+            };
+            document.getElementById(inputFieldId).value = mockIdentity.aadhaar_number;
+            const targetLabel = document.getElementById(displayLabelId);
+            targetLabel.style.color = '#28a745';
+            targetLabel.innerText = `👤 ${mockIdentity.customer_name}`;
+            
+            if (inputFieldId === 'ft-to-aadhaar') {
+                evaluateAuthorizationNode(mockIdentity.aadhaar_number);
+            }
+        }
+    }
+}
+
+/**
+ * Feeds localized balance mutations out to utility structures
+ */
+function evaluateAmountConversion(numericValue) {
+    const wordTargetNode = document.getElementById('ft-amount-words');
+    if (!numericValue || parseFloat(numericValue) <= 0) {
+        wordTargetNode.innerText = "Amount in words will appear here...";
+        return;
+    }
+
+    if (typeof window.convertAmountToWords === "function") {
+        wordTargetNode.innerText = window.convertAmountToWords(numericValue);
+    } else if (typeof window.AmountInWords === "function") {
+        wordTargetNode.innerText = window.AmountInWords(numericValue);
+    } else {
+        wordTargetNode.innerText = `${numericValue} Rupees Only.`;
+    }
+}
+
+/**
+ * Orchestrates payload packing and dispatches mutations out to database structures
+ */
+function executeFundTransferPersistence() {
+    const remitterIdentity = document.getElementById('ft-from-aadhaar').value.trim();
+    const beneficiaryIdentity = document.getElementById('ft-to-aadhaar').value.trim();
+    const operationValue = document.getElementById('ft-amount').value.trim();
+    const administrativeRemarks = document.getElementById('ft-remarks').value.trim();
+
+    if (!remitterIdentity || !beneficiaryIdentity || !operationValue) {
+        alert("❌ Missing structural metrics. Complete all mandatory properties.");
+        return;
+    }
+
+    // Point 7 Validation Verification: Reconcile input values against physical inventory mutations
+    let bundledDenominationMetadata = null;
+    if (isAuthorizedTarget) {
+        if (typeof window.getCurrentDenominationTotal === "function") {
+            const calculatedSum = window.getCurrentDenominationTotal();
+            if (parseFloat(calculatedSum) !== parseFloat(operationValue)) {
+                alert(`❌ Denomination discrepancy detected. Physical tracking total (${calculatedSum}) must scale identically with stated currency target amount (${operationValue}).`);
+                return;
+            }
+            bundledDenominationMetadata = window.getDenominationMatrix ? window.getDenominationMatrix() : {};
+        } else {
+            alert("⚠️ Inventory mapping script is structurally decoupled from current active view context.");
+        }
+    }
+
+    const payloadContext = {
+        source_identity: remitterIdentity,
+        destination_identity: beneficiaryIdentity,
+        allocated_amount: parseFloat(operationValue),
+        notes: administrativeRemarks,
+        is_staff_involved: isAuthorizedTarget,
+        inventory_adjustments: bundledDenominationMetadata
+    };
+
+    fetch('api/persist_fund_transfer.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payloadContext)
+    })
+    .then(res => res.json())
+    .then(response => {
+        if (response.success) {
+            alert("🎉 Asset execution completed. Ledger record appended successfully.");
+            clearFundTransferForm();
+            refreshTransferLedger();
+        } else {
+            alert(`Execution failure: ${response.message}`);
+        }
+    })
+    .catch(err => console.error("Pipeline failure:", err));
+}
+
+/**
+ * Gathers active operational events from active daily table segments
+ */
+function refreshTransferLedger() {
+    fetch('api/fetch_daily_transfers.php')
+        .then(res => res.json())
+        .then(data => {
+            const contentMountPoint = document.getElementById('ft-today-table-body');
+            contentMountPoint.innerHTML = ''; // Dynamic clean state reset
+
+            if (!data || data.length === 0) {
+                contentMountPoint.innerHTML = `
+                    <tr>
+                        <td colspan="3" style="padding: 20px; text-align: center; color: #888; font-style: italic;">No entries recorded today yet.</td>
+                    </tr>`;
+                return;
+            }
+
+            currentActiveTransfers = data;
+
+            data.forEach(entry => {
+                const rowStructure = document.createElement('tr');
+                rowStructure.innerHTML = `
+                    <td style="padding: 10px; border-bottom: 1px solid #eee;">
+                        <small style="color: #666; display: block;">ID: #${entry.transaction_id} | ${entry.timestamp}</small>
+                        <strong>From:</strong> ${entry.source_identity_masked} (${entry.source_name})<br>
+                        <strong>To:</strong> ${entry.destination_identity_masked} (${entry.destination_name})
+                    </td>
+                    <td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold; color: #7d0022; vertical-align: middle;">
+                        ₹${parseFloat(entry.allocated_amount).toFixed(2)}
+                    </td>
+                    <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: center; vertical-align: middle;">
+                        <button type="button" onclick="initializeTransactionRollback('${entry.transaction_id}', 'edit')" style="background: transparent; border: none; cursor: pointer; font-size: 1.1rem; padding: 4px;" title="Edit Entry">✏️</button>
+                        <button type="button" onclick="initializeTransactionRollback('${entry.transaction_id}', 'delete')" style="background: transparent; border: none; cursor: pointer; font-size: 1.1rem; padding: 4px;" title="Delete Entry">🗑️</button>
+                        <button type="button" onclick="dispatchPrintStream('${entry.transaction_id}')" style="background: transparent; border: none; cursor: pointer; font-size: 1.1rem; padding: 4px;" title="Print Receipt">🖨️</button>
+                    </td>
+                `;
+                contentMountPoint.appendChild(rowStructure);
+            });
+        })
+        .catch(err => console.error("Error refreshing ledger tables:", err));
+}
+
+/**
+ * Handles cascading database resets for records and returns notes back to physical cash vaults
+ */
+function initializeTransactionRollback(transactionId, pipelineAction) {
+    const targetingMessage = pipelineAction === 'edit' 
+        ? "Editing this record will completely roll back transaction updates, balance changes, and note inventory metrics. Proceed?" 
+        : "Are you certain you want to purge this record and revert adjustments to system inventory?";
+        
+    if (!confirm(targetingMessage)) return;
+
+    fetch('api/rollback_fund_transfer.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ transaction_id: transactionId, execution_mode: pipelineAction })
+    })
+    .then(res => res.json())
+    .then(response => {
+        if (response.success) {
+            alert(`Operation execution succeeded: Record states successfully re-adjusted.`);
+            
+            if (pipelineAction === 'edit' && response.cached_payload) {
+                // Pre-populate input configurations for quick corrective editing
+                document.getElementById('ft-from-aadhaar').value = response.cached_payload.source_identity || '';
+                document.getElementById('ft-to-aadhaar').value = response.cached_payload.destination_identity || '';
+                document.getElementById('ft-amount').value = response.cached_payload.allocated_amount || '';
+                document.getElementById('ft-remarks').value = response.cached_payload.notes || '';
+                
+                // Repopulate dynamic calculations
+                processIdentityLookup(response.cached_payload.source_identity, 'ft-from-name', 'ft-from-aadhaar');
+                processIdentityLookup(response.cached_payload.destination_identity, 'ft-to-name', 'ft-to-aadhaar');
+                evaluateAmountConversion(response.cached_payload.allocated_amount);
+            }
+            refreshTransferLedger();
+        } else {
+            alert(`Rollback fault instance: ${response.message}`);
+        }
+    })
+    .catch(err => console.error("Rollback execution framework exception:", err));
+}
+
+/**
+ * Integrates directly with withdrawal printing routines on consecutive lines
+ */
+function dispatchPrintStream(transactionId) {
+    if (typeof window.printWithdrawalReceipt === "function") {
+        window.printWithdrawalReceipt(transactionId, "fund-transfer-stream");
+    } else {
+        alert(`Print processing stream triggered for Target Event Code: #${transactionId}`);
+    }
+}
+
+/**
+ * Resets local states and interface properties back to baseline states
+ */
+function clearFundTransferForm() {
+    document.getElementById('ft-from-aadhaar').value = '';
+    document.getElementById('ft-to-aadhaar').value = '';
+    document.getElementById('ft-from-name').innerText = '';
+    document.getElementById('ft-to-name').innerText = '';
+    document.getElementById('ft-amount').value = '';
+    document.getElementById('ft-amount-words').innerText = 'Amount in words will appear here...';
+    document.getElementById('ft-remarks').value = '';
+    isAuthorizedTarget = false;
+}
