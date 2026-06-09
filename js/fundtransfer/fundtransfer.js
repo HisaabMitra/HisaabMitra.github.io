@@ -1,50 +1,41 @@
 /**
- * Aadhaar-to-Aadhaar Fund Transfer System Core Logic
- * Handles dynamic search, validation, automated registration modal triggers, 
- * amount-to-words parsing, authorized staff checks, and local storage/state rendering.
+ * Aadhaar-to-Aadhaar Fund Transfer System (Supabase Version)
+ * Direct Integration with public.banking_customers & public.saving_bank_accounts
  */
 
-// Global state tracking for transaction constraints
 let isAuthorizedTarget = false;
-let currentActiveTransfers = [];
+let targetAccountDetails = null;
 
 document.addEventListener("DOMContentLoaded", function () {
-    // 1. Initial configuration and cache loading
-    initializeFundTransferSystem();
+    // Initial Setup
+    clearFundTransferForm();
+    refreshTransferLedger();
 
-    // 2. Event Binding for Aadhaar input handling (From Side)
+    // Event Binding: From Aadhaar Lookup
     document.getElementById('ft-from-aadhaar').addEventListener('blur', function () {
         processIdentityLookup(this.value, 'ft-from-name', this.id);
     });
 
-    // 3. Event Binding for Aadhaar input handling (To Side)
+    // Event Binding: To Aadhaar Lookup
     document.getElementById('ft-to-aadhaar').addEventListener('blur', function () {
         processIdentityLookup(this.value, 'ft-to-name', this.id);
     });
 
-    // 4. Reactive Amount Monitoring for Text Translation
+    // Reactive Amount Words Translation (From Utils.js)
     document.getElementById('ft-amount').addEventListener('input', function () {
         evaluateAmountConversion(this.value);
     });
 
-    // 5. Global Action trigger for primary storage lifecycle
+    // Save Transfer Trigger
     document.getElementById('btn-ft-master-save').addEventListener('click', function () {
         executeFundTransferPersistence();
     });
 });
 
 /**
- * Initializes setup and pulls historical daily context rows
+ * 1 & 4. Identity Lookup via Supabase
  */
-function initializeFundTransferSystem() {
-    clearFundTransferForm();
-    refreshTransferLedger();
-}
-
-/**
- * Handles Identity lookups across public.banking_customers schema
- */
-function processIdentityLookup(aadhaarVal, displayLabelId, inputFieldId) {
+async function processIdentityLookup(aadhaarVal, displayLabelId, inputFieldId) {
     const cleansedAadhaar = aadhaarVal.trim();
     const labelSelector = document.getElementById(displayLabelId);
 
@@ -55,94 +46,98 @@ function processIdentityLookup(aadhaarVal, displayLabelId, inputFieldId) {
     }
 
     labelSelector.style.color = '#666';
-    labelSelector.innerText = "🔍 Checking registry...";
+    labelSelector.innerText = "🔍 Checking database...";
 
-    // Dynamic backend execution against public.banking_customers
-    fetch(`api/get_customer_by_identity.php?identity_token=${encodeURIComponent(cleansedAadhaar)}`)
-        .then(res => res.json())
-        .then(response => {
-            if (response.success && response.identity_found) {
-                labelSelector.style.color = '#28a745';
-                labelSelector.innerText = `👤 ${response.customer_name}`;
+    try {
+        // Querying public.banking_customers
+        const { data, error } = await supabase
+            .from('banking_customers')
+            .select('customer_name')
+            .eq('aadhaar_number', cleansedAadhaar)
+            .maybeSingle();
 
-                // Point 7 Evaluation: Check if Target entity exists within public.saving_bank_accounts
-                if (inputFieldId === 'ft-to-aadhaar') {
-                    evaluateAuthorizationNode(cleansedAadhaar);
-                }
-            } else {
-                // Point 4 Override: Open standard registration wrapper if entity missing
-                labelSelector.style.color = '#7d0022';
-                labelSelector.innerText = "⚠️ Identity context absent. Opening registration...";
-                invokeRegistrationGateway(cleansedAadhaar, displayLabelId, inputFieldId);
+        if (error) throw error;
+
+        if (data) {
+            labelSelector.style.color = '#28a745';
+            labelSelector.innerText = `👤 ${data.customer_name}`;
+
+            // Point 7 Check: If this is the "To Aadhaar", check if they are authorized staff
+            if (inputFieldId === 'ft-to-aadhaar') {
+                await evaluateAuthorizationNode(cleansedAadhaar);
             }
-        })
-        .catch(err => {
-            console.error("Lookup interface exception:", err);
-            labelSelector.innerText = "Error executing schema lookups.";
-        });
+        } else {
+            // Point 4: Customer not found -> Trigger your existing Registration Modal
+            labelSelector.style.color = '#7d0022';
+            labelSelector.innerText = "⚠️ Customer not registered. Opening Modal...";
+            invokeRegistrationGateway(cleansedAadhaar, displayLabelId, inputFieldId);
+        }
+    } catch (err) {
+        console.error("Supabase Lookup Error:", err);
+        labelSelector.innerText = "Error searching customer table.";
+    }
 }
 
 /**
- * Evaluates target accounts within the authorized public.saving_bank_accounts grid
+ * Point 7: Check if target Aadhaar is an Authorized Person in saving_bank_accounts
  */
-function evaluateAuthorizationNode(aadhaarVal) {
-    fetch(`api/check_account_clearance.php?identity_token=${encodeURIComponent(aadhaarVal)}`)
-        .then(res => res.json())
-        .then(response => {
-            if (response.success && response.is_authorized_staff) {
-                isAuthorizedTarget = true;
-                alert("⚠️ Authorized Staff destination flagged. Cash layout tracking enforced via local inventory modules.");
-                
-                // Invoke local global inventory interface from js/withdrawal/denomination.js
-                if (typeof window.openDenominationModal === "function") {
-                    window.openDenominationModal();
-                } else {
-                    console.warn("External currency calculation system (denomination.js) unavailable.");
-                }
+async function evaluateAuthorizationNode(aadhaarVal) {
+    try {
+        const { data, error } = await supabase
+            .from('saving_bank_accounts')
+            .select('id, account_number, account_holder_name, balance')
+            .eq('aadhar_number', aadhaarVal)
+            .maybeSingle();
+
+        if (error) throw error;
+
+        if (data) {
+            isAuthorizedTarget = true;
+            targetAccountDetails = data;
+            alert("⚠️ Authorized Staff profile detected. Cash payout requires Denomination check.");
+            
+            // Open denomination window from js/withdrawal/denomination.js
+            if (typeof window.openDenominationModal === "function") {
+                window.openDenominationModal();
             } else {
-                isAuthorizedTarget = false;
+                console.warn("denomination.js modal function not found.");
             }
-        })
-        .catch(err => console.error("Authorization check fault:", err));
+        } else {
+            isAuthorizedTarget = false;
+            targetAccountDetails = null;
+        }
+    } catch (err) {
+        console.error("Authorization check fault:", err);
+    }
 }
 
 /**
- * Interface routing to activate system registration dialog standard modules
+ * Point 4: Bridge to your existing New Customer Registration Modal
  */
 function invokeRegistrationGateway(aadhaarVal, displayLabelId, inputFieldId) {
     if (typeof window.openWithdrawalRegistrationModal === "function") {
-        window.openWithdrawalRegistrationModal(aadhaarVal, function (newIdentityRecord) {
-            document.getElementById(inputFieldId).value = newIdentityRecord.aadhaar_number;
+        window.openWithdrawalRegistrationModal(aadhaarVal, function (newCustomer) {
+            document.getElementById(inputFieldId).value = newCustomer.aadhaar_number;
             const targetLabel = document.getElementById(displayLabelId);
             targetLabel.style.color = '#28a745';
-            targetLabel.innerText = `👤 ${newIdentityRecord.customer_name}`;
+            targetLabel.innerText = `👤 ${newCustomer.customer_name}`;
             
             if (inputFieldId === 'ft-to-aadhaar') {
-                evaluateAuthorizationNode(newIdentityRecord.aadhaar_number);
+                evaluateAuthorizationNode(newCustomer.aadhaar_number);
             }
         });
     } else {
-        // Fallback interface handler if environment bindings are running asynchronously
-        let placeholderManualEntry = prompt("Customer registration fallback sequence. Enter display name:");
-        if (placeholderManualEntry) {
-            const mockIdentity = {
-                aadhaar_number: aadhaarVal,
-                customer_name: placeholderManualEntry
-            };
-            document.getElementById(inputFieldId).value = mockIdentity.aadhaar_number;
-            const targetLabel = document.getElementById(displayLabelId);
-            targetLabel.style.color = '#28a745';
-            targetLabel.innerText = `👤 ${mockIdentity.customer_name}`;
-            
-            if (inputFieldId === 'ft-to-aadhaar') {
-                evaluateAuthorizationNode(mockIdentity.aadhaar_number);
-            }
+        // Fallback placeholder for testing
+        let mockName = prompt("Registration Fallback: Enter Customer Name:");
+        if (mockName) {
+            document.getElementById(displayLabelId).style.color = '#28a745';
+            document.getElementById(displayLabelId).innerText = `👤 ${mockName}`;
         }
     }
 }
 
 /**
- * Feeds localized balance mutations out to utility structures
+ * Point 6: Amount to Words conversion via Utils.js
  */
 function evaluateAmountConversion(numericValue) {
     const wordTargetNode = document.getElementById('ft-amount-words');
@@ -161,157 +156,238 @@ function evaluateAmountConversion(numericValue) {
 }
 
 /**
- * Orchestrates payload packing and dispatches mutations out to database structures
+ * Save Operation: Write to Supabase Tables
  */
-function executeFundTransferPersistence() {
-    const remitterIdentity = document.getElementById('ft-from-aadhaar').value.trim();
-    const beneficiaryIdentity = document.getElementById('ft-to-aadhaar').value.trim();
-    const operationValue = document.getElementById('ft-amount').value.trim();
-    const administrativeRemarks = document.getElementById('ft-remarks').value.trim();
+async function executeFundTransferPersistence() {
+    const fromAadhaar = document.getElementById('ft-from-aadhaar').value.trim();
+    const toAadhaar = document.getElementById('ft-to-aadhaar').value.trim();
+    const amount = parseFloat(document.getElementById('ft-amount').value);
+    const remarks = document.getElementById('ft-remarks').value.trim();
 
-    if (!remitterIdentity || !beneficiaryIdentity || !operationValue) {
-        alert("❌ Missing structural metrics. Complete all mandatory properties.");
+    if (!fromAadhaar || !toAadhaar || isNaN(amount) || amount <= 0) {
+        alert("❌ Please fill all mandatory fields correctly.");
         return;
     }
 
-    // Point 7 Validation Verification: Reconcile input values against physical inventory mutations
-    let bundledDenominationMetadata = null;
+    // Point 7 Validation: Match denomination total with input amount if authorized person
+    let denominationData = null;
     if (isAuthorizedTarget) {
         if (typeof window.getCurrentDenominationTotal === "function") {
-            const calculatedSum = window.getCurrentDenominationTotal();
-            if (parseFloat(calculatedSum) !== parseFloat(operationValue)) {
-                alert(`❌ Denomination discrepancy detected. Physical tracking total (${calculatedSum}) must scale identically with stated currency target amount (${operationValue}).`);
+            const decompTotal = parseFloat(window.getCurrentDenominationTotal());
+            if (decompTotal !== amount) {
+                alert(`❌ Denomination mis-match! Denomination total (${decompTotal}) must match the Transfer Amount (${amount}).`);
                 return;
             }
-            bundledDenominationMetadata = window.getDenominationMatrix ? window.getDenominationMatrix() : {};
-        } else {
-            alert("⚠️ Inventory mapping script is structurally decoupled from current active view context.");
+            denominationData = window.getDenominationMatrix ? window.getDenominationMatrix() : {};
         }
     }
 
-    const payloadContext = {
-        source_identity: remitterIdentity,
-        destination_identity: beneficiaryIdentity,
-        allocated_amount: parseFloat(operationValue),
-        notes: administrativeRemarks,
-        is_staff_involved: isAuthorizedTarget,
-        inventory_adjustments: bundledDenominationMetadata
-    };
+    try {
+        // Step 1: Log the Master Fund Transfer entry in saving_account_transactions
+        const metaParticulars = {
+            from_aadhaar: fromAadhaar,
+            to_aadhaar: toAadhaar,
+            user_remarks: remarks,
+            denomination_retained: denominationData,
+            is_staff: isAuthorizedTarget
+        };
 
-    fetch('api/persist_fund_transfer.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payloadContext)
-    })
-    .then(res => res.json())
-    .then(response => {
-        if (response.success) {
-            alert("🎉 Asset execution completed. Ledger record appended successfully.");
-            clearFundTransferForm();
-            refreshTransferLedger();
-        } else {
-            alert(`Execution failure: ${response.message}`);
+        let oldBalance = 0;
+        let newBalance = 0;
+        let accountId = null;
+        let accountNumber = 'CUST_TO_CUST_TRANSFER';
+
+        // Step 2: If authorized staff, perform balance mutations
+        if (isAuthorizedTarget && targetAccountDetails) {
+            accountId = targetAccountDetails.id;
+            accountNumber = targetAccountDetails.account_number;
+            oldBalance = parseFloat(targetAccountDetails.balance);
+            newBalance = oldBalance + amount;
+
+            // Update balance in saving_bank_accounts
+            const { error: balError } = await supabase
+                .from('saving_bank_accounts')
+                .update({ balance: newBalance })
+                .eq('id', accountId);
+
+            if (balError) throw balError;
         }
-    })
-    .catch(err => console.error("Pipeline failure:", err));
+
+        // Insert primary transaction record
+        const { error: txError } = await supabase
+            .from('saving_account_transactions')
+            .insert([{
+                ko_code: 'KO_SYSTEM',
+                account_id: accountId,
+                account_number: accountNumber,
+                transaction_type: isAuthorizedTarget ? 'CREDIT' : 'TRANSFER',
+                channel: 'fund_transfer',
+                amount: amount,
+                old_balance: oldBalance,
+                new_balance: newBalance,
+                particulars: JSON.stringify(metaParticulars)
+            }]);
+
+        if (txError) throw txError;
+
+        alert("🎉 Fund Transfer saved successfully!");
+        clearFundTransferForm();
+        refreshTransferLedger();
+
+    } catch (err) {
+        console.error("Save Pipeline Error:", err);
+        alert("❌ Error saving transaction: " + err.message);
+    }
 }
 
 /**
- * Gathers active operational events from active daily table segments
+ * Table Rendering: Pull Today's entries from Supabase
  */
-function refreshTransferLedger() {
-    fetch('api/fetch_daily_transfers.php')
-        .then(res => res.json())
-        .then(data => {
-            const contentMountPoint = document.getElementById('ft-today-table-body');
-            contentMountPoint.innerHTML = ''; // Dynamic clean state reset
+async function refreshTransferLedger() {
+    const contentMountPoint = document.getElementById('ft-today-table-body');
+    contentMountPoint.innerHTML = '';
 
-            if (!data || data.length === 0) {
-                contentMountPoint.innerHTML = `
-                    <tr>
-                        <td colspan="3" style="padding: 20px; text-align: center; color: #888; font-style: italic;">No entries recorded today yet.</td>
-                    </tr>`;
-                return;
-            }
+    try {
+        const todayStr = new Date().toISOString().split('T')[0];
 
-            currentActiveTransfers = data;
+        // Fetch today's fund transfer transactions
+        const { data, error } = await supabase
+            .from('saving_account_transactions')
+            .select('*')
+            .eq('channel', 'fund_transfer')
+            .gte('created_at', `${todayStr}T00:00:00Z`)
+            .order('created_at', { ascending: false });
 
-            data.forEach(entry => {
-                const rowStructure = document.createElement('tr');
-                rowStructure.innerHTML = `
-                    <td style="padding: 10px; border-bottom: 1px solid #eee;">
-                        <small style="color: #666; display: block;">ID: #${entry.transaction_id} | ${entry.timestamp}</small>
-                        <strong>From:</strong> ${entry.source_identity_masked} (${entry.source_name})<br>
-                        <strong>To:</strong> ${entry.destination_identity_masked} (${entry.destination_name})
-                    </td>
-                    <td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold; color: #7d0022; vertical-align: middle;">
-                        ₹${parseFloat(entry.allocated_amount).toFixed(2)}
-                    </td>
-                    <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: center; vertical-align: middle;">
-                        <button type="button" onclick="initializeTransactionRollback('${entry.transaction_id}', 'edit')" style="background: transparent; border: none; cursor: pointer; font-size: 1.1rem; padding: 4px;" title="Edit Entry">✏️</button>
-                        <button type="button" onclick="initializeTransactionRollback('${entry.transaction_id}', 'delete')" style="background: transparent; border: none; cursor: pointer; font-size: 1.1rem; padding: 4px;" title="Delete Entry">🗑️</button>
-                        <button type="button" onclick="dispatchPrintStream('${entry.transaction_id}')" style="background: transparent; border: none; cursor: pointer; font-size: 1.1rem; padding: 4px;" title="Print Receipt">🖨️</button>
-                    </td>
-                `;
-                contentMountPoint.appendChild(rowStructure);
-            });
-        })
-        .catch(err => console.error("Error refreshing ledger tables:", err));
-}
+        if (error) throw error;
 
-/**
- * Handles cascading database resets for records and returns notes back to physical cash vaults
- */
-function initializeTransactionRollback(transactionId, pipelineAction) {
-    const targetingMessage = pipelineAction === 'edit' 
-        ? "Editing this record will completely roll back transaction updates, balance changes, and note inventory metrics. Proceed?" 
-        : "Are you certain you want to purge this record and revert adjustments to system inventory?";
-        
-    if (!confirm(targetingMessage)) return;
+        if (!data || data.length === 0) {
+            contentMountPoint.innerHTML = `
+                <tr>
+                    <td colspan="3" style="padding: 20px; text-align: center; color: #888; font-style: italic;">No entries recorded today yet.</td>
+                </tr>`;
+            return;
+        }
 
-    fetch('api/rollback_fund_transfer.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ transaction_id: transactionId, execution_mode: pipelineAction })
-    })
-    .then(res => res.json())
-    .then(response => {
-        if (response.success) {
-            alert(`Operation execution succeeded: Record states successfully re-adjusted.`);
+        for (const entry of data) {
+            const meta = JSON.parse(entry.particulars || '{}');
             
-            if (pipelineAction === 'edit' && response.cached_payload) {
-                // Pre-populate input configurations for quick corrective editing
-                document.getElementById('ft-from-aadhaar').value = response.cached_payload.source_identity || '';
-                document.getElementById('ft-to-aadhaar').value = response.cached_payload.destination_identity || '';
-                document.getElementById('ft-amount').value = response.cached_payload.allocated_amount || '';
-                document.getElementById('ft-remarks').value = response.cached_payload.notes || '';
-                
-                // Repopulate dynamic calculations
-                processIdentityLookup(response.cached_payload.source_identity, 'ft-from-name', 'ft-from-aadhaar');
-                processIdentityLookup(response.cached_payload.destination_identity, 'ft-to-name', 'ft-to-aadhaar');
-                evaluateAmountConversion(response.cached_payload.allocated_amount);
-            }
-            refreshTransferLedger();
-        } else {
-            alert(`Rollback fault instance: ${response.message}`);
+            // Format time
+            const txTime = new Date(entry.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+            const rowStructure = document.createElement('tr');
+            rowStructure.innerHTML = `
+                <td style="padding: 10px; border-bottom: 1px solid #eee;">
+                    <small style="color: #666; display: block;">Time: ${txTime} | Remarks: ${meta.user_remarks || 'N/A'}</small>
+                    <strong>From Aadhaar:</strong> ${meta.from_aadhaar}<br>
+                    <strong>To Aadhaar:</strong> ${meta.to_aadhaar} ${meta.is_staff ? '<b>(Staff)</b>' : ''}
+                </td>
+                <td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold; color: #7d0022; vertical-align: middle;">
+                    ₹${parseFloat(entry.amount).toFixed(2)}
+                </td>
+                <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: center; vertical-align: middle;">
+                    <button type="button" onclick="initializeTransactionRollback('${entry.id}', 'edit')" style="background: transparent; border: none; cursor: pointer; font-size: 1.1rem; padding: 4px; margin-right: 8px;" title="Edit Entry">✏️</button>
+                    <button type="button" onclick="initializeTransactionRollback('${entry.id}', 'delete')" style="background: transparent; border: none; cursor: pointer; font-size: 1.1rem; padding: 4px; margin-right: 8px;" title="Delete Entry">🗑️</button>
+                    <button type="button" onclick="dispatchPrintStream('${entry.id}')" style="background: transparent; border: none; cursor: pointer; font-size: 1.1rem; padding: 4px;" title="Print Receipt">🖨️</button>
+                </td>
+            `;
+            contentMountPoint.appendChild(rowStructure);
         }
-    })
-    .catch(err => console.error("Rollback execution framework exception:", err));
+    } catch (err) {
+        console.error("Fetch Ledger Error:", err);
+    }
 }
 
 /**
- * Integrates directly with withdrawal printing routines on consecutive lines
+ * Edit and Delete Rollback Sequence
+ * Reverts balances, deletes transaction log, and handles form reloading on edit
+ */
+async function initializeTransactionRollback(transactionId, pipelineAction) {
+    const confirmationMsg = pipelineAction === 'edit'
+        ? "Editing this record will completely roll back balances and load data into inputs. Proceed?"
+        : "Are you sure you want to completely delete and roll back this transaction?";
+
+    if (!confirm(confirmationMsg)) return;
+
+    try {
+        // 1. Get current transaction data
+        const { data: txRow, error: fetchError } = await supabase
+            .from('saving_account_transactions')
+            .select('*')
+            .eq('id', transactionId)
+            .maybeSingle();
+
+        if (fetchError) throw fetchError;
+        if (!txRow) throw new Error("Transaction record not found.");
+
+        const meta = JSON.parse(txRow.particulars || '{}');
+
+        // 2. If staff was involved, reverse the credit balance mutation
+        if (txRow.account_id) {
+            const { data: currentAccount, error: accFetchError } = await supabase
+                .from('saving_bank_accounts')
+                .select('balance')
+                .eq('id', txRow.account_id)
+                .maybeSingle();
+
+            if (accFetchError) throw accFetchError;
+
+            if (currentAccount) {
+                const reversedBalance = parseFloat(currentAccount.balance) - parseFloat(txRow.amount);
+                
+                // Rollback account balance
+                const { error: balRollbackError } = await supabase
+                    .from('saving_bank_accounts')
+                    .update({ balance: reversedBalance })
+                    .eq('id', txRow.account_id);
+
+                if (balRollbackError) throw balRollbackError;
+            }
+        }
+
+        // 3. Delete transaction log record
+        const { error: deleteError } = await supabase
+            .from('saving_account_transactions')
+            .delete()
+            .eq('id', transactionId);
+
+        if (deleteError) throw deleteError;
+
+        alert("🔄 Transaction successfully rolled back!");
+
+        // 4. If action was 'edit', reload values back into the form fields
+        if (pipelineAction === 'edit') {
+            document.getElementById('ft-from-aadhaar').value = meta.from_aadhaar || '';
+            document.getElementById('ft-to-aadhaar').value = meta.to_aadhaar || '';
+            document.getElementById('ft-amount').value = txRow.amount || '';
+            document.getElementById('ft-remarks').value = meta.user_remarks || '';
+
+            // Re-trigger dynamic checks and conversions
+            processIdentityLookup(meta.from_aadhaar, 'ft-from-name', 'ft-from-aadhaar');
+            processIdentityLookup(meta.to_aadhaar, 'ft-to-name', 'ft-to-aadhaar');
+            evaluateAmountConversion(txRow.amount);
+        }
+
+        refreshTransferLedger();
+
+    } catch (err) {
+        console.error("Rollback Processing Error:", err);
+        alert("❌ Failed to process rollback: " + err.message);
+    }
+}
+
+/**
+ * Print Routine: Connects to your withdrawal printing module
  */
 function dispatchPrintStream(transactionId) {
     if (typeof window.printWithdrawalReceipt === "function") {
-        window.printWithdrawalReceipt(transactionId, "fund-transfer-stream");
+        window.printWithdrawalReceipt(transactionId, "fund-transfer");
     } else {
-        alert(`Print processing stream triggered for Target Event Code: #${transactionId}`);
+        alert(`Receipt Print triggered for Transaction ID: ${transactionId}`);
     }
 }
 
 /**
- * Resets local states and interface properties back to baseline states
+ * Reset form input parameters
  */
 function clearFundTransferForm() {
     document.getElementById('ft-from-aadhaar').value = '';
@@ -322,4 +398,5 @@ function clearFundTransferForm() {
     document.getElementById('ft-amount-words').innerText = 'Amount in words will appear here...';
     document.getElementById('ft-remarks').value = '';
     isAuthorizedTarget = false;
+    targetAccountDetails = null;
 }
