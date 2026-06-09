@@ -1,48 +1,57 @@
 <!-- pages/fundtransfer.html -->
-<div class="module-page" id="fund-transfer-page">
+<div id="fund-transfer-page" class="module-container">
+
     <div class="page-header">
         <h1>💸 Fund Transfer</h1>
-        <p>Aadhaar to Aadhaar Money Transfer</p>
+        <p>Aadhaar Based Money Transfer</p>
     </div>
 
-    <div class="two-column-layout">
-        
-        <!-- Left: Transfer Form -->
-        <div class="card">
-            <h3>Transfer Details</h3>
+    <div class="content-wrapper">
+
+        <!-- Transfer Form Card -->
+        <div class="card main-card">
+            <div class="card-header">
+                <h3>Transfer Details</h3>
+            </div>
             
-            <div class="form-group">
-                <label>From Aadhaar Number (Remitter)</label>
-                <input type="text" id="ft-from-aadhaar" maxlength="12" class="input-field" placeholder="Enter 12 digit Aadhaar">
-                <div id="ft-from-name-display" class="name-display"></div>
-            </div>
+            <div class="form-section">
 
-            <div class="form-group">
-                <label>To Aadhaar Number (Beneficiary)</label>
-                <input type="text" id="ft-to-aadhaar" maxlength="12" class="input-field" placeholder="Enter 12 digit Aadhaar">
-                <div id="ft-to-name-display" class="name-display"></div>
-            </div>
+                <div class="form-group">
+                    <label>From Aadhaar (Remitter)</label>
+                    <input type="text" id="ft-from-aadhaar" maxlength="12" class="input-field" placeholder="Enter 12 digit Aadhaar Number">
+                    <div id="ft-from-name-display" class="customer-name-display"></div>
+                </div>
 
-            <div class="form-group">
-                <label>Amount (₹)</label>
-                <input type="number" id="ft-amount" class="input-field" placeholder="0.00">
-                <div id="ft-amount-words" class="amount-words"></div>
-            </div>
+                <div class="form-group">
+                    <label>To Aadhaar (Beneficiary)</label>
+                    <input type="text" id="ft-to-aadhaar" maxlength="12" class="input-field" placeholder="Enter 12 digit Aadhaar Number">
+                    <div id="ft-to-name-display" class="customer-name-display"></div>
+                </div>
 
-            <div class="form-group">
-                <label>Remarks (Optional)</label>
-                <input type="text" id="ft-remarks" class="input-field" placeholder="Fund transfer remarks">
-            </div>
+                <div class="form-group">
+                    <label>Amount ₹</label>
+                    <input type="number" id="ft-amount" class="input-field amount-input" placeholder="0.00" step="0.01">
+                    <div id="ft-amount-words" class="amount-in-words"></div>
+                </div>
 
-            <button id="btn-save-fund-transfer" class="btn-primary full-width">
-                💾 SAVE FUND TRANSFER
-            </button>
+                <div class="form-group">
+                    <label>Remarks (Optional)</label>
+                    <input type="text" id="ft-remarks" class="input-field" placeholder="Enter remarks if any">
+                </div>
+
+                <button id="btn-save-fund-transfer" class="btn-primary btn-large">
+                    💾 SAVE FUND TRANSFER
+                </button>
+
+            </div>
         </div>
 
-        <!-- Right: Today's Ledger -->
-        <div class="card">
-            <h3>📋 Today's Fund Transfers</h3>
-            <div class="table-container">
+        <!-- Today's Ledger -->
+        <div class="card ledger-card">
+            <div class="card-header">
+                <h3>📋 Today's Fund Transfers</h3>
+            </div>
+            <div class="table-responsive">
                 <table class="data-table" id="ft-today-table">
                     <thead>
                         <tr>
