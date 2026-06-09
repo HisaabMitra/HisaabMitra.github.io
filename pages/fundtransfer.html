@@ -6,32 +6,35 @@
         <p>Aadhaar Based Money Transfer</p>
     </div>
 
-    <div class="content-wrapper">
+    <div class="two-column-container">
 
-        <!-- Transfer Form Card -->
-        <div class="card main-card">
+        <!-- LEFT SIDE - Transfer Form -->
+        <div class="main-form-card">
             <div class="card-header">
-                <h3>Transfer Details</h3>
+                <h2>TRANSFER DETAILS</h2>
             </div>
-            
+
             <div class="form-section">
 
                 <div class="form-group">
-                    <label>From Aadhaar (Remitter)</label>
+                    <label>From Aadhaar (Remitter) <span class="required">*</span></label>
                     <input type="text" id="ft-from-aadhaar" maxlength="12" class="input-field" placeholder="Enter 12 digit Aadhaar Number">
-                    <div id="ft-from-name-display" class="customer-name-display"></div>
+                    <div id="ft-from-name-display" class="name-display">Name will auto-appear</div>
                 </div>
 
                 <div class="form-group">
-                    <label>To Aadhaar (Beneficiary)</label>
+                    <label>To Aadhaar (Beneficiary) <span class="required">*</span></label>
                     <input type="text" id="ft-to-aadhaar" maxlength="12" class="input-field" placeholder="Enter 12 digit Aadhaar Number">
-                    <div id="ft-to-name-display" class="customer-name-display"></div>
+                    <div id="ft-to-name-display" class="name-display">Name will auto-appear</div>
                 </div>
 
                 <div class="form-group">
-                    <label>Amount ₹</label>
+                    <label>Amount (₹) <span class="required">*</span></label>
                     <input type="number" id="ft-amount" class="input-field amount-input" placeholder="0.00" step="0.01">
-                    <div id="ft-amount-words" class="amount-in-words"></div>
+                    <div class="amount-words-box">
+                        <strong>AMOUNT IN WORDS</strong>
+                        <div id="ft-amount-words">Zero Rupees Only</div>
+                    </div>
                 </div>
 
                 <div class="form-group">
@@ -46,24 +49,49 @@
             </div>
         </div>
 
-        <!-- Today's Ledger -->
-        <div class="card ledger-card">
-            <div class="card-header">
-                <h3>📋 Today's Fund Transfers</h3>
-            </div>
-            <div class="table-responsive">
-                <table class="data-table" id="ft-today-table">
+        <!-- RIGHT SIDE - Denomination + Today's Ledger -->
+        <div class="right-panel">
+
+            <!-- Denomination Panel (Optional for Staff) -->
+            <div class="card denomination-card">
+                <div class="card-header">
+                    <h3>DENOMINATION (IN / OUT)</h3>
+                </div>
+                <table class="denomination-table">
                     <thead>
                         <tr>
-                            <th>From → To</th>
-                            <th>Amount</th>
-                            <th>Time</th>
-                            <th>Action</th>
+                            <th>VALUE</th>
+                            <th>CASH IN</th>
+                            <th>CASH OUT</th>
+                            <th>TOTAL</th>
                         </tr>
                     </thead>
-                    <tbody id="ft-today-ledger-body"></tbody>
+                    <tbody id="ft-denomination-body">
+                        <!-- JS से भरेगा -->
+                    </tbody>
                 </table>
             </div>
+
+            <!-- Today's Transfers -->
+            <div class="card ledger-card">
+                <div class="card-header">
+                    <h3>📋 Today's Fund Transfers</h3>
+                </div>
+                <div class="table-responsive">
+                    <table class="data-table" id="ft-today-table">
+                        <thead>
+                            <tr>
+                                <th>From → To</th>
+                                <th>Amount</th>
+                                <th>Time</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ft-today-ledger-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
         </div>
 
     </div>
