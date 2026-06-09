@@ -1,57 +1,63 @@
 <!-- pages/fundtransfer.html -->
-<div id="fund-transfer-page" style="padding:20px; max-width:1400px; margin:0 auto;">
-    <h1 style="color:#7d0022; margin-bottom:5px;">💸 Fund Transfer (Aadhaar to Aadhaar)</h1>
-    <p style="color:#555;">Secure money transfer between customers/staff</p>
+<div class="module-page" id="fund-transfer-page">
+    <div class="page-header">
+        <h1>💸 Fund Transfer</h1>
+        <p>Aadhaar to Aadhaar Money Transfer</p>
+    </div>
 
-    <div style="display:flex; gap:25px; flex-wrap:wrap; margin-top:20px;">
-
-        <!-- Transfer Form -->
-        <div style="flex:1; min-width:480px; background:white; padding:25px; border-radius:8px; box-shadow:0 4px 15px rgba(0,0,0,0.1);">
-            <h3 style="margin-top:0; color:#7d0022;">Transfer Details</h3>
+    <div class="two-column-layout">
+        
+        <!-- Left: Transfer Form -->
+        <div class="card">
+            <h3>Transfer Details</h3>
             
-            <div style="margin-bottom:16px;">
-                <label><strong>From Aadhaar (Remitter)</strong></label>
-                <input type="text" id="ft-from-aadhaar" maxlength="12" placeholder="12 digit Aadhaar" style="width:100%; padding:12px; margin-top:6px;">
-                <div id="ft-from-name" style="margin-top:6px; font-weight:bold; min-height:22px;"></div>
+            <div class="form-group">
+                <label>From Aadhaar Number (Remitter)</label>
+                <input type="text" id="ft-from-aadhaar" maxlength="12" class="input-field" placeholder="Enter 12 digit Aadhaar">
+                <div id="ft-from-name-display" class="name-display"></div>
             </div>
 
-            <div style="margin-bottom:16px;">
-                <label><strong>To Aadhaar (Beneficiary)</strong></label>
-                <input type="text" id="ft-to-aadhaar" maxlength="12" placeholder="12 digit Aadhaar" style="width:100%; padding:12px; margin-top:6px;">
-                <div id="ft-to-name" style="margin-top:6px; font-weight:bold; min-height:22px;"></div>
+            <div class="form-group">
+                <label>To Aadhaar Number (Beneficiary)</label>
+                <input type="text" id="ft-to-aadhaar" maxlength="12" class="input-field" placeholder="Enter 12 digit Aadhaar">
+                <div id="ft-to-name-display" class="name-display"></div>
             </div>
 
-            <div style="margin-bottom:16px;">
-                <label><strong>Amount ₹</strong></label>
-                <input type="number" id="ft-amount" placeholder="0" style="width:100%; padding:12px; margin-top:6px;">
-                <div id="ft-amount-words" style="margin-top:8px; font-style:italic; color:#555; min-height:28px;"></div>
+            <div class="form-group">
+                <label>Amount (₹)</label>
+                <input type="number" id="ft-amount" class="input-field" placeholder="0.00">
+                <div id="ft-amount-words" class="amount-words"></div>
             </div>
 
-            <div style="margin-bottom:20px;">
-                <label><strong>Remarks</strong></label>
-                <input type="text" id="ft-remarks" placeholder="Optional remarks" style="width:100%; padding:12px; margin-top:6px;">
+            <div class="form-group">
+                <label>Remarks (Optional)</label>
+                <input type="text" id="ft-remarks" class="input-field" placeholder="Fund transfer remarks">
             </div>
 
-            <button id="btn-save-fund-transfer" style="width:100%; padding:16px; background:#7d0022; color:white; border:none; border-radius:6px; font-size:1.1rem; font-weight:bold;">
+            <button id="btn-save-fund-transfer" class="btn-primary full-width">
                 💾 SAVE FUND TRANSFER
             </button>
         </div>
 
-        <!-- Today's Ledger -->
-        <div style="flex:1.3; min-width:520px; background:white; padding:25px; border-radius:8px; box-shadow:0 4px 15px rgba(0,0,0,0.1);">
-            <h3 style="margin-top:0; color:#28a745;">📋 Today's Transfers</h3>
-            <div style="overflow-x:auto; max-height:600px;">
-                <table style="width:100%; border-collapse:collapse;">
+        <!-- Right: Today's Ledger -->
+        <div class="card">
+            <h3>📋 Today's Fund Transfers</h3>
+            <div class="table-container">
+                <table class="data-table" id="ft-today-table">
                     <thead>
-                        <tr style="background:#f8f9fa;">
-                            <th style="padding:10px; text-align:left;">Details</th>
-                            <th style="padding:10px;">Amount</th>
-                            <th style="padding:10px; text-align:center;">Actions</th>
+                        <tr>
+                            <th>From → To</th>
+                            <th>Amount</th>
+                            <th>Time</th>
+                            <th>Action</th>
                         </tr>
                     </thead>
-                    <tbody id="ft-today-ledger"></tbody>
+                    <tbody id="ft-today-ledger-body"></tbody>
                 </table>
             </div>
         </div>
+
     </div>
 </div>
+
+<script src="js/fundtransfer/fundtransfer.js"></script>
